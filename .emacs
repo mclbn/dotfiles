@@ -64,6 +64,9 @@
 ;;; Shortcut to clean whitespaces
 (global-set-key (kbd "C-c w") 'whitespace-cleanup)
 
+;;; Script-shell-mode on zsh
+(add-to-list 'auto-mode-alist '(".zsh$" . shell-script-mode))
+
 ;;; php-mode (https://github.com/ejmr/php-mode)
 (add-to-list 'load-path "~/.emacs.d/php-mode")
 (load "php-mode")
