@@ -43,3 +43,6 @@
 [submodule ".emacs.d/themes/zenburn-emacs"]
 	path = .emacs.d/themes/zenburn-emacs
 	url = https://github.com/bbatsov/zenburn-emacs
+[submodule ".zshrc.d/functions"]
+	path = .zshrc.d/functions
+	url = https://github.com/MarcVador/zsh-functions
