@@ -71,7 +71,7 @@ setopt multios
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(git cp encode64 extract gem git history mercurial perl python svn perso)
+plugins=(git cp encode64 extract gem git history mercurial perl python svn)
 
 source $ZSH/oh-my-zsh.sh
 

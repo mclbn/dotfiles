@@ -14,6 +14,6 @@ alias grep_full='grep -aiRPoH'
 alias wget_no_cert_verify 'wget --no-check-certificate'5D
 alias tree='tree | less'
 
-alias wakehome="ssh root@lioks-brazil.no-ip.org -p 6589 '/usr/sbin/wol -i 192.168.1.255 -p 7 20:cf:30:c0:98:5f'"
+# alias wakehome="ssh root@lioks-brazil.no-ip.org -p 6589 '/usr/sbin/wol -i 192.168.1.255 -p 7 20:cf:30:c0:98:5f'"
 
 alias git_update_fork='git pull && git fetch upstream && git merge upstream/master && git push origin master'
