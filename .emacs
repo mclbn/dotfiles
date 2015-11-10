@@ -181,7 +181,7 @@
 (require 'clean-aindent-mode)
 (add-hook 'prog-mode-hook 'clean-aindent-mode)
 
-;;; Helm (https://github.com/emacs-helm/helm), require Async (https://github.com/jwiegley/emacs-async.git)
+;;; Helm (https://github.com/emacs-helm/helm, don't forget to make), require Async (https://github.com/jwiegley/emacs-async.git)
 (add-to-list 'load-path "~/.emacs.d/emacs-async")
 (add-to-list 'load-path "~/.emacs.d/helm")
 (require 'helm)
