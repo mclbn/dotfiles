@@ -46,3 +46,6 @@
 [submodule ".zshrc.d/functions"]
 	path = .zshrc.d/functions
 	url = https://github.com/MarcVador/zsh-functions
+[submodule ".emacs.d/multi-term"]
+	path = .emacs.d/multi-term
+	url = https://github.com/emacsmirror/multi-term

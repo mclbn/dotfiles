@@ -89,6 +89,10 @@
 (global-set-key (kbd "RET") 'newline-and-indent)
 (setq-default tab-width 4 indent-tabs-mode nil)
 
+;;; Multiterm
+(add-to-list 'load-path "~/.emacs.d/multi-term")
+(require 'multi-term)
+
 ;;; Dash, required by (at least) smartparens (https://github.com/magnars/dash.el)
 (add-to-list 'load-path "~/.emacs.d/dash.el")
 
@@ -163,10 +167,13 @@
 ;;; cmake-ide requires system include paths for C and C++
 (setq cmake-ide-flags-c++ '("-I/usr/include/c++/4.8" "-I/usr/include/x86_64-linux-gnu/c++/4.8" "-I/usr/include/c++/4.8/backward" "-I/usr/lib/gcc/x86_64-linux-gnu/4.8/include" "-I/usr/local/include" "-I/usr/lib/gcc/x86_64-linux-gnu/4.8/include-fixed" "-I/usr/include/x86_64-linux-gnu" "-I/usr/include"))
 (setq cmake-ide-flags-c '("-I/usr/local/include" "-I/usr/lib/clang/3.4/include" "-I/usr/lib/gcc/x86_64-linux-gnu/4.8/include" "-I/usr/include/x86_64-linux-gnu" "-I/usr/include"))
-;;; Shortcut for quick compiling
+;;; Shortcuts for quick compiling
 (defun cmake-c++-mode-hook ()
     (local-set-key (kbd "C-c C-c") 'cmake-ide-compile))
 (add-hook 'c++-mode-hook 'cmake-c++-mode-hook)
+(defun cmake-c-mode-hook ()
+    (local-set-key (kbd "C-c C-c") 'cmake-ide-compile))
+(add-hook 'c-mode-hook 'cmake-c-mode-hook)
 
 ;;; Flycheck on the fly compilation (installed from packages)
 (add-hook 'after-init-hook #'global-flycheck-mode)

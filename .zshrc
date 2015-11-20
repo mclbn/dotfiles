@@ -94,6 +94,10 @@ fi
 
 export TERM=xterm-256color
 
+if [ -n "$INSIDE_EMACS" ]; then
+    PROMPT="%#> "
+fi
+
 if [ -f ~/.zshrc.local ]; then
     source ~/.zshrc.local
 fi
