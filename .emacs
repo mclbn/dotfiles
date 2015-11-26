@@ -89,6 +89,10 @@
 (global-set-key (kbd "RET") 'newline-and-indent)
 (setq-default tab-width 4 indent-tabs-mode nil)
 
+(add-to-list 'load-path "~/.emacs.d/dockerfile-mode")
+(require 'dockerfile-mode)
+(add-to-list 'auto-mode-alist '("Dockerfile\\'" . dockerfile-mode))
+
 ;;; Multiterm
 (add-to-list 'load-path "~/.emacs.d/multi-term")
 (require 'multi-term)

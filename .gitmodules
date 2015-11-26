@@ -49,3 +49,6 @@
 [submodule ".emacs.d/multi-term"]
 	path = .emacs.d/multi-term
 	url = https://github.com/emacsmirror/multi-term
+[submodule ".emacs.d/dockerfile-mode"]
+	path = .emacs.d/dockerfile-mode
+	url = https://github.com/spotify/dockerfile-mode
