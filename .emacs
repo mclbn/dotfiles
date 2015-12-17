@@ -136,6 +136,22 @@
 (ac-set-trigger-key "TAB")
 (ac-set-trigger-key "<tab>")
 
+;;; EPC, required by jedi (https://github.com/kiwanami/emacs-epc)
+;;; it requires defered (https://github.com/kiwanami/emacs-deferred) and ctable (https://github.com/kiwanami/emacs-ctable) itself
+(add-to-list 'load-path "~/.emacs.d/emacs-epc")
+(add-to-list 'load-path "~/.emacs.d/emacs-deferred")
+(add-to-list 'load-path "~/.emacs.d/emacs-ctable")
+(require 'epc)
+
+;;; Python jedi completion (https://github.com/tkf/emacs-jedi), also requires (https://github.com/tkf/emacs-python-environment)
+;;; you also need to run jedi:install-server after adding this module
+(add-to-list 'load-path "~/.emacs.d/emacs-jedi")
+(add-to-list 'load-path "~/.emacs.d/emacs-python-environment")
+(autoload 'jedi:setup "jedi" nil t)
+(add-hook 'python-mode-hook 'jedi:setup)
+(setq jedi:complete-on-dot t)
+(global-set-key (kbd "C-c p") 'jedi:get-in-function-call)
+
 ;;; Clang systgem include locations must be specified
 (setq ac-clang-flags
       (mapcar (lambda (item)(concat "-I" item))
@@ -210,7 +226,7 @@
 (add-to-list 'load-path "~/.emacs.d/semantic-stickyfunc-enhance")
 (require 'stickyfunc-enhance)
 
-;;; Helm config for manpages at point
+;;; Helm config for manpages at point<0;75;45m[
 (add-to-list 'helm-sources-using-default-as-input 'helm-source-man-pages)
 ;;; fuzzy matching for some of Helm features
 (setq helm-buffers-fuzzy-matching t

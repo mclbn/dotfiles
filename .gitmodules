@@ -55,3 +55,18 @@
 [submodule ".emacs.d/nginx-mode"]
 	path = .emacs.d/nginx-mode
 	url = https://github.com/ajc/nginx-mode.git
+[submodule ".emacs.d/emacs-epc"]
+	path = .emacs.d/emacs-epc
+	url = https://github.com/kiwanami/emacs-epc
+[submodule ".emacs.d/emacs-deferred"]
+	path = .emacs.d/emacs-deferred
+	url = https://github.com/kiwanami/emacs-deferred
+[submodule ".emacs.d/emacs-ctable"]
+	path = .emacs.d/emacs-ctable
+	url = https://github.com/kiwanami/emacs-ctable
+[submodule ".emacs.d/emacs-jedi"]
+	path = .emacs.d/emacs-jedi
+	url = https://github.com/tkf/emacs-jedi
+[submodule ".emacs.d/emacs-python-environment"]
+	path = .emacs.d/emacs-python-environment
+	url = https://github.com/tkf/emacs-python-environment
