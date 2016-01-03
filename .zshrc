@@ -81,6 +81,9 @@ export PATH=$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:$PA
 # Emacs bindkeys please
 bindkey -e
 
+# Used later by script in order to launch the right shell
+export SHELL="$(which zsh)"
+
 # Logs all shell sessions using script
 ps -p $PPID | grep script &>/dev/null
 ps_retval=$?
