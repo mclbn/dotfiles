@@ -49,7 +49,7 @@
 
 ;;; Tell emacs where is your personal elisp lib dir
 ;;; this is default dir for extra packages
-(add-to-list 'load-path "~/.emacs.d/")
+(add-to-list 'load-path "~/.emacs.d/lisp")
 
 ;;; make characters after column 80 purple
 (setq whitespace-style
