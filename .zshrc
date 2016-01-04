@@ -1,5 +1,3 @@
-echo "FIRST +++ $PATH"
-
 # This .zshrc file is meant to be used with oh-my-zsh
 # Path to your oh-my-zsh configuration.
 ZSH=$HOME/.oh-my-zsh
