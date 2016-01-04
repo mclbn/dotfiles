@@ -1,3 +1,5 @@
+echo "FIRST +++ $PATH"
+
 # This .zshrc file is meant to be used with oh-my-zsh
 # Path to your oh-my-zsh configuration.
 ZSH=$HOME/.oh-my-zsh
@@ -75,9 +77,6 @@ plugins=(git cp encode64 extract gem git history mercurial perl python svn)
 
 source $ZSH/oh-my-zsh.sh
 
-# Initial PATH
-export PATH=$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:$PATH
-
 # Emacs bindkeys please
 bindkey -e
 
@@ -93,6 +92,9 @@ if [[ "$ps_retval" -ne 0 ]]; then
     local filename=$ZSH_SESSION_LOG_DIR/typescript_$(date +"%d_%m_%y-%k_%M-%S" | tr -d ' ')
     echo "A typescript of this session will be saved as $filename."
     script -f --force -q "$filename"
+else
+    # Initial PATH, not set again inside the script session
+    export PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:$HOME/bin:$PATH
 fi
 
 export TERM=xterm-256color
@@ -115,4 +117,3 @@ if [ -d ~/.zshrc.d ]; then
         done
     fi
 fi
-
