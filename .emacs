@@ -71,6 +71,12 @@
 (add-to-list 'load-path "~/.emacs.d/php-mode")
 (load "php-mode")
 
+;;; lua-mode (https://github.com/immerrr/lua-mode)
+(add-to-list 'load-path "~/.emacs.d/lua-mode")
+(autoload 'lua-mode "lua-mode" "Lua editing mode." t)
+(add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
+    (add-to-list 'interpreter-mode-alist '("lua" . lua-mode))
+
 ;;; smali/baksmali mode (https://github.com/strazzere/Emacs-Smali)
 (add-to-list 'load-path "~/.emacs.d/Emacs-Smali")
 (autoload 'smali-mode "smali-mode" "Major mode for editing and viewing smali issues" t)
