@@ -92,7 +92,7 @@ if [[ "$ps_retval" -ne 0 ]]; then
     script -f --force -q "$filename"
 else
     # Initial PATH, not set again inside the script session
-    export PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:$HOME/bin:$PATH
+    export PATH=$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:$PATH
 fi
 
 export TERM=xterm-256color
