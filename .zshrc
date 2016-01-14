@@ -71,12 +71,12 @@ setopt multios
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(git cp encode64 extract gem git history mercurial perl python svn)
+plugins=(git cp encode64 extract gem git history mercurial perl python svn docker vagrant)
 
 source $ZSH/oh-my-zsh.sh
 
 # Initial PATH
-export PATH=$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:$PATH
+export PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:$HOME/bin:$PATH
 
 # Emacs bindkeys please
 bindkey -e
