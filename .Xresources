@@ -17,6 +17,12 @@ xterm*ScrollBar: false
 XTerm*locale: utf8
 XTerm*metaSendsEscape: true
 
+XTerm*visualBell: false
+
+xterm*faceName: DejaVu Sans Mono Book
+xterm*faceSize: 10
+xterm*vt100*geometry: 120x40
+
 urxvt*foreground: rgb:a8/a8/a8
 urxvt*background: rgb:00/00/00
 urxvt*loginshell: true
