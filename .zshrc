@@ -75,11 +75,11 @@ plugins=(git cp encode64 extract gem git history mercurial perl python svn docke
 
 source $ZSH/oh-my-zsh.sh
 
-# Initial PATH
-export PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:$HOME/bin:$PATH
-
 # Emacs bindkeys please
 bindkey -e
+
+# Used later by script in order to launch the right shell
+export SHELL="$(which zsh)"
 
 # Logs all shell sessions using script
 ps -p $PPID | grep script &>/dev/null
@@ -90,6 +90,9 @@ if [[ "$ps_retval" -ne 0 ]]; then
     local filename=$ZSH_SESSION_LOG_DIR/typescript_$(date +"%d_%m_%y-%k_%M-%S" | tr -d ' ')
     echo "A typescript of this session will be saved as $filename."
     script -f --force -q "$filename"
+else
+    # Initial PATH, not set again inside the script session
+    export PATH=$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:$PATH
 fi
 
 export TERM=xterm-256color
@@ -112,4 +115,3 @@ if [ -d ~/.zshrc.d ]; then
         done
     fi
 fi
-
