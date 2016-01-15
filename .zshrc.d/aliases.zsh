@@ -1,5 +1,5 @@
 # overriding previous aliases
-alias ls='ls'
+alias ls='ls -F'
 alias grep='grep'
 
 alias setenv="export"
