@@ -176,7 +176,7 @@
 
 ;;; Rtags for cmake-ide (require compilation and installation of https://github.com/Andersbakken/rtags)
 (add-to-list 'load-path "/usr/local/share/emacs/site-lisp/rtags/")
-(require 'rtags)
+;; (require 'rtags)
 (global-set-key (kbd "C-c s") 'rtags-find-symbol-at-point)
 (global-set-key (kbd "C-c r") 'rtags-find-references-at-point)
 (global-set-key (kbd "C-c v") 'rtags-find-virtuals-at-point)
