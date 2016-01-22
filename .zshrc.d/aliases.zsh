@@ -17,5 +17,7 @@ alias grep_full='grep -aiRPoH'
 alias wget_no_cert_verify 'wget --no-check-certificate'5D
 alias tree='tree | less'
 alias chmox='chmod +x'
+alias emacs='emacs -nw'
+alias ne='emacs -Q'
 
 alias git_update_fork='git pull && git fetch upstream && git merge upstream/master && git push origin master'
