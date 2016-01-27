@@ -64,6 +64,15 @@
 ;;; Shortcut to clean whitespaces
 (global-set-key (kbd "C-c w") 'whitespace-cleanup)
 
+;; Flyspell settings
+(add-hook 'text-mode-hook 'flyspell-mode)
+; (add-hook 'prog-mode-hook 'flyspell-prog-mode)
+(setq ispell-dictionary "francais")
+
+;;; Mutt / mail-mode
+(setq auto-mode-alist (append '(("/home/marc/.mutt/temp/mutt.*" . mail-mode)) auto-mode-alist))
+(add-hook 'mail-mode-hook 'turn-on-auto-fill)
+
 ;;; Script-shell-mode on zsh
 (add-to-list 'auto-mode-alist '(".zsh$" . shell-script-mode))
 
