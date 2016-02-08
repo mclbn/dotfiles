@@ -15,6 +15,9 @@
 ;;; Disable the welcome message
 (setq inhibit-startup-message t)
 
+;;; Disable menubar
+(menu-bar-mode -1)
+
 ;;; Enable mouse support
 (unless window-system
   (require 'mouse)
@@ -166,6 +169,20 @@
 (add-hook 'python-mode-hook 'jedi:setup)
 (setq jedi:complete-on-dot t)
 (global-set-key (kbd "C-c p") 'jedi:get-in-function-call)
+
+(add-to-list 'load-path "~/.emacs.d/tuareg")
+(autoload 'tuareg-mode "tuareg" "Major mode for editing Caml code" t)
+(autoload 'camldebug "camldebug" "Run the Caml debugger" t)
+(autoload 'tuareg-imenu-set-imenu "tuareg-imenu"
+  "Configuration of imenu for tuareg" t)
+
+(add-hook 'tuareg-mode-hook 'tuareg-imenu-set-imenu)
+
+(setq auto-mode-alist
+      (append '(("\\.ml[ily]?$" . tuareg-mode)
+                ("\\.topml$" . tuareg-mode))
+              auto-mode-alist))
+
 
 ;;; Clang systgem include locations must be specified
 (setq ac-clang-flags
