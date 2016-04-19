@@ -15,7 +15,7 @@ alias ssh='ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -o UseRoaming
 alias grep_urls="grep -aiRPoH 'https?://[a-zA-Z0-9\-\_\.\~\!\*'\''\(\)\;\:\@\&\=\+\$\,\/\?\#\[\]\%]+'|sed 's/:/,/'"
 alias grep_full='grep -aiRPoH'
 alias wget_no_cert_verify 'wget --no-check-certificate'5D
-alias tree='tree | less'
+#alias tree='tree | less'
 alias chmox='chmod +x'
 alias emacs='emacs -nw'
 alias ne='emacs -Q'
