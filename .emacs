@@ -54,6 +54,26 @@
 ;;; this is default dir for extra packages
 (add-to-list 'load-path "~/.emacs.d/lisp")
 
+;;; Backup files location and versioning
+(defvar --backup-directory (concat user-emacs-directory "backups"))
+(defvar --auto-save-directory (concat user-emacs-directory "auto-save/"))
+(if (not (file-exists-p --backup-directory))
+    (make-directory --backup-directory t))
+(if (not (file-exists-p --auto-save-directory))
+    (make-directory --auto-save-directory t))
+(setq backup-directory-alist `(("." . ,--backup-directory)))
+(setq auto-save-file-name-transforms `((".*" ,--auto-save-directory t)))
+(setq make-backup-files t    ; backup of a file the first time it is saved.
+      backup-by-copying t    ; Don't delink hardlinks
+      version-control t      ; Use version numbers on backups
+      delete-old-versions t  ; Automatically delete excess backups
+      kept-new-versions 20   ; how many of the newest versions to keep
+      kept-old-versions 5    ; and how many of the old
+      auto-save-default t               ; auto-save every buffer that visits a file
+      auto-save-timeout 20              ; number of seconds idle time before auto-save (default: 30)
+      auto-save-interval 200            ; number of keystrokes between auto-saves (default: 300)
+)
+
 ;;; make characters after column 80 purple
 (setq whitespace-style
   (quote (face trailing tab-mark lines-tail)))
@@ -82,6 +102,15 @@
 ;;; php-mode (https://github.com/ejmr/php-mode)
 (add-to-list 'load-path "~/.emacs.d/php-mode")
 (load "php-mode")
+
+(require 'asm-mode)
+(add-hook 'asm-mode-hook (lambda ()
+                           (setq indent-tabs-mode nil) ; use spaces to indent
+                           (electric-indent-mode -1) ; indentation in asm-mode is annoying
+                           (setq tab-stop-list (number-sequence 2 60 2))))
+
+(define-key asm-mode-map (kbd "<ret>") 'newline-and-indent)
+(define-key asm-mode-map (kbd "M-.") 'helm-etags-select)
 
 ;;; lua-mode (https://github.com/immerrr/lua-mode)
 (add-to-list 'load-path "~/.emacs.d/lua-mode")
