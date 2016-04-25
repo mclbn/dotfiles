@@ -22,4 +22,9 @@ alias ne='emacs -Q'
 
 alias git_update_fork='git pull && git fetch upstream && git merge upstream/master && git push origin master'
 
-alias shred_all='find . -type f -exec shred -u {} \;'
+if [[ $(uname) == "OpenBSD" ]]; then
+	alias shred='rm -P'
+	alias shred_all='find . -type f -exec rm -P {} \;'
+else
+	alias shred_all='find . -type f -exec shred -u {} \;'
+fi
