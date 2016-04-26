@@ -76,3 +76,6 @@
 [submodule ".emacs.d/tuareg"]
 	path = .emacs.d/tuareg
 	url = https://github.com/ocaml/tuareg
+[submodule ".emacs.d/openbsd-knf-emacs"]
+	path = .emacs.d/openbsd-knf-emacs
+	url = https://github.com/hogand/openbsd-knf-emacs.git

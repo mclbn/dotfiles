@@ -18,6 +18,13 @@
 ;;; Disable menubar
 (menu-bar-mode -1)
 
+;;; edit compressed files
+(auto-compression-mode 1)
+
+;;; Search / query highlighting
+(setq search-highlight 1)
+(setq query-replace-highlight 1)
+
 ;;; Enable mouse support
 (unless window-system
   (require 'mouse)
@@ -76,7 +83,7 @@
 
 ;;; make characters after column 80 purple
 (setq whitespace-style
-  (quote (face trailing tab-mark lines-tail)))
+  (quote (face trailing tab-mark lines-tail space-before-tab)))
 (add-hook 'find-file-hook 'whitespace-mode)
 
 ;;; whitespace-mode to view all whitespace characters
@@ -132,9 +139,15 @@
 
 ;;; Basic settings for C-mode
 (require 'cc-mode)
-(setq c-basic-offset 4 c-default-style "linux")
+;;(setq c-basic-offset 4 c-default-style "linux")
+;;(setq-default tab-width 4 indent-tabs-mode nil)
 (global-set-key (kbd "RET") 'newline-and-indent)
-(setq-default tab-width 4 indent-tabs-mode nil)
+
+;; OpenBSD KNF for C/C++
+(add-to-list 'load-path "~/.emacs.d/openbsd-knf-emacs")
+(require 'openbsd-knf-style)
+(c-add-style "OpenBSD" openbsd-knf-style)
+(setq c-default-style '((c-mode . "OpenBSD")))
 
 (add-to-list 'load-path "~/.emacs.d/dockerfile-mode")
 (require 'dockerfile-mode)
@@ -287,7 +300,7 @@
 (add-to-list 'load-path "~/.emacs.d/semantic-stickyfunc-enhance")
 (require 'stickyfunc-enhance)
 
-;;; Helm config for manpages at point<0;75;45m[
+;;; Helm config for manpages at point
 (add-to-list 'helm-sources-using-default-as-input 'helm-source-man-pages)
 ;;; fuzzy matching for some of Helm features
 (setq helm-buffers-fuzzy-matching t
