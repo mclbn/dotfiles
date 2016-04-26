@@ -1,3 +1,3 @@
 export PAGER='less'
-export VISUAL="emacs -nw"
-export EDITOR="emacs -nw"
+export VISUAL="emc"
+export EDITOR="emc"
