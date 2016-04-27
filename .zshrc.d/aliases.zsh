@@ -30,3 +30,5 @@ else
 	alias shred_all='find . -type f -exec shred -u {} \;'
 fi
 
+alias docker_cleanup='sudo docker-gc ; docker volume ls -qf dangling=true | xargs -r docker volume rm'
+alias docker_volume_cleanup='docker volume ls -qf dangling=true | xargs -r docker volume rm'
