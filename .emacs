@@ -242,6 +242,14 @@
 "
                )))
 
+;;; Add cmake listfile names to the mode list.
+(autoload 'cmake-mode "~/.emacs.d/lisp/cmake-mode.el" t)
+(setq auto-mode-alist
+      (append
+       '(("CMakeLists\\.txt\\'" . cmake-mode))
+       '(("\\.cmake\\'" . cmake-mode))
+          auto-mode-alist))
+
 ;;; Rtags for cmake-ide (require compilation and installation of https://github.com/Andersbakken/rtags)
 (add-to-list 'load-path "/usr/local/share/emacs/site-lisp/rtags/")
 ;; (require 'rtags)
