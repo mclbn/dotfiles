@@ -1,0 +1,5 @@
+setg PromptTimeFormat "%I:%H:%S"
+setg PROMPT "%grn%T%clr%yel@%clr%red%%H%clr : %L%clr (s:%red%S%clr j:%red%J%clr) msf "
+<ruby>
+run_single("spool /home/marc/log/msf/" + Time.new.strftime("%Y%m%d_%H-%M-%S") + "_console.log")
+</ruby>
