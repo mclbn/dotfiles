@@ -1,7 +1,7 @@
 xterm*termName: xterm-256color
 
-xterm*foreground: rgb:a8/a8/a8
-xterm*background: rgb:00/00/00
+! xterm*foreground: rgb:a8/a8/a8
+! xterm*background: rgb:00/00/00
 
 xterm*loginshell: true
 
@@ -38,3 +38,43 @@ urxvt*ScrollBar: false
 ! UTF-8 support
 urxvt*locale: utf8
 urxvt*metaSendsEscape: true
+
+! Zenburn
+
+#define ZB_COLOR_BG #3a3a3a
+#define ZB_COLOR_FG #dcdccc
+#define ZB_COLOR_BLACK #1E2320
+#define ZB_COLOR_DARK_RED #b20e0e
+#define ZB_COLOR_DARK_GREEN #60b48a
+#define ZB_COLOR_DARK_YELLOW #dfaf8f
+#define ZB_COLOR_DARK_BLUE #506070
+#define ZB_COLOR_DARK_MAGENTA #dc8cc3
+#define ZB_COLOR_DARK_CYAN #8cd0d3
+#define ZB_COLOR_LIGHT_GREY #dcdccc
+#define ZB_COLOR_DARK_GREY #709080
+#define ZB_COLOR_LIGHT_RED #dca3a3
+#define ZB_COLOR_LIGHT_GREEN #c3bf9f
+#define ZB_COLOR_LIGHT_YELLOW #f0dfaf
+#define ZB_COLOR_LIGHT_BLUE #94bff3
+#define ZB_COLOR_LIGHT_MAGENTA #ec93d3
+#define ZB_COLOR_LIGHT_CYAN #93e0e3
+#define ZB_COLOR_WHITE #ffffff
+
+xterm*background:  ZB_COLOR_BG
+xterm*foreground:  ZB_COLOR_FG
+xterm*color0:      ZB_COLOR_BLACK
+xterm*color1:      ZB_COLOR_DARK_RED
+xterm*color2:      ZB_COLOR_DARK_GREEN
+xterm*color3:      ZB_COLOR_DARK_YELLOW
+xterm*color4:      ZB_COLOR_DARK_BLUE
+xterm*color5:      ZB_COLOR_DARK_MAGENTA
+xterm*color6:      ZB_COLOR_DARK_CYAN
+xterm*color7:      ZB_COLOR_LIGHT_GREY
+xterm*color8:      ZB_COLOR_DARK_GREY
+xterm*color9:      ZB_COLOR_LIGHT_RED
+xterm*color10:     ZB_COLOR_LIGHT_GREEN
+xterm*color11:     ZB_COLOR_LIGHT_YELLOW
+xterm*color12:     ZB_COLOR_LIGHT_BLUE
+xterm*color13:     ZB_COLOR_LIGHT_MAGENTA
+xterm*color14:     ZB_COLOR_LIGHT_CYAN
+xterm*color15:     ZB_COLOR_WHITE
