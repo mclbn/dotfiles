@@ -32,3 +32,6 @@ fi
 
 alias docker_cleanup='sudo docker-gc ; docker volume ls -qf dangling=true | xargs -r docker volume rm'
 alias docker_volume_cleanup='docker volume ls -qf dangling=true | xargs -r docker volume rm'
+
+alias cmake-release='cmake -DCMAKE_BUILD_TYPE=Release'
+alias cmake-debug='cmake -DCMAKE_BUILD_TYPE=Debug'
