@@ -20,6 +20,7 @@ XTerm*metaSendsEscape: true
 XTerm*visualBell: false
 
 xterm*faceName: DejaVu Sans Mono Book
+! xterm*faceSize: 11
 xterm*faceSize: 11
 xterm*vt100*geometry: 120x40
 
@@ -78,3 +79,5 @@ xterm*color12:     ZB_COLOR_LIGHT_BLUE
 xterm*color13:     ZB_COLOR_LIGHT_MAGENTA
 xterm*color14:     ZB_COLOR_LIGHT_CYAN
 xterm*color15:     ZB_COLOR_WHITE
+
+UXTerm*metaSendsEscape: true
