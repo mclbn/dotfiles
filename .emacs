@@ -110,6 +110,11 @@
 (add-to-list 'load-path "~/.emacs.d/php-mode")
 (load "php-mode")
 
+;;; arduino-mode (https://github.com/bookest/arduino-mode)
+(add-to-list 'load-path "~/.emacs.d/arduino-mode")
+(setq auto-mode-alist (cons '("\\.\\(pde\\|ino\\)$" . arduino-mode) auto-mode-alist))
+(autoload 'arduino-mode "arduino-mode" "Arduino editing mode." t)
+
 (require 'asm-mode)
 (add-hook 'asm-mode-hook (lambda ()
                            (setq indent-tabs-mode nil) ; use spaces to indent
@@ -347,9 +352,10 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(ac-candidate-limit 10)
- '(ediff-window-setup-function 'ediff-setup-windows-plain)
  '(ediff-diff-options "-w")
- '(ediff-split-window-function 'split-window-horizontally))
+ '(ediff-split-window-function 'split-window-horizontally)
+ '(ediff-window-setup-function 'ediff-setup-windows-plain)
+ '(package-selected-packages '(arduino-mode sr-speedbar flycheck cmake-ide)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
