@@ -21,7 +21,7 @@ XTerm*visualBell: false
 
 xterm*faceName: DejaVu Sans Mono Book
 ! xterm*faceSize: 11
-xterm*faceSize: 11
+xterm*faceSize: 13
 xterm*vt100*geometry: 120x40
 
 urxvt*foreground: rgb:a8/a8/a8
