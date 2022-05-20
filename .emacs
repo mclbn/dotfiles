@@ -85,6 +85,8 @@
 (setq whitespace-style
   (quote (face trailing tab-mark lines-tail space-before-tab)))
 (add-hook 'find-file-hook 'whitespace-mode)
+;;; also display column number
+(setq column-number-mode t)
 
 ;;; whitespace-mode to view all whitespace characters
 (setq show-trailing-whitespace t)
