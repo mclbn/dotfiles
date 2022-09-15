@@ -57,6 +57,9 @@
 ;;; Use y or n instead of yes or not
 (fset 'yes-or-no-p 'y-or-n-p)
 
+;;; Backspace is backspace
+(keyboard-translate ?\C-h ?\C-?)
+
 ;;; Tell emacs where is your personal elisp lib dir
 ;;; this is default dir for extra packages
 (add-to-list 'load-path "~/.emacs.d/lisp")
@@ -188,7 +191,7 @@
 (require 'yasnippet)
 (yas-global-mode 1)
 
-;;; Popup-el (needed by Autocomplete, https://github.com/auto-complete/popup-el)
+;;; Popup-el (needed by Autocomplete and Helm, https://github.com/auto-complete/popup-el)
 (add-to-list 'load-path "~/.emacs.d/popup-el")
 
 ;;; Autocomplete (https://github.com/auto-complete/auto-complete)
