@@ -115,6 +115,7 @@
 
 ;; Projectile : project management
 (use-package projectile
+  :diminish
   :bind
   ("C-c p" . projectile-command-map)
   :custom
@@ -214,8 +215,7 @@
   :config
   ;; X11 emacs is usually full-screen on widescreen
   (if (display-graphic-p)
-      (which-key-setup-side-window-right)
-    )
+      (which-key-setup-side-window-right))
   (which-key-mode))
 
 ;; Undo-tree
@@ -274,6 +274,21 @@
 (keyboard-translate ?\C-h ?\C-?)
 (global-set-key "\C-h" 'delete-backward-char)
 
+;; Also M-DEL should kill last word
+(defun delete-word (arg)
+  "Delete characters forward until encountering the end of a word.
+With argument, do this that many times."
+  (interactive "p")
+  (if (use-region-p)
+      (delete-region (region-beginning) (region-end))
+    (delete-region (point) (progn (forward-word arg) (point)))))
+(defun backward-delete-word (arg)
+  "Delete characters backward until encountering the end of a word.
+With argument, do this that many times."
+  (interactive "p")
+  (delete-word (- arg)))
+(global-set-key (read-kbd-macro "<M-DEL>") 'backward-delete-word)
+
 ;; Use y or n instead of yes or not
 (fset 'yes-or-no-p 'y-or-n-p)
 
@@ -297,23 +312,6 @@
   (defun track-mouse (e))
   (setq mouse-sel-mode t)
   )
-
-;; Smooth scrolling
-(if (display-graphic-p)
-    (progn
-      ;; Vertical Scroll
-      (setq scroll-step 1)
-      (setq scroll-margin 1)
-      (setq scroll-conservatively 101)
-      (setq scroll-up-aggressively 0.01)
-      (setq scroll-down-aggressively 0.01)
-      (setq auto-window-vscroll nil)
-      (setq fast-but-imprecise-scrolling nil)
-      (setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))
-      (setq mouse-wheel-progressive-speed nil)
-      ;; Horizontal Scroll
-      (setq hscroll-step 1)
-      (setq hscroll-margin 1)))
 
 ;; Function to abort minibuffer on mouse click
 (defun abort-minibuffer-using-mouse ()
@@ -441,23 +439,6 @@
 ;; Shortcut to clean whitespaces
 (global-set-key (kbd "C-z w") 'whitespace-cleanup)
 
-;;; X11 / Windows configuration
-;; Disable dialog box (if using X or Windows)
-(when (display-graphic-p)
-  (setq use-dialog-box nil))
-
-;; Adjust font size and shortcuts
-(if (display-graphic-p)
-    (progn
-      (set-frame-font "DejaVu Sans Mono-13" nil t)
-      (global-set-key (kbd "C-=") #'text-scale-increase)
-      (global-set-key (kbd "C-+") #'text-scale-increase)
-      (global-set-key (kbd "C--") #'text-scale-decrease)))
-
-;; X11 Alt is Meta
-(if (display-graphic-p)
-    (setq x-alt-keysym 'meta))
-
 ;;; Languages and spell-checking
 ;; Guess-language : automatic language detection
 (use-package guess-language
@@ -520,8 +501,6 @@
 ;; Magit : Git interface
 (use-package magit
   :if (executable-find "git")
-  ;; deferring to prevent startup slow-down
-  :defer 3
   :bind
   (("C-x g" . magit-status)
    (:map magit-status-mode-map
@@ -552,8 +531,7 @@
   (global-flycheck-mode)
   (if (display-graphic-p)
       (use-package flycheck-pos-tip
-	:hook (flycheck-mode . flycheck-pos-tip-mode))
-    )
+	    :hook (flycheck-mode . flycheck-pos-tip-mode)))
   :config
   (use-package flycheck-popup-tip
     :hook (flycheck-mode . flycheck-popup-tip-mode)))
@@ -836,6 +814,7 @@
 
 ;; Arduino / Teensy specific C / C++ code
 (use-package platformio-mode
+  :diminish
   :config
   (add-hook 'c++-mode-hook (lambda ()
                              (lsp-deferred)
@@ -929,12 +908,51 @@
 ;;   (load-theme 'gruvbox t)
 ;; )
 
+;;; X11 / Windows configuration
+
+;; Need a wrapper and hook because emacs --daemon won't load fonts
+(defun apply-gui-stuff ()
+  (interactive)
+  (when (display-graphic-p)
+    ;; Adjust font size and shortcuts
+    (set-frame-font "DejaVu Sans Mono-13" nil t)
+    (global-set-key (kbd "C-=") #'text-scale-increase)
+    (global-set-key (kbd "C-+") #'text-scale-increase)
+    (global-set-key (kbd "C--") #'text-scale-decrease)
+    ;; Disable dialog box (if using X or Windows)
+    (setq use-dialog-box nil)
+    ;; X11 Alt is Meta
+    (setq x-alt-keysym 'meta)
+    ;; Smooth scrolling
+    ;; Vertical Scroll
+    (setq scroll-step 1)
+    (setq scroll-margin 1)
+    (setq scroll-conservatively 101)
+    (setq scroll-up-aggressively 0.01)
+    (setq scroll-down-aggressively 0.01)
+    (setq auto-window-vscroll nil)
+    (setq fast-but-imprecise-scrolling nil)
+    (setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))
+    (setq mouse-wheel-progressive-speed nil)
+    ;; Horizontal Scroll
+    (setq hscroll-step 1)
+    (setq hscroll-margin 1)
+    ;; Fix highlight-indent-guide visual glitch when started by daemon
+    (highlight-indent-guides-auto-set-faces)
+    ;; Fix which-key settings not applied when started by daemon
+    (which-key-setup-side-window-right)
+    ))
+
+(if (display-graphic-p)
+    (apply-gui-stuff))
+(add-hook 'server-after-make-frame-hook #'apply-gui-stuff)
+
 ;;; Final common-use bindings
-(global-set-key (kbd "C-z m") 'woman) ; Manpages
+(global-set-key (kbd "C-z m") 'woman) ; Man pages
 
 ;;; Startup time
 ;; Let's finish loading this file by displaying how much time we took to start
-(defun efs/display-startup-time ()
+(defun display-startup-time ()
   (message
    "Emacs loaded in %s with %d garbage collections."
    (format
@@ -942,7 +960,7 @@
     (float-time
      (time-subtract after-init-time before-init-time)))
    gcs-done))
-(add-hook 'emacs-startup-hook #'efs/display-startup-time)
+(add-hook 'emacs-startup-hook #'display-startup-time)
 
 (provide 'init)
 ;;; init.el ends here
