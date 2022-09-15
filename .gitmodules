@@ -1,84 +1,12 @@
 [submodule ".emacs.d/Emacs-Smali"]
 	path = .emacs.d/Emacs-Smali
 	url = https://github.com/strazzere/Emacs-Smali
-[submodule ".emacs.d/php-mode"]
-	path = .emacs.d/php-mode
-	url = https://github.com/ejmr/php-mode
-[submodule ".emacs.d/markdown-mode"]
-	path = .emacs.d/markdown-mode
-	url = https://github.com/defunkt/markdown-mode
-[submodule ".emacs.d/smartparens"]
-	path = .emacs.d/smartparens
-	url = https://github.com/Fuco1/smartparens
-[submodule ".emacs.d/dash.el"]
-	path = .emacs.d/dash.el
-	url = https://github.com/magnars/dash.el
-[submodule ".emacs.d/yasnippet"]
-	path = .emacs.d/yasnippet
-	url = https://github.com/capitaomorte/yasnippet
-[submodule ".emacs.d/popup-el"]
-	path = .emacs.d/popup-el
-	url = https://github.com/auto-complete/popup-el
-[submodule ".emacs.d/auto-complete"]
-	path = .emacs.d/auto-complete
-	url = https://github.com/auto-complete/auto-complete
-[submodule ".emacs.d/auto-complete-clang"]
-	path = .emacs.d/auto-complete-clang
-	url = https://github.com/brianjcj/auto-complete-clang
-[submodule ".emacs.d/clean-aindent-mode"]
-	path = .emacs.d/clean-aindent-mode
-	url = https://github.com/pmarinov/clean-aindent-mode
-[submodule ".emacs.d/helm"]
-	path = .emacs.d/helm
-	url = https://github.com/emacs-helm/helm
-[submodule ".emacs.d/emacs-async"]
-	path = .emacs.d/emacs-async
-	url = https://github.com/jwiegley/emacs-async.git
-[submodule ".emacs.d/semantic-stickyfunc-enhance"]
-	path = .emacs.d/semantic-stickyfunc-enhance
-	url = https://github.com/tuhdo/semantic-stickyfunc-enhance
-[submodule ".emacs.d/helm-ls-git"]
-	path = .emacs.d/helm-ls-git
-	url = https://github.com/emacs-helm/helm-ls-git
-[submodule ".emacs.d/themes/zenburn-emacs"]
-	path = .emacs.d/themes/zenburn-emacs
-	url = https://github.com/bbatsov/zenburn-emacs
 [submodule ".zshrc.d/functions"]
 	path = .zshrc.d/functions
 	url = https://github.com/MarcVador/zsh-functions
-[submodule ".emacs.d/multi-term"]
-	path = .emacs.d/multi-term
-	url = https://github.com/emacsmirror/multi-term
-[submodule ".emacs.d/dockerfile-mode"]
-	path = .emacs.d/dockerfile-mode
-	url = https://github.com/spotify/dockerfile-mode
-[submodule ".emacs.d/nginx-mode"]
-	path = .emacs.d/nginx-mode
-	url = https://github.com/ajc/nginx-mode.git
-[submodule ".emacs.d/emacs-epc"]
-	path = .emacs.d/emacs-epc
-	url = https://github.com/kiwanami/emacs-epc
-[submodule ".emacs.d/emacs-deferred"]
-	path = .emacs.d/emacs-deferred
-	url = https://github.com/kiwanami/emacs-deferred
-[submodule ".emacs.d/emacs-ctable"]
-	path = .emacs.d/emacs-ctable
-	url = https://github.com/kiwanami/emacs-ctable
-[submodule ".emacs.d/emacs-jedi"]
-	path = .emacs.d/emacs-jedi
-	url = https://github.com/tkf/emacs-jedi
-[submodule ".emacs.d/emacs-python-environment"]
-	path = .emacs.d/emacs-python-environment
-	url = https://github.com/tkf/emacs-python-environment
-[submodule ".emacs.d/lua-mode"]
-	path = .emacs.d/lua-mode
-	url = https://github.com/immerrr/lua-mode
-[submodule ".emacs.d/tuareg"]
-	path = .emacs.d/tuareg
-	url = https://github.com/ocaml/tuareg
 [submodule ".emacs.d/openbsd-knf-emacs"]
 	path = .emacs.d/openbsd-knf-emacs
 	url = https://github.com/hogand/openbsd-knf-emacs.git
-[submodule ".emacs.d/arduino-mode"]
-	path = .emacs.d/arduino-mode
-	url = https://github.com/bookest/arduino-mode.git
+[submodule ".emacs.d/color-rg"]
+	path = .emacs.d/color-rg
+	url = https://github.com/manateelazycat/color-rg
