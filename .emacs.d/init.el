@@ -313,15 +313,6 @@ With argument, do this that many times."
   (setq mouse-sel-mode t)
   )
 
-;; Function to abort minibuffer on mouse click
-(defun abort-minibuffer-using-mouse ()
-  "Abort the minibuffer when using the mouse."
-  (when (and (>= (recursion-depth) 1) (active-minibuffer-window))
-    (abort-recursive-edit)))
-(add-hook 'mouse-leave-buffer-hook 'abort-minibuffer-using-mouse)
-;; keep the point out of the minibuffer
-(setq-default minibuffer-prompt-properties '(read-only t point-entered minibuffer-avoid-prompt face minibuffer-prompt))
-
 ;;; Backups, history and custom variables
 ;; Backup files location and versioning
 (defvar --backup-directory (concat user-emacs-directory "backups"))
