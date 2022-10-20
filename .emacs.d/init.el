@@ -451,7 +451,7 @@ With argument, do this that many times."
   (interactive)
   (move-end-of-line nil)
   (newline-and-indent))
-(bind-key "M-<return>" #'pt/eol-then-newline)
+(define-key prog-mode-map (kbd "M-<return>") #'pt/eol-then-newline)
 
 ;; Insert char by name
 (bind-key "C-c C-e i" #'insert-char)
