@@ -22,6 +22,8 @@
 (menu-bar-mode -1)
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
+;; Do not show default modeline until doom-modeline is loaded
+(setq-default mode-line-format nil)
 
 ;; Because undo-tree throws a warning about cl being deprecated
 (setq byte-compile-warnings '(cl-functions))

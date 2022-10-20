@@ -25,7 +25,12 @@
 ;; Custom C / C++ style definition
 ;; Org-mode
 ;; - Disable unused modules to speedup startup ?
+;; - org-super-agenda
+;; - org-fancy-priorities
 ;; General startup speed optimizations
+;; Properly configure Web mode
+;; Visual-regexp (https://github.com/benma/visual-regexp.el)
+;; Have a look at Perspective (https://github.com/nex3/perspective-el and https://alhassy.github.io/emacs.d/#Having-a-workspace-manager-in-Emacs)
 
 ;;; First, let's ensure that early-init is loaded on older Emacs versions
 (cond ((version< emacs-version "26.1")
@@ -50,9 +55,9 @@
 ;;; Personal information is stored in a non-versioned file
 (defvar personal-info (concat user-emacs-directory "perso.el"))
 (let ((personal-settings personal-info))
- (when (file-exists-p personal-settings)
-   (load-file personal-settings))
-)
+  (when (file-exists-p personal-settings)
+    (load-file personal-settings))
+  )
 
 ;;; Configuration for package.el
 (require 'package)
@@ -84,6 +89,15 @@
   (require 'use-package)
   (require 'bind-key))
 
+(use-package  quelpa
+  :ensure t
+  :init
+  (setq quelpa-update-melpa-p nil) ; no auto update (faster startup)
+  )
+
+(use-package  quelpa-use-package
+  :ensure t)
+
 ;;; Early packages
 ;; Use Garbage collector magic hack ASAP
 (use-package gcmh
@@ -92,7 +106,9 @@
   (gcmh-mode 1))
 
 ;; Diminish : reduces info about modes in bottom bar
-(use-package diminish)
+(use-package diminish
+  :config
+  (diminish 'visual-line-mode))
 
 ;;; Unbinding unneeded keys that will be bound by upcoming packages
 
@@ -100,7 +116,6 @@
 (global-set-key (kbd "M-}") nil)
 (global-set-key (kbd "C-z") nil)
 (global-set-key (kbd "M-z") nil)
-(global-set-key (kbd "M-m") nil)
 
 ;;; Main packages
 
@@ -184,6 +199,8 @@
   ;; Detect external file changes and auto refresh file
   (auto-revert-use-notify nil)
   (auto-revert-interval 3) ; Auto revert every 3 sec
+  ;; Probe ls for capabilities
+  (dired-use-ls-dired 'unspecified)
   :config
   ;; Reuse same dired buffer, to prevent numerous buffers while navigating in dired
   (put 'dired-find-alternate-file 'disabled nil)
@@ -227,7 +244,9 @@
   (undo-tree-visualizer-diff t)
   ;; Undos are stored on disk in a subdirectory of the user directory
   (undo-tree-history-directory-alist `(("." . ,(expand-file-name "undos" user-emacs-directory))))
-  (undo-tree-visualizer-timestamps t))
+  (undo-tree-visualizer-timestamps t)
+  :bind
+  ("C-z u" . undo-tree-visualize))
 
 ;; Ace-window : window selection & management
 (use-package ace-window
@@ -259,6 +278,19 @@
      (mark " "
            (name 16 -1)
            " " filename))))
+
+;; Helpful: help menu replacement
+(use-package helpful
+  :config
+  (global-set-key (kbd "C-h f") #'helpful-callable)
+  (global-set-key (kbd "C-h v") #'helpful-variable)
+  (global-set-key (kbd "C-h k") #'helpful-key)
+  (global-set-key (kbd "C-c C-d") #'helpful-at-point)
+  (global-set-key (kbd "C-h F") #'helpful-function)
+  (global-set-key (kbd "C-h C") #'helpful-command)
+  (setq counsel-describe-function-function #'helpful-callable)
+  (setq counsel-describe-variable-function #'helpful-variable)
+  )
 
 ;;; Absolute must-have tweaks and settings
 ;; Disable the welcome message
@@ -294,6 +326,13 @@ With argument, do this that many times."
 
 ;; Show Keystrokes in Progress Instantly
 (setq echo-keystrokes 0.1)
+
+;; Calendar weeks start on monday
+(setq calendar-week-start-day 1)
+
+;; Calendar timezones
+(set-time-zone-rule "GMT+1")
+(setq org-icalendar-timezone "GMT+1")
 
 ;; Disable bells
 (setq visible-bell nil
@@ -371,6 +410,9 @@ With argument, do this that many times."
 (global-set-key (kbd "C-z g") 'goto-line)
 (global-set-key (kbd "C-z /") 'comment-or-uncomment-region)
 
+;; We wrap at 80
+(setq-default fill-column 80)
+
 ;; Don't Lock Files
 (setq-default create-lockfiles nil)
 
@@ -404,10 +446,42 @@ With argument, do this that many times."
 ;; Always end a file with a newline
 (setq require-final-newline t)
 
+(defun pt/eol-then-newline ()
+  "Go to end of line, then newline-and-indent."
+  (interactive)
+  (move-end-of-line nil)
+  (newline-and-indent))
+(bind-key "M-<return>" #'pt/eol-then-newline)
+
+;; Insert char by name
+(bind-key "C-c C-e i" #'insert-char)
+
+;; Expand-region : incrementally select region
+(use-package expand-region
+  :bind ("C-+" . er/expand-region))
+
+(use-package multiple-cursors
+  :bind
+  (("C-c C-e m" . #'mc/edit-lines)
+   ("C-c C-e d" . #'mc/mark-all-dwim)))
+
+;; Move-text: move text with M-<arrows> a-la org
+(use-package move-text
+  :config (move-text-default-bindings))
+
+(use-package change-inner
+  :diminish
+  :bind (("M-i" . #'change-inner)
+         ("M-o" . #'change-outer)))
+
+(use-package comment-dwim-2
+  :bind
+  ("M-;" . comment-dwim-2))
+
 ;;; Visual configuration
 ;; Show line numbers on the left
 (require 'linum)
-(global-linum-mode t)
+(add-hook 'prog-mode-hook 'linum-mode)
 (setq linum-format "%3d \u2502 ")
 
 ;; Highlight current line
@@ -420,7 +494,8 @@ With argument, do this that many times."
 ;; make characters after column 80 purple
 (setq whitespace-style
   (quote (face trailing tab-mark lines-tail space-before-tab)))
-(add-hook 'find-file-hook 'whitespace-mode)
+(add-hook 'prog-mode-hook 'whitespace-mode)
+;; (add-hook 'find-file-hook 'whitespace-mode)
 ;; also display column number
 (setq column-number-mode t)
 
@@ -429,6 +504,94 @@ With argument, do this that many times."
 
 ;; Shortcut to clean whitespaces
 (global-set-key (kbd "C-z w") 'whitespace-cleanup)
+
+;; Wrap lines in compilation and flycheck buffers
+(add-hook 'compilation-mode-hook 'visual-line-mode)
+(add-hook 'flycheck-error-list-mode-hook 'visual-line-mode)
+
+(defun pt/split-window ()
+  "Split a window."
+  (interactive)
+  (split-window-right)
+  (balance-windows))
+(bind-key "C-c 2" #'pt/split-window)
+
+(defun pt/split-window-thirds ()
+  "Split a window into thirds."
+  (interactive)
+  (split-window-right)
+  (split-window-right)
+  (balance-windows))
+(bind-key "C-c 3" #'pt/split-window-thirds)
+
+;;All-the-icons : unified icon pack
+;; Requires manually installing the fonts with M-x all-the-icons-install-fonts
+(use-package all-the-icons
+  :if (display-graphic-p))
+
+(use-package minimap
+  :quelpa (minimap :repo "mclbn/minimap" :fetcher github :commit "master")
+  :diminish minimap-mode
+  :init
+  (setq minimap-window-location 'right
+    minimap-width-fraction 0.04
+    minimap-hide-scroll-bar nil
+    minimap-hide-fringes nil
+    minimap-dedicated-window t
+    minimap-minimum-width 15)
+  :custom-face
+  (minimap-font-face ((t (:height 13 :weight bold :width condensed
+                          :spacing dual-width :family "VT323"))))
+  (minimap-active-region-background ((t (:extend t :background "gray24"))))
+  :config
+  (setq minimap-major-modes '(prog-mode text-mode))
+  (global-set-key (kbd "C-c m") #'minimap-mode)
+  )
+
+(use-package centaur-tabs
+  :demand
+  :init
+  (setq centaur-tabs-style "bar"
+        centaur-tabs-set-bar 'left
+        centaur-tabs-height 20
+        centaur-tabs-cycle-scope 'default
+        centaur-tabs-show-navigation-buttons nil
+        centaur-tabs-show-new-tab-button nil
+        centaur-tabs-set-close-button nil
+        centaur-tabs-set-icons t
+        centaur-tabs-set-bar 'over
+        centaur-tabs-set-modified-marker t
+        centaur-tabs-modified-marker "*")
+  :config
+  (set-face-attribute 'centaur-tabs-active-bar-face nil :background "green")
+  ;; Quick and dirty fix for the light grey tab bar
+  (set-face-attribute 'tab-line nil ;; background behind tabs
+                      :background "#3F3F3F"
+                      :foreground "#2B2B2B" :distant-foreground "#2B2B2B"
+                      :height 1.0 :box nil)
+  (global-set-key (kbd "C-c t") 'centaur-tabs-mode)
+;;  (centaur-tabs-mode t)
+  :bind
+  ("C-<prior>" . centaur-tabs-backward)
+  ("C-<next>" . centaur-tabs-forward))
+
+(use-package beacon
+  :diminish
+  :config (setq beacon-color "#5F7F5F")
+  :hook   ((org-mode text-mode prog-mode) . beacon-mode))
+
+(use-package dimmer
+  :pin melpa ;; the good version is on melpa, not melpa-stable
+  :custom
+  (dimmer-fraction 0.2)
+  :config
+  (dimmer-mode))
+
+(use-package centered-window
+  :bind
+  ("C-z c" . centered-window-mode)
+  :custom
+  (cwm-centered-window-width 120))
 
 ;;; Languages and spell-checking
 ;; Guess-language : automatic language detection
@@ -473,21 +636,97 @@ With argument, do this that many times."
           ("C-." . flyspell-correct-wrapper))
     :custom (flyspell-correct-interface #'flyspell-correct-ivy)))
 
+;; Flycheck-grammalecte : french syntax checking
+;; May require running grammalecte-download-grammalecte once
+(use-package flycheck-grammalecte
+  :ensure t
+  :after flycheck
+  :init
+  (setq flycheck-grammalecte-report-spellcheck nil
+        flycheck-grammalecte-report-grammar t
+        flycheck-grammalecte-report-apos nil
+        flycheck-grammalecte-report-esp nil
+        flycheck-grammalecte-report-nbsp nil)
+  :config
+  (setq flycheck-grammalecte-filters-by-mode
+        '((latex-mode "\\\\(?:title|(?:sub)*section){([^}]+)}"
+                      "\\\\\\w+(?:\\[[^]]+\\])?(?:{[^}]*})?")
+          (org-mode "(?ims)^[ \t]*#\\+begin_src.+?#\\+end_src"
+                    "(?ims)^[ \t]*:LOGBOOK:.+?:END:"
+                    "(?ims)^[ \t]*:PROPERTIES:.+?:END:"
+                    "(?im):.*:" ; tags
+                    "(?im)<.*>" ; timestamps
+                    "(?im)\\[.*\\]" ; links, progress, etc.
+                    "(?im)^[ \t]*\-[ \t]*" ; checkboxes
+                    "(?im)(?im)[0-9]+" ; numbers
+                    "(?im)^[ \t]*#\\+begin[_:].+$"
+                    "(?im)^[ \t]*#\\+end[_:].+$"
+                    "(?m)^[ \t]*(?:DEADLINE|SCHEDULED):.+$"
+                    "(?m)^\\*+ .*[ \t]*(:[\\w:@]+:)[ \t]*$"
+                    "(?im)^[ \t]*#\\+(?:caption|description|keywords|(?:sub)?title):"
+                    "(?im)^[ \t]*#\\+(?!caption|description|keywords|(?:sub)?title)\\w+:.*$")
+          (message-mode "(?m)^[ \t]*(?:[\\w_.]+>|[]>|]).*")))
+  (grammalecte-download-grammalecte)
+  (flycheck-grammalecte-setup))
+
+;; sdcv : Stardict dictionnary
+(when (executable-find "sdcv")
+  (use-package sdcv
+    :bind
+    (("C-c d" . sdcv-search-pointer)
+     ("C-c w" . sdcv-search-input))
+    :config
+    (setq sdcv-dictionary-data-dir "~/.stardic/dic")
+    (setq sdcv-dictionary-simple-list    ;setup dictionary list for simple search
+          '("XMLittre"
+            ))
+    (setq sdcv-dictionary-complete-list     ;setup dictionary list for complete search
+          '(
+            "XMLittre"
+            "Dictionnaire de l’Académie Française, 8ème édition (1935)."
+            "Oxford Advanced Learner's Dictionary 8th Ed."
+            "Oxford English Dictionary 2nd Ed. P1"
+            "Oxford English Dictionary 2nd Ed. P2"
+            ))
+    ))
+
 ;;; General programming
 ;; Better Compilation
 (setq-default compilation-always-kill t) ; kill compilation process before starting another
 (setq-default compilation-ask-about-save nil) ; save all buffers on `compile'
 (setq-default compilation-scroll-output t)
 
+;; Show current function in mode bar
+(add-hook 'prog-mode-hook #'which-function-mode)
+
 ;; Smartparens : auto parenthesis,  etc.
 (use-package smartparens
   :diminish
   :hook (prog-mode . smartparens-mode)
+  :bind
+  (("C-(" . sp-backward-up-sexp)
+   ("C-)" . sp-down-sexp))
   :custom
   (sp-escape-quotes-after-insert nil)
   :config
   ;; Stop pairing single quotes in elisp
   (sp-local-pair 'emacs-lisp-mode "'" nil :actions nil))
+
+;; Rainbow-delimiters : colors for parenthesis
+(use-package rainbow-delimiters
+  :diminish
+  :ensure t
+  :hook (prog-mode . rainbow-delimiters-mode))
+
+;; Color-identifiers-mode : symbol colors
+(use-package color-identifiers-mode
+  :diminish
+  :ensure t
+  :init
+  ;; Enabled by default for now to try it out
+  (global-color-identifiers-mode)
+  ;; :commands color-identifiers-mode
+  )
 
 ;; Magit : Git interface
 (use-package magit
@@ -520,12 +759,19 @@ With argument, do this that many times."
   :diminish
   :init
   (global-flycheck-mode)
-  (if (display-graphic-p)
-      (use-package flycheck-pos-tip
-	    :hook (flycheck-mode . flycheck-pos-tip-mode)))
+  :custom
+  (flycheck-checker-error-threshold nil)
   :config
   (use-package flycheck-popup-tip
-    :hook (flycheck-mode . flycheck-popup-tip-mode)))
+    :hook (flycheck-mode . flycheck-popup-tip-mode))
+  (add-to-list 'display-buffer-alist
+             `(,(rx bos "*Flycheck errors*" eos)
+              (display-buffer-reuse-window
+               display-buffer-in-side-window)
+              (side            . bottom)
+              (reusable-frames . visible)
+              (window-height   . 0.33))))
+
 
 ;; Dumb-jump : simple "jump to definition" tool
 (use-package dumb-jump
@@ -559,15 +805,18 @@ With argument, do this that many times."
   (highlight-indent-guides-responsive 'top)
   (highlight-indent-guides-delay 0))
 
+;; Electric-operator : add spaces around operators
+(use-package electric-operator
+  :diminish
+  :hook ((c-mode c++-mode python-mode rust-mode java-mode php-mode) . electric-operator-mode))
+
 ;; Quickrun : compile and run quickly
 (use-package quickrun
   :custom
   (quickrun-timeout-seconds 60)
   :bind
   (("<f5>" . quickrun)
-   ("M-<f5>" . quickrun-shell)
-   ("C-c e" . quickrun)
-   ("C-c C-e" . quickrun-shell)))
+   ("M-<f5>" . quickrun-shell)))
 
 ;;; Completion
 ;; Company : completion engine
@@ -586,6 +835,7 @@ With argument, do this that many times."
   (company-require-match 'never)
   (company-transformers '(company-sort-by-occurrence))
   (company-show-numbers t)
+  (company-dabbrev-downcase nil)
   ;; invert the navigation direction if the the completion popup-isearch-match
   ;; is displayed on top (happens near the bottom of windows)
   (company-tooltip-flip-when-above t)
@@ -603,7 +853,10 @@ With argument, do this that many times."
   (add-hook 'text-mode-hook
             (lambda ()
               (setq-local company-backends
-                          '((company-dabbrev company-ispell :separate)
+                          '((company-capf
+                             company-dabbrev
+                             company-ispell
+                             :separate)
                             company-files))
               ))
   (add-hook 'org-mode-hook
@@ -635,6 +888,38 @@ With argument, do this that many times."
   :config
    (company-quickhelp-terminal-mode 1))
 
+(use-package company-box
+  :diminish
+  :hook (company-mode . company-box-mode)
+  :config
+  (when (require 'all-the-icons nil t)
+    (declare-function all-the-icons-faicon 'all-the-icons)
+    (declare-function all-the-icons-material 'all-the-icons)
+    (declare-function all-the-icons-octicon 'all-the-icons)))
+
+(use-package doom-modeline
+  :ensure t
+  :custom
+  ;; Don't compact font caches during GC. Windows Laggy Issue
+  (inhibit-compacting-font-caches t)
+  (doom-modeline-minor-modes t)
+  (doom-modeline-icon t)
+  (doom-modeline-major-mode-color-icon t)
+  (doom-modeline-buffer-encoding t)
+  (doom-modeline-checker-simple-format nil)
+  (doom-modeline-window-width-limit nil)
+  (doom-modeline-enable-word-count t)
+  (doom-modeline-gnus nil)
+  (doom-modeline-irc t)
+  (doom-modeline-height 1)
+  (all-the-icons-scale-factor 1.2)
+  :init (doom-modeline-mode 1)
+  :config
+  (doom-modeline-def-modeline 'main
+                              '(bar workspace-name window-number matches follow buffer-info remote-host buffer-position word-count selection-info)
+                              '(objed-state misc-info persp-name grip debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process vcs checker " "))
+  )
+
 ;;; File navigation UI
 ;; Treemacs : visual tree
 (use-package treemacs
@@ -645,6 +930,8 @@ With argument, do this that many times."
   :config
   (treemacs-project-follow-mode t)
   :init
+  (use-package treemacs-all-the-icons
+    :ensure t)
   (use-package treemacs-icons-dired
     :hook (dired-mode . treemacs-icons-dired-enable-once)
     :ensure t
@@ -706,7 +993,7 @@ With argument, do this that many times."
         ([remap xref-find-definitions] . lsp-ui-peek-find-definitions) ; M-.
         ([remap xref-find-references] . lsp-ui-peek-find-references) ; M-?
         ("C-c u" . lsp-ui-imenu)
-        ("M-i" . lsp-ui-doc-focus-frame))
+        ("C-x l i" . lsp-ui-doc-focus-frame))
   :custom
   (lsp-ui-doc-show-with-cursor t)
   ;; We prefer the less intruding binding to lsp-ui-doc-glance
@@ -760,6 +1047,12 @@ With argument, do this that many times."
   (setenv "WORKON_HOME" "~/.virtualenvs")
   )
 
+;; Elisp
+;; Highlight-defined Elisp symbols
+(use-package highlight-defined
+  :hook (emacs-lisp-mode . highlight-defined-mode))
+
+
 ;; Java
 ;; Jsp-java : lsp-mode integration
 (use-package lsp-java
@@ -802,6 +1095,9 @@ With argument, do this that many times."
     :config
     (with-eval-after-load 'rust-mode
       (add-hook 'flycheck-mode-hook #'flycheck-rust-setup))))
+
+;; Scad-mode
+(use-package scad-mode)
 
 ;; Arduino / Teensy specific C / C++ code
 (use-package platformio-mode
@@ -857,17 +1153,103 @@ With argument, do this that many times."
   :ensure t
   :defer t
   :custom
+  (org-modules (quote
+                (org-crypt
+                 org-id
+                 ol-info
+                 org-habit
+                 org-protocol)))
+  (org-agenda-start-on-weekday 1)
   (org-hide-emphasis-markers t)
-  (org-startup-indented t)
+  (org-startup-indented nil)
+  (org-adapt-indentation nil)
+  (org-startup-truncated nil)
+  (org-startup-folded 'overview)
+  (org-directory "~/org")
+  (org-agenda-files '("perso.org" "work.org" "notes.org"))
+  (org-refile-targets `((nil :maxlevel . 9)
+                        (("perso.org" "work.org" "notes.org") :maxlevel . 9)))
+                        ;; (,(directory-files-recursively "~/org/" "^[a-z0-9]*.org$") :maxlevel . 9)))
+  (org-refile-use-outline-path 'file)
+  (org-outline-path-complete-in-steps nil)
+  (org-refile-allow-creating-parent-nodes 'confirm)
   (org-todo-keywords
-   '((sequence "TODO" "IN-PROGRESS" "REVIEW" "|" "DONE" "CANCELED")))
+   '((sequence "TODO(t/!)" "NEXT(n/!)" "STARTED(s/!)" "WAITING(w@/!)" "SOMEDAY(f/!)" "|" "DONE(d/!)" "CANCELED(c/!)")))
+  (org-todo-keyword-faces
+   '(("NEXT" . (:foreground "IndianRed1" :weight bold))
+     ("STARTED" . (:foreground "OrangeRed" :weight bold))
+     ("WAITING" . (:foreground "coral" :weight bold))
+     ("SOMEDAY" . (:foreground "LimeGreen" :weight bold))
+     ("RATED" . (:foreground "Gold" :weight bold))
+     ))
+  (org-src-fontify-natively t)
+;  (org-todo-repeat-to-state "TODO")
+  (org-log-into-drawer "LOGBOOK")
+  (org-log-done 'time)
+  (org-log-reschedule 'time)
+  (org-log-redeadline 'note)
+  (org-log-note-headings '((done        . "CLOSING NOTE %t")
+                           (state       . "State %-12s from %-12S %t")
+                           (note        . "Note taken on %t")
+                           (reschedule  . "Schedule changed on %t: %S -> %s")
+                           (delschedule . "Not scheduled, was %S on %t")
+                           (redeadline  . "Deadline changed on %t: %S -> %s")
+                           (deldeadline . "Removed deadline, was %S on %t")
+                           (refile      . "Refiled on %t")
+                           (clock-out   . "")))
+  (org-hierarchical-todo-statistics t)
+  (org-tags-exclude-from-inheritance (quote ("crypt" "project")))
+  (org-agenda-include-diary t)
+  (org-habit-show-habits-only-for-today t)
+  (org-deadline-warning-days 7)
+  (org-reverse-note-order nil)
+  (org-blank-before-new-entry (quote ((heading . audo)
+                                      (plain-list-item . auto))))
+  (org-return-follows-link t)
+  (org-special-ctrl-a/e t)
+  (org-special-ctrl-k t)
+  (org-yank-adjusted-subtrees t)
+  (org-catch-invisible-edits 'smart)
+  (org-use-property-inheritance nil) ; for performance
+  (org-cycle-separator-lines 2)
   :bind
   ("C-z a" . org-agenda)
+  :config
+  (require 'org-id)
+  (defun org-schedule-force-note ()
+    "Call org-schedule but make sure it prompts for re-scheduling note."
+    (interactive)
+    (let ((org-log-reschedule "note"))
+      (call-interactively 'org-schedule)))
+  (define-key org-mode-map (kbd "C-c C-S-s") 'org-schedule-force-note)
+  (defun org-deadline-force-note ()
+  "Call org-deadline but make sure it prompts for re-deadlining note."
+  (interactive)
+  (let ((org-log-redeadline "note"))
+    (call-interactively 'org-deadline)))
+  (define-key org-mode-map (kbd "C-c C-S-d") 'org-deadline-force-note)
+  (setq org-agenda-custom-commands
+      '(("c" . "My Custom Agendas")
+        ("cu" "Unscheduled TODO"
+         ((todo ""
+                ((org-agenda-overriding-header "\nUnscheduled TODO")
+                 (org-agenda-skip-function '(org-agenda-skip-entry-if 'scheduled 'deadline 'todo '("SOMEDAY" "WAITING"))))))
+         nil
+         nil)))
+  (add-hook 'org-mode-hook  #'which-function-mode)
   )
-  ;; ;; company compatibility (https://github.com/company-mode/company-mode/issues/50)
-  ;; (defun add-pcomplete-to-capf ()
-  ;;   (add-hook 'completion-at-point-functions 'pcomplete-completions-at-point nil t))
-  ;; (add-hook 'org-mode-hook #'add-pcomplete-to-capf)
+;; ;; company compatibility (https://github.com/company-mode/company-mode/issues/50)
+;; (defun add-pcomplete-to-capf ()
+;;   (add-hook 'completion-at-point-functions 'pcomplete-completions-at-point nil t))
+;; (add-hook 'org-mode-hook #'add-pcomplete-to-capf)
+
+(when (executable-find "gpg")
+  (require 'org-crypt)
+  (org-crypt-use-before-save-magic)
+  (setq org-crypt-key "511079E5FEC0BA66B53C9A625D01D510BEBDD2FF")
+  (require 'epa-file)
+  (epa-file-enable)
+  )
 
 ;; Org-superstar : beautify org-mode
 (use-package org-superstar
@@ -875,8 +1257,222 @@ With argument, do this that many times."
   :hook (org-mode . org-superstar-mode)
   :custom
   (org-hide-leading-stars t)
+  (org-superstar-remove-leading-stars t)
   (org-superstar-special-todo-items t)
+  (org-superstar-todo-bullet-alist '(
+                                     ("TODO" . ?☐)
+                                     ("TOWATCH" . ?☐)
+                                     ("NEXT" . ?▻)
+                                     ("STARTED" . ?►)
+                                     ("WAITING" . ?…)
+                                     ("SOMEDAY" . ?∞)
+                                     ("DONE" . ?☑)
+                                     ("WATCHED" . ?☑)
+                                     ("CANCELED" . ?☒)
+                                     ("RATED" . ?★)
+                                     ))
   )
+
+(use-package org-super-links
+  :quelpa (org-super-links :repo "toshism/org-super-links" :fetcher github :commit "develop")
+  :bind (("C-c s s" . sl-link)
+	     ("C-c s l" . sl-store-link)
+	     ("C-c s C-l" . sl-insert-link)))
+
+(use-package org-edna
+  :config
+  (require 'org-edna)
+  (org-edna-load))
+
+(use-package org-linker
+  :quelpa (org-linker :repo "toshism/org-linker" :fetcher github :commit "master"))
+
+(use-package org-linker-edna
+  :quelpa (org-linker-edna :repo "toshism/org-linker-edna" :fetcher github :commit "master")
+  :bind (("C-c s e" . org-linker-edna)) ;; follows org-super-link binding patterns
+  )
+
+(use-package org-books
+  :custom
+  (org-books-file "~/org/books.org")
+  (org-books-file-depth 1)
+  )
+
+(use-package orgmdb
+  :ensure t
+  :diminish
+  :quelpa (orgmdb :fetcher github :repo "isamert/orgmdb.el")
+  :bind
+  (("C-z o m" . orgmdb-fill-movie-properties))
+  :custom
+  (orgmdb-omdb-apikey "ce9ed4b5")
+  (orgmdb-fill-property-list '(title released genre runtime rated director writer actors plot country language imdb metacritic tomatometer imdb-id))
+  )
+
+;;; Mail management
+;; Include protonmail-bridge cert
+(require 'gnutls)
+(add-to-list 'gnutls-trustfiles (expand-file-name "~/.config/protonmail/bridge/cert.pem"))
+;; mu4e
+(use-package mu4e
+  ;; We want the version that comes with mu, not from melpa
+  :ensure nil
+  :commands (mu4e make-mu4e-context)
+  :custom
+  (mu4e-maildir (expand-file-name "~/.mail"))
+  (mu4e-attachment-dir  "~/Downloads/")
+  (mu4e-change-filenames-when-moving t) ; work better for mbsync
+  (mu4e-get-mail-command "mbsync protonmail gmail")
+  (mu4e-view-show-addresses t)
+  (mu4e-compose-dont-reply-to-self t)
+  (message-kill-buffer-on-exit t)
+  (mu4e-headers-auto-update t)
+  (mu4e-headers-skip-duplicates t)
+  (mu4e-view-show-images t)
+  (mu4e-view-prefer-html t)
+  (mu4e-use-fancy-chars t)
+  (mu4e-headers-precise-alignment t)
+  (mu4e-headers-date-format "%d-%m-%Y")
+  (mu4e-headers-fields
+   '((:human-date . 13)
+     (:flags . 10)
+     (:mailing-list . 10)
+     (:from . 25)
+     (:subject)))
+  ;; index-cleanup and index-lazy-check are needed with mbsync/gmail
+  (mu4e-index-cleanup t)
+  (mu4e-index-lazy-check nil)
+;  (mu4e-html2text-command "html2text -utf8 -width 72")
+  (mu4e-html2text-command "w3m -dump -T text/html")
+  (mu4e-decryption-policy 'ask)
+  :config
+  ;; org-mode integration
+  (require 'org-mu4e)
+  ;; This is bound globally later
+  (unbind-key "C--" mu4e-headers-mode-map)
+  ;; mu4e-action-view-in-browser is built into mu4e
+  ;; by adding it to these lists of custom actions
+  ;; it can be invoked by first pressing a, then selecting
+  (add-to-list 'mu4e-headers-actions
+               '("in browser" . mu4e-action-view-in-browser) t)
+  (add-to-list 'mu4e-view-actions
+               '("in browser" . mu4e-action-view-in-browser) t)
+
+  ;; Marking for deletion only move to trash folder
+(setf (alist-get 'trash mu4e-marks)
+      (list :char '("d" . "▼")
+            :prompt "dtrash"
+            :dyn-target (lambda (target msg)
+                          (mu4e-get-trash-folder msg))
+            :action (lambda (docid msg target)
+                      ;; Here's the main difference to the regular trash mark,
+                      ;; no +T before -N so the message is not marked as
+                      ;; IMAP-deleted:
+                      (mu4e--server-move docid (mu4e--mark-check-target target) "+S-u-N"))))
+
+  ;; Tag message
+  (add-to-list 'mu4e-marks
+               '(tag
+                 :char       "g"
+                 :prompt     "gtag"
+                 :ask-target (lambda () (read-string "What tag do you want to add?"))
+                 :action      (lambda (docid msg target)
+                                (mu4e-action-retag-message msg (concat "+" target)))))
+  (mu4e~headers-defun-mark-for tag)
+  (define-key mu4e-headers-mode-map (kbd "g") 'mu4e-headers-mark-for-tag)
+
+  ;; Archive Gmail-style
+  (add-to-list 'mu4e-marks
+               '(archive
+                 :char       "A"
+                 :prompt     "Archive"
+                 :show-target (lambda (target) mu4e-archive-folder)
+                 :action      (lambda (docid msg target)
+                                ;; must come before proc-move since retag runs
+                                ;; 'sed' on the file
+                                (mu4e-action-retag-message msg "-\\Inbox")
+                                (mu4e--server-move docid mu4e-archive-folder "+S-u-N"))))
+  (mu4e~headers-defun-mark-for archive)
+  (define-key mu4e-headers-mode-map (kbd "A") 'mu4e-headers-mark-for-archive)
+
+  ;; Mark as read and move to spam
+  (add-to-list 'mu4e-marks
+               '(spam
+                 :char       "X"
+                 :prompt     "Spam"
+                 :show-target (lambda (target) mu4e-spam-folder)
+                 :action      (lambda (docid msg target)
+                                (mu4e-action-retag-message msg "-\\Inbox")
+                                (mu4e--server-move docid mu4e-spam-folder "+S-u-N"))))
+  (mu4e~headers-defun-mark-for spam)
+  (define-key mu4e-headers-mode-map (kbd "X") 'mu4e-headers-mark-for-spam)
+
+  (setq mu4e-contexts
+        (list
+         (make-mu4e-context
+          :name "protonmail"
+          :enter-func (lambda () (mu4e-message "Entering context protonmail"))
+          :leave-func (lambda () (mu4e-message "Leaving context protonmail"))
+          :match-func
+          (lambda (msg)
+            (when msg
+              (string-match "protonmail" (mu4e-message-field msg :maildir))))
+          :vars `((user-mail-address . ,protonmail-user-mail-address) ; in perso.el
+                  (user-full-name . ,protonmail-user-full-name) ; in perso.el
+                  (mu4e-sent-folder . "/protonmail/sent")
+                  (mu4e-drafts-folder . "/protonmail/drafts")
+                  (mu4e-trash-folder . "/protonmail/trash")
+                  (mu4e-refile-folder. "/protonmail/archive")
+                  (mu4e-archive-folder . "/protonmail/archive")
+                  (mu4e-spam-folder . "/protonmail/spam")
+                  (message-send-mail-function . smtpmail-send-it)
+                  (smtpmail-stream-type . starttls)
+                  (smtpmail-default-smtp-server . "127.0.0.1")
+                  (smtpmail-smtp-server . "127.0.0.1")
+                  (smtpmail-smtp-service . 1025)))
+         (make-mu4e-context
+          :name "gmail"
+          :enter-func (lambda () (mu4e-message "Entering context gmail"))
+          :leave-func (lambda () (mu4e-message "Leaving context gmail"))
+          :match-func
+          (lambda (msg)
+            (when msg
+              (string-match "gmail" (mu4e-message-field msg :maildir))))
+          :vars `((user-mail-address . ,gmail-user-mail-address) ; in perso.el
+                  (user-full-name . ,gmail-user-full-name) ; in perso.el
+                  (mu4e-sent-folder . "/gmail/sent")
+                  (mu4e-drafts-folder . "/gmail/drafts")
+                  (mu4e-trash-folder . "/gmail/trash")
+                  (mu4e-refile-folder. "/gmail/archive")
+                  (mu4e-archive-folder . "/gmail/archive")
+                  (mu4e-spam-folder . "/gmail/spam")
+                  (mu4e-sent-messages-behavior . delete) ; IMAP takes care of it
+                  (message-send-mail-function . smtpmail-send-it)
+                  (smtpmail-stream-type . starttls)
+                  (smtpmail-default-smtp-server . "smtp.gmail.com")
+                  (smtpmail-smtp-server . "smtp.gmail.com")
+                  (smtpmail-smtp-service . 587)
+                  ))))
+  ;; Encryption settings
+  (setq mml-secure-openpgp-sign-with-sender t
+        mml-secure-openpgp-encrypt-to-self t)
+  )
+
+;; Default mail agent for emacs
+(require 'mu4e)
+(setq mail-user-agent 'mu4e-user-agent)
+
+;; Small hook so Flyspell skip headers
+(defun flyspell-skip-mail-headers (begin _end _ignored)
+  "Returns non-nil if BEGIN position is in mail header."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((end-header
+           (re-search-forward "^--text follows this line--[[:space:]]*$" nil t)))
+      (when end-header
+        (< begin end-header)))))
+(add-hook 'flyspell-incorrect-hook #'flyspell-skip-mail-headers)
+
 
 ;;; Color themes
 ;;; Zenburn color theme
@@ -900,7 +1496,6 @@ With argument, do this that many times."
 ;; )
 
 ;;; X11 / Windows configuration
-
 ;; Need a wrapper and hook because emacs --daemon won't load fonts
 (defun apply-gui-stuff ()
   (interactive)
@@ -908,7 +1503,6 @@ With argument, do this that many times."
     ;; Adjust font size and shortcuts
     (set-frame-font "DejaVu Sans Mono-13" nil t)
     (global-set-key (kbd "C-=") #'text-scale-increase)
-    (global-set-key (kbd "C-+") #'text-scale-increase)
     (global-set-key (kbd "C--") #'text-scale-decrease)
     ;; Disable dialog box (if using X or Windows)
     (setq use-dialog-box nil)
@@ -940,6 +1534,12 @@ With argument, do this that many times."
 
 ;;; Final common-use bindings
 (global-set-key (kbd "C-z m") 'woman) ; Man pages
+
+(defun open-init-file ()
+  "Open init file"
+  (interactive)
+  (find-file "~/.emacs.d/init.el"))
+(bind-key "C-z e" #'open-init-file)
 
 ;;; Startup time
 ;; Let's finish loading this file by displaying how much time we took to start
