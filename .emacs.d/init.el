@@ -16,7 +16,7 @@
 ;; - Custom lists for spellchecking (flyspell) and completion (company)
 ;; - ispell completion with company
 ;; show parentheses out of reach (https://with-emacs.com/posts/ui-hacks/show-matching-lines-when-parentheses-go-off-screen/)
-;; Check out random stuff : avy, crux
+;; Check out random stuff : tramp, crux
 ;; Maybe something to automatically add headers
 ;; Bindings to learn :
 ;; - treemacs
@@ -149,7 +149,7 @@
   (ivy-mode 1)
   :bind
   (("C-s" . swiper-isearch)
-   ("C-z s" . counsel-rg)
+   ("C-z g" . counsel-rg)
    ("C-z r" . counsel-recentf)
    ("C-z b" . counsel-buffer-or-recentf)
    ("C-z C-b" . counsel-ibuffer)
@@ -167,6 +167,12 @@
 (use-package ivy-prescient
   :after prescient
   :hook (ivy-mode . ivy-prescient-mode))
+
+(use-package avy
+  :custom
+  (avy-background nil)
+  (avy-timeout-seconds 0.7)
+  :bind (("C-:" . avy-goto-char-timer)))
 
 ;; Color-rg : searching & refactoring
 (use-package color-rg
@@ -186,8 +192,9 @@
   (("C-x C-j" . dired-jump))
   :custom
   ;; Always delete and copy recursively
-  (dired-listing-switches "-lah")
-  (dired-recursive-deletes 'always)
+  (dired-listing-switches "-lahp --group-directories-first")
+  (dired-hide-details-hide-symlink-targets nil)
+  (dired-recursive-deletes 'top)
   (dired-recursive-copies 'always)
   ;; Auto refresh Dired, but be quiet about it
   (global-auto-revert-non-file-buffers t)
@@ -201,16 +208,60 @@
   (auto-revert-interval 3) ; Auto revert every 3 sec
   ;; Probe ls for capabilities
   (dired-use-ls-dired 'unspecified)
+  (dired-omit-files "^\\...+$\\|\\`[.]?#\\|\\`[.][.]?\\'")
   :config
   ;; Reuse same dired buffer, to prevent numerous buffers while navigating in dired
   (put 'dired-find-alternate-file 'disabled nil)
+  ;; open with external application
+  (defun dired-open-external ()
+    "In dired, open the file named on this line."
+    (interactive)
+    (let* ((file (dired-get-filename nil t)))
+      (call-process "xdg-open" nil 0 nil file)))
+  (define-key dired-mode-map (kbd "C-<return>") #'dired-open-external)
+;;   (defun open-in-external-app ()
+;;     "Open the file where point is or the marked files in Dired in external
+;; app. The app is chosen from your OS's preference."
+;;     (interactive)
+;;     (let* ((file-list
+;;             (dired-get-marked-files)))
+;;       (mapc
+;;        (lambda (file-path)
+;;          (let ((process-connection-type nil))
+;;            (start-process "" nil "xdg-open" (shell-quote-argument file-path)))) file-list)))
+
+
+  (use-package diredfl
+    :config
+    (setq
+     diredfl-dir-heading '(:foreground ,zenburn-green)
+     diredfl-dir-name '(:foreground ,zenburn-green))
+    :hook (dired-mode . diredfl-mode))
+
+  (use-package dired-git-info
+    :custom
+    (dgi-auto-hide-details-p nil)
+    :bind (:map dired-mode-map (")" . dired-git-info-mode))
+    )
+
   :hook
   (dired-mode . auto-revert-mode)
+  (dired-mode . dired-omit-mode)
+  (dired-mode . dired-hide-details-mode)
   (dired-mode . (lambda ()
-                  (local-set-key (kbd "<mouse-2>") #'dired-find-alternate-file)
+                  (local-set-key (kbd "<mouse-2>") #'dired-find-file)
                   (local-set-key (kbd "RET") #'dired-find-alternate-file)
+                  (local-set-key (kbd "M-RET") #'dired-find-file)
                   (local-set-key (kbd "^")
                                  (lambda () (interactive) (find-alternate-file ".."))))))
+
+(use-package all-the-icons-dired
+  :after all-the-icons
+  :hook (dired-mode . all-the-icons-dired-mode)
+  :custom
+  (all-the-icons-dired-monochrome nil)
+  :init
+  (advice-add 'all-the-icons-dired--icon :around #'all-the-icons-pad-families-on-tty-advice+))
 
 ;; Disk-usage : browse by sorting disk usage
 ;; Is this really useful in the scope of a text editor / IDE ?
@@ -234,6 +285,20 @@
   (if (display-graphic-p)
       (which-key-setup-side-window-right))
   (which-key-mode))
+
+(defun clipboard-swap () "Swaps the clipboard contents with the highlighted region"
+    (interactive)
+    (if (use-region-p)
+        (progn
+            (setq
+                reg-beg (region-beginning)
+                reg-end (region-end))
+            (deactivate-mark)
+            (goto-char reg-end)
+            (clipboard-yank)
+            (clipboard-kill-region reg-beg reg-end))
+        (clipboard-yank)))
+(global-set-key (kbd "C-z y") 'clipboard-swap) ; Yank with the Shift key to swap instead of paste.
 
 ;; Undo-tree
 (use-package undo-tree
@@ -327,12 +392,16 @@ With argument, do this that many times."
 ;; Show Keystrokes in Progress Instantly
 (setq echo-keystrokes 0.1)
 
+;; Yes to recursive minibuffers
+(setq enable-recursive-minibuffers t)
+(minibuffer-depth-indicate-mode)
+
 ;; Calendar weeks start on monday
 (setq calendar-week-start-day 1)
 
 ;; Calendar timezones
-(set-time-zone-rule "GMT+1")
-(setq org-icalendar-timezone "GMT+1")
+(set-time-zone-rule "CET")
+(setq org-icalendar-timezone "CET")
 
 ;; Disable bells
 (setq visible-bell nil
@@ -397,7 +466,9 @@ With argument, do this that many times."
                      "recentf"
                      "undo-tree-hist"
                      "url"
-                     "COMMIT_EDITMSG\\'")))
+                     "COMMIT_EDITMSG\\'"))
+  :config
+  (run-at-time nil (* 5 60) 'recentf-save-list))
 
 ;; Move Custom-Set-Variables to Different File
 (setq custom-file (concat user-emacs-directory "custom-set-variables.el"))
@@ -454,7 +525,7 @@ With argument, do this that many times."
 (define-key prog-mode-map (kbd "M-<return>") #'pt/eol-then-newline)
 
 ;; Insert char by name
-(bind-key "C-c C-e i" #'insert-char)
+(bind-key "C-z e i" #'insert-char)
 
 ;; Expand-region : incrementally select region
 (use-package expand-region
@@ -462,8 +533,8 @@ With argument, do this that many times."
 
 (use-package multiple-cursors
   :bind
-  (("C-c C-e m" . #'mc/edit-lines)
-   ("C-c C-e d" . #'mc/mark-all-dwim)))
+  (("C-z e m" . #'mc/edit-lines)
+   ("C-z e d" . #'mc/mark-all-dwim)))
 
 ;; Move-text: move text with M-<arrows> a-la org
 (use-package move-text
@@ -477,6 +548,14 @@ With argument, do this that many times."
 (use-package comment-dwim-2
   :bind
   ("M-;" . comment-dwim-2))
+
+(use-package ediff
+  :defer
+  :config
+  (setq ediff-split-window-function 'split-window-horizontally)
+  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
+  (setq ediff-diff-options "-w")
+  )
 
 ;;; Visual configuration
 ;; Show line numbers on the left
@@ -598,10 +677,10 @@ With argument, do this that many times."
 (use-package guess-language
   :defer t
   :pin melpa ;; the good version is on melpa, not melpa-stable
-  :init (add-hook 'text-mode-hook #'guess-language-mode)
+  :init (add-hook 'flycheck-mode-hook #'guess-language-mode)
   :config
-  (setq guess-language-langcodes '((en . ("en_GB" "English"))
-                                   (fr . ("fr_FR" "Francais")))
+  (setq guess-language-langcodes '((en . ("en_US" "English" "🇺🇸" "English"))
+                                   (fr . ("fr_FR"  "French" "🇫🇷" "French")))
         guess-language-languages '(en fr)
         guess-language-min-paragraph-length 35)
   :diminish guess-language-mode)
@@ -614,9 +693,9 @@ With argument, do this that many times."
 	 (prog-mode . flyspell-prog-mode))
   :bind
   ("C-c e" . (lambda () (interactive)
-	       (ispell-change-dictionary "en_US") (flyspell-buffer)))
+	       (ispell-change-dictionary "en_US") (typo-change-language "English") (flyspell-buffer)))
   ("C-c f" . (lambda () (interactive)
-	       (ispell-change-dictionary "fr_FR") (flyspell-buffer)))
+	       (ispell-change-dictionary "fr_FR") (typo-change-language "French") (flyspell-buffer)))
   :init
   ;; The personal dictionary file has to exist, otherwise hunspell will
   ;; silently not use it.
@@ -634,7 +713,16 @@ With argument, do this that many times."
     (:map flyspell-mode-map
           ([remap flyspell-correct-word-before-point] . flyspell-correct-wrapper)
           ("C-." . flyspell-correct-wrapper))
-    :custom (flyspell-correct-interface #'flyspell-correct-ivy)))
+    :custom (flyspell-correct-interface #'flyspell-correct-ivy))
+  ;; Typo: auto-replace typographically useful unicode characters
+  (use-package typo
+    :hook
+    ((org-mode text-mode) . typo-mode)))
+
+;; Flycheck
+(use-package flycheck
+  :diminish
+  :hook (after-init . global-flycheck-mode))
 
 ;; Flycheck-grammalecte : french syntax checking
 ;; May require running grammalecte-download-grammalecte once
@@ -757,7 +845,7 @@ With argument, do this that many times."
 ;; Flycheck : on-the-fly syntax checking
 (use-package flycheck
   :diminish
-  :init
+  ;; :init
   (global-flycheck-mode)
   :custom
   (flycheck-checker-error-threshold nil)
@@ -777,7 +865,11 @@ With argument, do this that many times."
 (use-package dumb-jump
   :bind
   ("C-c C-j" . dumb-jump-go)
-  :custom (dumb-jump-selector 'ivy))
+  :custom
+  (dumb-jump-prefer-searcher 'rg)
+  (dumb-jump-selector 'ivy)
+  :init
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 
 ;; Indentation settings
 ;; We indent with spaces
@@ -932,10 +1024,11 @@ With argument, do this that many times."
   :init
   (use-package treemacs-all-the-icons
     :ensure t)
-  (use-package treemacs-icons-dired
-    :hook (dired-mode . treemacs-icons-dired-enable-once)
-    :ensure t
-    )
+  ;; Using all-the-icons-dired instead
+  ;; (use-package treemacs-icons-dired
+  ;;   :hook (dired-mode . treemacs-icons-dired-enable-once)
+  ;;   :ensure t
+  ;;   )
   (use-package treemacs-projectile
     :after (treemacs projectile)
     :ensure t
@@ -945,8 +1038,36 @@ With argument, do this that many times."
     :ensure t
     ))
 
+;; TRAMP
+(use-package tramp
+  :custom
+  (tramp-default-method "ssh")
+  :init
+  (use-package ibuffer-tramp
+    :hook
+    (ibuffer-mode . ibuffer-tramp-set-filter-groups-by-tramp-connection)
+    )
+  :config
+  (setq password-cache-expiry 300))
+
 ;;; Advanced programming modules
-;; LSP : IDE-like features
+;; Eglot
+;; Gave up on this package for now
+;; Reasons are:
+;; - does not work out of the box with my config
+;; - use flymake, I prefer flycheck
+;; - does not recognize projectile
+;; (use-package eglot
+;;   :defer
+;;   :commands eglot
+;;   :hook
+;;   (python-mode . eglot-ensure)
+;;   :config
+;;   (setq eglot-autoshutdown t)
+;;   (add-to-list 'eglot-server-programs '(python-mode . ("pyright-langserver" "--stdio"))))
+
+
+;; LSP-mode : IDE-like features
 (use-package lsp-mode
   :defer t
   :commands lsp
@@ -1012,9 +1133,23 @@ With argument, do this that many times."
     (setq mode-line-format nil))
   )
 
-;; need DAP ?
-
-
+;; I found dap-mode to be extremely buggy at best,
+;; for most of the languages I use, so disabling it for now
+;; ;; Dap-mode
+;; (use-package dap-mode
+;;   :after lsp-mode
+;;   :diminish
+;;   :config
+;;   ;; Could not manage to make any of the following work...
+;;   ;; (require 'dap-firefox)
+;;   ;; (require 'dap-edge)
+;;   ;; (require 'dap-chrome)
+;;   ;; (require 'dap-node)
+;;   (require 'dap-python)
+;;   (require 'dap-lldb)
+;;   (require 'dap-php)
+;;   (setq dap-lldb-debug-program '("/usr/bin/lldb-vscode"))
+;;   (setq dap-python-debugger 'debugpy))
 
 ;;; Language-specific modes and settings
 ;; Python
@@ -1052,6 +1187,23 @@ With argument, do this that many times."
 (use-package highlight-defined
   :hook (emacs-lisp-mode . highlight-defined-mode))
 
+;; Php
+(use-package php-mode
+  :ensure t)
+
+;; JavaScript / Typescript
+(use-package js2-mode
+  :mode "\\.js\\'"
+  :interpreter "node")
+(use-package typescript-mode
+  :mode "\\.ts\\'"
+  :commands (typescript-mode))
+
+;; Web-mode
+(use-package web-mode
+  :mode
+  ("\\.phtml\\'" "\\.tpl\\.php\\'" "\\.[agj]sp\\'" "\\.as[cp]x\\'"
+   "\\.erb\\'" "\\.mustache\\'" "\\.djhtml\\'" "\\.[t]?html?\\'"))
 
 ;; Java
 ;; Jsp-java : lsp-mode integration
@@ -1078,10 +1230,6 @@ With argument, do this that many times."
   :config
   (add-to-list 'company-backends 'company-c-headers)
   )
-
-;; Php
-(use-package php-mode
-  :ensure t)
 
 ;; Rust
 (use-package rust-mode
@@ -1130,6 +1278,9 @@ With argument, do this that many times."
 
 ;; Dockerfile mode
 (use-package dockerfile-mode :defer t)
+
+;; CSV-mode
+(use-package csv-mode)
 
 ;;; File/mode associations
 ;; Script-shell-mode on zsh
@@ -1216,6 +1367,7 @@ With argument, do this that many times."
   ("C-z a" . org-agenda)
   :config
   (require 'org-id)
+  (require 'org-capture)
   (defun org-schedule-force-note ()
     "Call org-schedule but make sure it prompts for re-scheduling note."
     (interactive)
@@ -1236,6 +1388,41 @@ With argument, do this that many times."
                  (org-agenda-skip-function '(org-agenda-skip-entry-if 'scheduled 'deadline 'todo '("SOMEDAY" "WAITING"))))))
          nil
          nil)))
+
+  ;; From https://github.com/alphapapa/unpackaged.el
+  (defun org-fix-blank-lines (&optional prefix)
+    "Ensure that blank lines exist between headings and between headings and their contents.
+With prefix, operate on whole buffer. Ensures that blank lines
+exist after each headings's drawers."
+    (interactive "P")
+    (org-map-entries (lambda ()
+                       (org-with-wide-buffer
+                        ;; `org-map-entries' narrows the buffer, which prevents us from seeing
+                        ;; newlines before the current heading, so we do this part widened.
+                        (while (not (looking-back "\n\n" nil))
+                          ;; Insert blank lines before heading.
+                          (insert "\n")))
+                       (let ((end (org-entry-end-position)))
+                         ;; Insert blank lines before entry content
+                         (forward-line)
+                         (while (and (org-at-planning-p)
+                                     (< (point) (point-max)))
+                           ;; Skip planning lines
+                           (forward-line))
+                         (while (re-search-forward org-drawer-regexp end t)
+                           ;; Skip drawers. You might think that `org-at-drawer-p' would suffice, but
+                           ;; for some reason it doesn't work correctly when operating on hidden text.
+                           ;; This works, taken from `org-agenda-get-some-entry-text'.
+                           (re-search-forward "^[ \t]*:END:.*\n?" end t)
+                           (goto-char (match-end 0)))
+                         (unless (or (= (point) (point-max))
+                                     (org-at-heading-p)
+                                     (looking-at-p "\n"))
+                           (insert "\n"))))
+                     t (if prefix
+                           nil
+                         'tree)))
+
   (add-hook 'org-mode-hook  #'which-function-mode)
   )
 ;; ;; company compatibility (https://github.com/company-mode/company-mode/issues/50)
@@ -1250,6 +1437,81 @@ With argument, do this that many times."
   (require 'epa-file)
   (epa-file-enable)
   )
+
+(use-package org-capture
+  ;; No need to get it, comes with emacs/org
+  :ensure nil
+  :bind ("C-c c" . org-capture)
+  :config
+  (setq org-default-notes-file (concat org-directory "/notes.org"))
+  (setq org-capture-templates
+        `(
+          ("n" "take a quick note"
+           entry (file+headline ,(concat org-directory "/notes.org") "À classer")
+           "* %?"
+           :immediate-finish nil
+           :empty-lines 1
+           :prepend nil)
+
+          ("l" "take note with context"
+           entry (file+headline  ,(concat org-directory "/notes.org") "À classer")
+           "* %?\n%a"
+           :immediate-finish nil
+           :empty-lines 1
+           :prepend nil)
+
+          ("x" "take note with clipboard"
+           entry (file+headline ,(concat org-directory "/notes.org") "À classer")
+           "* %?\n%x"
+           :immediate-finish nil
+           :empty-lines 1
+           :prepend nil)
+
+          ("s" "take note with selection"
+           entry (file+headline ,(concat org-directory "/notes.org") "À classer")
+           "* %?\n%i"
+           :immediate-finish nil
+           :empty-lines 1
+           :prepend nil)
+
+          ("t" "add simple task"
+           entry (file+headline ,(concat org-directory "/perso.org") "Tâches rapides")
+           "* TODO %?"
+           :immediate-finish nil
+           :empty-lines 1
+           :prepend nil)
+
+          ("c" "add task with context"
+           entry (file+headline ,(concat org-directory "/perso.org") "Tâches rapides")
+           "* TODO %?"
+           :immediate-finish nil
+           :empty-lines 1
+           :prepend nil)
+
+          ("m" "meeting notes"
+           entry (file+headline  ,(concat org-directory "/notes.org") "À classer")
+           "* %? %U"
+           :immediate-finish nil
+           :clock-in t
+           :clock-resume t
+           :empty-lines 1
+           :prepend nil)
+
+          ("p" "plan meeting"
+           entry (file+headline  ,(concat org-directory "/notes.org") "À classer")
+           "* %?\nSCHEDULED: %^T"
+           :immediate-finish nil
+           :empty-lines 1
+           :prepend nil)
+
+          ("r" "new task: respond to email"
+           entry (file+headline ,(concat org-directory "/perso.org") "Tâches rapides")
+           "* TODO Répondre à [[mailto:%:fromaddress][%:fromname]]\nSCHEDULED: %^t"
+           :immediate-finish t
+           :empty-lines 1
+           :prepend nil)))
+  (setq org-capture-templates-contexts
+      '(("r" ((in-mode . "mu4e-view-mode"))))))
 
 ;; Org-superstar : beautify org-mode
 (use-package org-superstar
@@ -1328,6 +1590,8 @@ With argument, do this that many times."
   (message-kill-buffer-on-exit t)
   (mu4e-headers-auto-update t)
   (mu4e-headers-skip-duplicates t)
+  ;; We will display manually with W if needed
+  (mu4e-headers-include-related nil)
   (mu4e-view-show-images t)
   (mu4e-view-prefer-html t)
   (mu4e-use-fancy-chars t)
@@ -1335,17 +1599,40 @@ With argument, do this that many times."
   (mu4e-headers-date-format "%d-%m-%Y")
   (mu4e-headers-fields
    '((:human-date . 13)
+     (:mdir . 15)
      (:flags . 10)
      (:mailing-list . 10)
-     (:from . 25)
+     (:from-or-to . 25)
      (:subject)))
+  (mu4e-headers-results-limit -1)
   ;; index-cleanup and index-lazy-check are needed with mbsync/gmail
   (mu4e-index-cleanup t)
   (mu4e-index-lazy-check nil)
-;  (mu4e-html2text-command "html2text -utf8 -width 72")
+                                        ;  (mu4e-html2text-command "html2text -utf8 -width 72")
   (mu4e-html2text-command "w3m -dump -T text/html")
   (mu4e-decryption-policy 'ask)
+  (mu4e-context-policy 'pick-first)
+  (mu4e-hide-index-messages t)
+  ;; Since we are using Ivy:
+  (mu4e-completing-read-function 'ivy-completing-read)
   :config
+  (setq mu4e-maildir-shortcuts
+        '((:maildir "/protonmail/inbox"     :key  ?i)
+          (:maildir "/protonmail/archive"   :key  ?a)
+          (:maildir "/protonmail/drafts"     :key  ?d)
+          (:maildir "/protonmail/sent"      :key  ?s)
+          (:maildir "/gmail/inbox"     :key  ?I)
+          (:maildir "/gmail/archive"   :key  ?A)
+          (:maildir "/gmail/drafts"     :key  ?D)
+          (:maildir "/gmail/sent"      :key  ?S)))
+  (add-to-list 'mu4e-bookmarks
+               '( :name "With attachment"
+                  :query "mime:application/* AND NOT mime:application/pgp* AND NOT (maildir:/protonmail/trash OR maildir:/gmail/trash OR maildir:/protonmail/spam OR maildir:/gmail/spam)"
+                  :key ?a))
+  (add-to-list 'mu4e-bookmarks
+               '( :name  "Focused"
+                  :query "flag:flagged OR (flag:unread AND NOT flag:list AND NOT (maildir:/protonmail/sent OR maildir:/gmail/sent OR maildir:/protonmail/trash OR maildir:/gmail/trash OR maildir:/protonmail/spam OR maildir:/gmail/spam))"
+                  :key ?f))
   ;; org-mode integration
   (require 'org-mu4e)
   ;; This is bound globally later
@@ -1358,17 +1645,46 @@ With argument, do this that many times."
   (add-to-list 'mu4e-view-actions
                '("in browser" . mu4e-action-view-in-browser) t)
 
+  ;; From https://etienne.depar.is/emacs.d/mu4e.html
+  (defun ed/mu4e-view-go-to-private-url (&optional multi)
+    "Offer to go to url(s) in a private window of Firefox.
+If MULTI (prefix-argument) is nil, go to a single one, otherwise,
+offer to go to a range of urls."
+    (interactive "P")
+    (mu4e~view-handle-urls
+     "URL to visit" multi
+     (lambda (url)
+       (start-process
+        "private-firefox" nil
+        "firefox" "--private-window" url))))
+
+  (define-key mu4e-view-mode-map "G" #'ed/mu4e-view-go-to-private-url)
+
+  (add-to-list 'mu4e-header-info-custom
+               '(:mdir .
+                       ( :name "Shortend Maildir path"
+                         :shortname "Maildir"
+                         :help "Shows a collapsed maildir path"
+                         :function (lambda (msg)
+                                     (let ((maildir (or (mu4e-message-field msg :maildir) "")))
+                                       (cond ((string-match-p "Archives/" maildir)
+                                              (replace-regexp-in-string "^/\\(.\\).*/\\(.\\).*/\\(.*\\)" "\\1/\\2/\\3" maildir))
+                                             ((string-match-p "Archives" maildir)
+                                              (replace-regexp-in-string "^/\\(.\\).*/\\(.\\).*" "\\1/\\2" maildir))
+                                             (t
+                                              (replace-regexp-in-string "^/\\(.\\).*/\\(.*\\)" "\\1/\\2" maildir))))))))
+
   ;; Marking for deletion only move to trash folder
-(setf (alist-get 'trash mu4e-marks)
-      (list :char '("d" . "▼")
-            :prompt "dtrash"
-            :dyn-target (lambda (target msg)
-                          (mu4e-get-trash-folder msg))
-            :action (lambda (docid msg target)
-                      ;; Here's the main difference to the regular trash mark,
-                      ;; no +T before -N so the message is not marked as
-                      ;; IMAP-deleted:
-                      (mu4e--server-move docid (mu4e--mark-check-target target) "+S-u-N"))))
+  (setf (alist-get 'trash mu4e-marks)
+        (list :char '("d" . "▼")
+              :prompt "dtrash"
+              :dyn-target (lambda (target msg)
+                            (mu4e-get-trash-folder msg))
+              :action (lambda (docid msg target)
+                        ;; Here's the main difference to the regular trash mark,
+                        ;; no +T before -N so the message is not marked as
+                        ;; IMAP-deleted:
+                        (mu4e--server-move docid (mu4e--mark-check-target target) "+S-u-N"))))
 
   ;; Tag message
   (add-to-list 'mu4e-marks
@@ -1456,6 +1772,55 @@ With argument, do this that many times."
   ;; Encryption settings
   (setq mml-secure-openpgp-sign-with-sender t
         mml-secure-openpgp-encrypt-to-self t)
+
+  ;; From https://macowners.club/posts/mu4e-save-attachments-faster-with-ivy/#edits
+  (defun timu/mu4e-view-save-attachments ()
+  "Save All Attachements in a selected directory using completion.
+This is a modified version of `mu4e-view-save-attachments'."
+  (interactive)
+  (cl-assert (and (eq major-mode 'mu4e-view-mode)
+                  (derived-mode-p 'gnus-article-mode)))
+  (let* ((parts (mu4e~view-gather-mime-parts))
+         (handles '())
+         (files '())
+         dir)
+    (dolist (part parts)
+      (let ((fname (cdr (assoc 'filename (assoc "attachment" (cdr part))))))
+        (when fname
+          (push `(,fname . ,(cdr part)) handles)
+          (push fname files))))
+    (if files
+        (progn
+          (setq dir (read-directory-name "Save to directory: "))
+          (cl-loop for (f . h) in handles
+                   when (member f files)
+                   do (mm-save-part-to-file h (expand-file-name f dir))))
+      (mu4e-message "No attached files found"))))
+  (define-key mu4e-view-mode-map ">" 'timu/mu4e-view-save-attachments)
+  (defun timu/mu4e-view-save-attachment ()
+  "Save one attachements in a selected directory using completion.
+This is a modified version of `mu4e-view-save-attachments'."
+  (interactive)
+  (cl-assert (and (eq major-mode 'mu4e-view-mode)
+                  (derived-mode-p 'gnus-article-mode)))
+  (let* ((parts (mu4e~view-gather-mime-parts))
+         (handles '())
+         (files '())
+         dir)
+    (dolist (part parts)
+      (let ((fname (cdr (assoc 'filename (assoc "attachment" (cdr part))))))
+        (when fname
+          (push `(,fname . ,(cdr part)) handles)
+          (push fname files))))
+    (if files
+        (progn
+          (setq files (completing-read-multiple "Save part(s): " files)
+                dir (read-directory-name "Save to directory: "))
+          (cl-loop for (f . h) in handles
+                   when (member f files)
+                   do (mm-save-part-to-file h (expand-file-name f dir))))
+      (mu4e-message "No attached files found"))))
+    (define-key mu4e-view-mode-map "e" 'timu/mu4e-view-save-attachment)
   )
 
 ;; Default mail agent for emacs
@@ -1486,6 +1851,11 @@ With argument, do this that many times."
      ;; Needed for proper hl-line-mode
      `(hl-line-face ((t (:background ,zenburn-bg+1 ))))
      `(hl-line ((t (:background ,zenburn-bg+1 ))))
+     ;; Dired stuff
+     ;; `(diredfl-dir-name ((t (:foreground ,zenburn-blue+1 :weight bold))))
+     ;; `(diredfl-dir-name ((t (:background ,nil))))
+     ;; `(diredfl-dir-heading ((t (:foreground ,zenburn-blue-1))))
+     ;; `(diredfl-dir-heading ((t (:background ,nil))))
      )))
 
 ;;; Gruvbox color theme
@@ -1519,6 +1889,8 @@ With argument, do this that many times."
     (setq fast-but-imprecise-scrolling nil)
     (setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))
     (setq mouse-wheel-progressive-speed nil)
+    ;; Copy when selecting region
+    (setq mouse-drag-copy-region t)
     ;; Horizontal Scroll
     (setq hscroll-step 1)
     (setq hscroll-margin 1)
@@ -1535,11 +1907,79 @@ With argument, do this that many times."
 ;;; Final common-use bindings
 (global-set-key (kbd "C-z m") 'woman) ; Man pages
 
+;; move the cursor when a new window is created
+(defun mm/split-window-right-and-follow ()
+  "A function to create a window on the right and move the cursor to it"
+  (interactive)
+  (select-window (split-window-right)))
+(global-set-key (kbd "C-x 3") 'mm/split-window-right-and-follow)
+
+(defun mm/split-window-below-and-follow ()
+  "A function to create a window below and move the cursor to it"
+  (interactive)
+  (select-window (split-window-below)))
+(global-set-key (kbd "C-x 2") 'mm/split-window-below-and-follow)
+
+
+;; The two following functions are from https://codeberg.org/mehrad
+;; make the home key to be smart and context-aware
+(defun mm/smart-beginning-of-line ()
+  "Move point to first non-whitespace character or beginning-of-line.
+
+Move point to the first non-whitespace character on this line.
+If point was already at that position, move point to beginning of line.
+
+Originally adopted from: https://stackoverflow.com/a/145359/1613005"
+  (interactive)
+  (let ((oldpos (point)))
+    (back-to-indentation)
+    (and (= oldpos (point))
+         (beginning-of-line))))
+(global-set-key (kbd "C-a") 'mm/smart-beginning-of-line)
+;; make the end key to be smart and context aware
+(defun mm/smart-end-of-line ()
+  "Move the point to end of code (before tailing whitespace and comments) or end
+of line.
+
+When having the point in the middle of some code:
+1. the first time this function is invoked, it will jump to the end of the code
+   (before tailing spaces and tailing comments)
+2. the second time it is invoked, it will jump to the end of the line after the
+   tailing comment
+
+This is the first function that I (Mehrad) wrote in elisp, so it may still needs some work.
+"
+  (interactive)
+  (let ((oldpos (point)))                                            ; get the current position of point
+    (let* ((bolpos (progn (beginning-of-line) (point)))              ; get the position of end of line
+           (eolpos (progn (end-of-line) (point))))                   ; get the position of begining of line
+      (beginning-of-line)                                            ; move to the begining of line to prepare for finding comments
+      (comment-normalize-vars)                                       ; this must be run as per documentation for comment-* functions
+      (comment-search-forward eolpos t)                              ; move the point to the first character of the tailing comment
+      (re-search-backward (concat "[^" comment-start " ]"))          ; navigate point back to the [before] last character of the code
+      (forward-char)                                                 ; move point forward to fix the shortfall of the previous command
+      (and (= oldpos (point))                                        ; if the point is the same as the oldpos
+           (end-of-line))))                                          ; move to the end of line
+  )
+(define-key prog-mode-map (kbd "C-e") #'mm/smart-end-of-line)
+
+;; Quick access to scratch
+(defun switch-to-scratch-buffer ()
+  "Switch to the current session's scratch buffer."
+  (interactive)
+  (switch-to-buffer "*scratch*"))
+(bind-key "C-z s" #'switch-to-scratch-buffer)
+
 (defun open-init-file ()
   "Open init file"
   (interactive)
   (find-file "~/.emacs.d/init.el"))
-(bind-key "C-z e" #'open-init-file)
+(bind-key "C-z C-e" #'open-init-file)
+
+(defun reload-init-file ()
+  "Reload the Emacs configuration"
+  (interactive)
+  (load-file "~/.emacs.d/init.el"))
 
 ;;; Startup time
 ;; Let's finish loading this file by displaying how much time we took to start
