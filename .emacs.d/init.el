@@ -1219,7 +1219,7 @@ With argument, do this that many times."
 
 ;; C / C++ / Objective-C
 ;; OpenBSD KNF for C/C++ ()
-(add-to-list 'load-path "~/.emacs.d/openbsd-knf-emacs")
+(add-to-list 'load-path (expand-file-name "~/.emacs.d/openbsd-knf-emacs"))
 (require 'openbsd-knf-style)
 (c-add-style "OpenBSD" openbsd-knf-style)
 (setq c-default-style '((c-mode . "bsd")))
