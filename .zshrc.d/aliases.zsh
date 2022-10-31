@@ -7,6 +7,7 @@ alias setenv="export"
 alias ll='ls -l'
 alias l='ll'
 alias c='cd'
+alias fd='find'
 alias dir='ls'
 alias objdump='objdump -M intel -D'
 alias gdb='gdb -q'
