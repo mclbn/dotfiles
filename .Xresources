@@ -40,6 +40,9 @@ urxvt*ScrollBar: false
 urxvt*locale: utf8
 urxvt*metaSendsEscape: true
 
+! Standard X11 clipboard
+xterm*selectToClipboard: true
+
 ! Zenburn
 
 #define ZB_COLOR_BG #3a3a3a
