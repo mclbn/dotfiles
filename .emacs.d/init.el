@@ -716,8 +716,9 @@ With argument, do this that many times."
     :custom (flyspell-correct-interface #'flyspell-correct-ivy))
   ;; Typo: auto-replace typographically useful unicode characters
   (use-package typo
+    :diminish
     :hook
-    ((org-mode text-mode) . typo-mode)))
+    (flyspell-mode . typo-mode)))
 
 ;; Flycheck
 (use-package flycheck
