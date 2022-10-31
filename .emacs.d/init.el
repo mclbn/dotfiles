@@ -718,7 +718,7 @@ With argument, do this that many times."
   (use-package typo
     :diminish
     :hook
-    (flyspell-mode . typo-mode)))
+    ((org-mode text-mode) . typo-mode)))
 
 ;; Flycheck
 (use-package flycheck
