@@ -1223,7 +1223,8 @@ respectively."
   :commands lsp-ui-mode
   :custom-face
   (lsp-ui-doc-background ((t (:background nil))))
-  (lsp-ui-doc-border (face-foreground 'default))
+  ;; I don't know why but the following does not work on all my machines
+  ;; (lsp-ui-doc-border (face-foreground 'default))
   :bind
   ("C-z i" . lsp-ui-doc-glance)
   (:map lsp-ui-mode-map
