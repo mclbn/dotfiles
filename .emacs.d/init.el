@@ -219,16 +219,16 @@
     (let* ((file (dired-get-filename nil t)))
       (call-process "xdg-open" nil 0 nil file)))
   (define-key dired-mode-map (kbd "C-<return>") #'dired-open-external)
-;;   (defun open-in-external-app ()
-;;     "Open the file where point is or the marked files in Dired in external
-;; app. The app is chosen from your OS's preference."
-;;     (interactive)
-;;     (let* ((file-list
-;;             (dired-get-marked-files)))
-;;       (mapc
-;;        (lambda (file-path)
-;;          (let ((process-connection-type nil))
-;;            (start-process "" nil "xdg-open" (shell-quote-argument file-path)))) file-list)))
+  ;;   (defun open-in-external-app ()
+  ;;     "Open the file where point is or the marked files in Dired in external
+  ;; app. The app is chosen from your OS's preference."
+  ;;     (interactive)
+  ;;     (let* ((file-list
+  ;;             (dired-get-marked-files)))
+  ;;       (mapc
+  ;;        (lambda (file-path)
+  ;;          (let ((process-connection-type nil))
+  ;;            (start-process "" nil "xdg-open" (shell-quote-argument file-path)))) file-list)))
 
 
   (use-package diredfl
@@ -287,17 +287,17 @@
   (which-key-mode))
 
 (defun clipboard-swap () "Swaps the clipboard contents with the highlighted region"
-    (interactive)
-    (if (use-region-p)
-        (progn
-            (setq
-                reg-beg (region-beginning)
-                reg-end (region-end))
-            (deactivate-mark)
-            (goto-char reg-end)
-            (clipboard-yank)
-            (clipboard-kill-region reg-beg reg-end))
-        (clipboard-yank)))
+       (interactive)
+       (if (use-region-p)
+           (progn
+             (setq
+              reg-beg (region-beginning)
+              reg-end (region-end))
+             (deactivate-mark)
+             (goto-char reg-end)
+             (clipboard-yank)
+             (clipboard-kill-region reg-beg reg-end))
+         (clipboard-yank)))
 (global-set-key (kbd "C-z y") 'clipboard-swap) ; Yank with the Shift key to swap instead of paste.
 
 ;; Undo-tree
@@ -577,7 +577,7 @@ With argument, do this that many times."
 
 ;; make characters after column 80 purple
 (setq whitespace-style
-  (quote (face trailing tab-mark lines-tail space-before-tab)))
+      (quote (face trailing tab-mark lines-tail space-before-tab)))
 (add-hook 'prog-mode-hook 'whitespace-mode)
 ;; (add-hook 'find-file-hook 'whitespace-mode)
 ;; also display column number
@@ -618,14 +618,14 @@ With argument, do this that many times."
   :diminish minimap-mode
   :init
   (setq minimap-window-location 'right
-    minimap-width-fraction 0.04
-    minimap-hide-scroll-bar nil
-    minimap-hide-fringes nil
-    minimap-dedicated-window t
-    minimap-minimum-width 15)
+        minimap-width-fraction 0.04
+        minimap-hide-scroll-bar nil
+        minimap-hide-fringes nil
+        minimap-dedicated-window t
+        minimap-minimum-width 15)
   :custom-face
   (minimap-font-face ((t (:height 13 :weight bold :width condensed
-                          :spacing dual-width :family "VT323"))))
+                                  :spacing dual-width :family "VT323"))))
   (minimap-active-region-background ((t (:extend t :background "gray24"))))
   :config
   (setq minimap-major-modes '(prog-mode text-mode))
@@ -654,7 +654,7 @@ With argument, do this that many times."
                       :foreground "#2B2B2B" :distant-foreground "#2B2B2B"
                       :height 1.0 :box nil)
   (global-set-key (kbd "C-c t") 'centaur-tabs-mode)
-;;  (centaur-tabs-mode t)
+  ;;  (centaur-tabs-mode t)
   :bind
   ("C-<prior>" . centaur-tabs-backward)
   ("C-<next>" . centaur-tabs-forward))
@@ -695,12 +695,12 @@ With argument, do this that many times."
   :ensure nil
   :if (executable-find "hunspell")
   :hook (((text-mode outline-mode latex-mode org-mode markdown-mode) . flyspell-mode)
-	 (prog-mode . flyspell-prog-mode))
+	     (prog-mode . flyspell-prog-mode))
   :bind
   ("C-c e" . (lambda () (interactive)
-	       (ispell-change-dictionary "en_US") (typo-change-language "English") (flyspell-buffer)))
+	           (ispell-change-dictionary "en_US") (typo-change-language "English") (flyspell-buffer)))
   ("C-c f" . (lambda () (interactive)
-	       (ispell-change-dictionary "fr_FR") (typo-change-language "French") (flyspell-buffer)))
+	           (ispell-change-dictionary "fr_FR") (typo-change-language "French") (flyspell-buffer)))
   :init
   ;; The personal dictionary file has to exist, otherwise hunspell will
   ;; silently not use it.
@@ -889,8 +889,8 @@ With argument, do this that many times."
   ;; Stop pairing single quotes in elisp
   (sp-local-pair 'emacs-lisp-mode "'" nil :actions nil)
 
-(defmacro def-pairs (pairs)
-  "Define functions for pairing. PAIRS is an alist of (NAME . STRING)
+  (defmacro def-pairs (pairs)
+    "Define functions for pairing. PAIRS is an alist of (NAME . STRING)
 conses, where NAME is the function name that will be created and
 STRING is a single-character string that marks the opening character.
 
@@ -899,23 +899,23 @@ STRING is a single-character string that marks the opening character.
 
 defines the functions WRAP-WITH-PAREN and WRAP-WITH-BRACKET,
 respectively."
-  `(progn
-     ,@(loop for (key . val) in pairs
-             collect
-             `(defun ,(read (concat
-                             "wrap-with-"
-                             (prin1-to-string key)
-                             "s"))
-                  (&optional arg)
-                (interactive "p")
-                (sp-wrap-with-pair ,val)))))
+    `(progn
+       ,@(loop for (key . val) in pairs
+               collect
+               `(defun ,(read (concat
+                               "wrap-with-"
+                               (prin1-to-string key)
+                               "s"))
+                    (&optional arg)
+                  (interactive "p")
+                  (sp-wrap-with-pair ,val)))))
 
-(def-pairs ((paren . "(")
-            (bracket . "[")
-            (brace . "{")
-            (single-quote . "'")
-            (double-quote . "\"")
-            (back-quote . "`"))))
+  (def-pairs ((paren . "(")
+              (bracket . "[")
+              (brace . "{")
+              (single-quote . "'")
+              (double-quote . "\"")
+              (back-quote . "`"))))
 
 ;; Rainbow-delimiters : colors for parenthesis
 (use-package rainbow-delimiters
@@ -970,12 +970,12 @@ respectively."
   (use-package flycheck-popup-tip
     :hook (flycheck-mode . flycheck-popup-tip-mode))
   (add-to-list 'display-buffer-alist
-             `(,(rx bos "*Flycheck errors*" eos)
-              (display-buffer-reuse-window
-               display-buffer-in-side-window)
-              (side            . bottom)
-              (reusable-frames . visible)
-              (window-height   . 0.33))))
+               `(,(rx bos "*Flycheck errors*" eos)
+                 (display-buffer-reuse-window
+                  display-buffer-in-side-window)
+                 (side            . bottom)
+                 (reusable-frames . visible)
+                 (window-height   . 0.33))))
 
 ;; Dumb-jump : simple "jump to definition" tool
 (use-package dumb-jump
@@ -1094,7 +1094,7 @@ respectively."
   :after prescient
   :hook (company-mode . company-prescient-mode)
   :config
-   (company-quickhelp-terminal-mode 1))
+  (company-quickhelp-terminal-mode 1))
 
 (use-package company-box
   :diminish
@@ -1124,8 +1124,8 @@ respectively."
   :init (doom-modeline-mode 1)
   :config
   (doom-modeline-def-modeline 'main
-                              '(bar workspace-name window-number matches follow buffer-info remote-host buffer-position word-count selection-info)
-                              '(objed-state misc-info persp-name grip debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process vcs checker " "))
+    '(bar workspace-name window-number matches follow buffer-info remote-host buffer-position word-count selection-info)
+    '(objed-state misc-info persp-name grip debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process vcs checker " "))
   )
 
 ;;; File navigation UI
@@ -1203,8 +1203,8 @@ respectively."
   (lsp-enable-folding nil)
   :bind (:map lsp-mode-map ("C-c C-f" . lsp-format-buffer))
   :hook ((java-mode python-mode go-mode rust-mode
-          js-mode js2-mode typescript-mode web-mode
-          c-mode c++-mode objc-mode php-mode) . lsp-deferred)
+                    js-mode js2-mode typescript-mode web-mode
+                    c-mode c++-mode objc-mode php-mode) . lsp-deferred)
   :config
   (setq lsp-completion-provider :none)
   (setq read-process-output-max (* 1024 1024)) ;; 1MB for better performance
@@ -1249,6 +1249,7 @@ respectively."
   (defadvice lsp-ui-imenu (after hide-lsp-ui-imenu-mode-line activate)
     (setq mode-line-format nil))
   )
+
 
 ;; I found dap-mode to be extremely buggy at best,
 ;; for most of the languages I use, so disabling it for now
@@ -1437,7 +1438,7 @@ respectively."
   (org-agenda-files '("perso.org" "work.org" "notes.org" "cloudcal-perso.org" "cloudcal-work.org"))
   (org-refile-targets `((nil :maxlevel . 9)
                         (("perso.org" "work.org" "notes.org") :maxlevel . 9)))
-                        ;; (,(directory-files-recursively "~/org/" "^[a-z0-9]*.org$") :maxlevel . 9)))
+  ;; (,(directory-files-recursively "~/org/" "^[a-z0-9]*.org$") :maxlevel . 9)))
   (org-refile-use-outline-path 'file)
   (org-outline-path-complete-in-steps nil)
   (org-refile-allow-creating-parent-nodes 'confirm)
@@ -1451,7 +1452,7 @@ respectively."
      ("RATED" . (:foreground "Gold" :weight bold))
      ))
   (org-src-fontify-natively t)
-;  (org-todo-repeat-to-state "TODO")
+                                        ;  (org-todo-repeat-to-state "TODO")
   (org-log-into-drawer "LOGBOOK")
   (org-log-done 'time)
   (org-log-reschedule 'time)
@@ -1494,10 +1495,10 @@ respectively."
       (call-interactively 'org-schedule)))
   (define-key org-mode-map (kbd "C-c C-S-s") 'org-schedule-force-note)
   (defun org-deadline-force-note ()
-  "Call org-deadline but make sure it prompts for re-deadlining note."
-  (interactive)
-  (let ((org-log-redeadline "note"))
-    (call-interactively 'org-deadline)))
+    "Call org-deadline but make sure it prompts for re-deadlining note."
+    (interactive)
+    (let ((org-log-redeadline "note"))
+      (call-interactively 'org-deadline)))
   (define-key org-mode-map (kbd "C-c C-S-d") 'org-deadline-force-note)
 
   (defun my-skip-unless-deadline ()
@@ -1642,7 +1643,7 @@ exist after each headings's drawers."
            :empty-lines 1
            :prepend nil)))
   (setq org-capture-templates-contexts
-      '(("r" ((in-mode . "mu4e-view-mode"))))))
+        '(("r" ((in-mode . "mu4e-view-mode"))))))
 
 ;; Org-superstar : beautify org-mode
 (use-package org-superstar
