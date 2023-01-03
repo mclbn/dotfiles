@@ -4,9 +4,6 @@
 [submodule ".zshrc.d/functions"]
 	path = .zshrc.d/functions
 	url = https://github.com/MarcVador/zsh-functions
-[submodule ".emacs.d/openbsd-knf-emacs"]
-	path = .emacs.d/openbsd-knf-emacs
-	url = https://github.com/hogand/openbsd-knf-emacs.git
 [submodule ".emacs.d/color-rg"]
 	path = .emacs.d/color-rg
 	url = https://github.com/manateelazycat/color-rg

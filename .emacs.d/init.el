@@ -466,6 +466,7 @@ With argument, do this that many times."
                      "recentf"
                      "undo-tree-hist"
                      "url"
+                     ;; org archive? (.org_archive)
                      "COMMIT_EDITMSG\\'"))
   :config
   (run-at-time nil (* 5 60) 'recentf-save-list))
@@ -516,6 +517,10 @@ With argument, do this that many times."
 
 ;; Always end a file with a newline
 (setq require-final-newline t)
+
+;; Ws-butler : smart cleanup of trailing newlines
+(use-package ws-butler
+  :hook (prog-mode . ws-butler-mode))
 
 (defun pt/eol-then-newline ()
   "Go to end of line, then newline-and-indent."
@@ -793,13 +798,124 @@ With argument, do this that many times."
   :diminish
   :hook (prog-mode . smartparens-mode)
   :bind
-  (("C-(" . sp-backward-up-sexp)
-   ("C-)" . sp-down-sexp))
+  (("C-z ("  . wrap-with-parens)
+   ("C-z ["  . wrap-with-brackets)
+   ("C-z {"  . wrap-with-braces)
+   ("C-z '"  . wrap-with-single-quotes)
+   ("C-z \"" . wrap-with-double-quotes)
+   ("C-z _"  . wrap-with-underscores)
+   ("C-z `"  . wrap-with-back-quotes)
+   ("C-(" . (lambda () (interactive)
+              (sp-beginning-of-sexp) (backward-char)))
+   ("C-)" . (lambda () (interactive)
+              (sp-end-of-sexp) (forward-char)))
+   ("M-(" . sp-down-sexp)
+   ("M-)" . (lambda () (interactive)
+              (sp-end-of-sexp) (forward-char))))
   :custom
   (sp-escape-quotes-after-insert nil)
   :config
+  ;; Auto newline in some pairs
+  (let ((c-like-modes-list '(c-mode c++-mode java-mode perl-mode)))
+    (sp-local-pair c-like-modes-list "(" nil
+                   :post-handlers '(:add add-paren-dwim))
+    (sp-local-pair c-like-modes-list "{" nil
+                   :post-handlers '(:add open-block-dwim)))
+
+  ;; Some of the following is derived from
+  ;; https://www.omarpolo.com/dots/emacs.html
+  (defun current-line-str ()
+    "Return the current line as string."
+    (buffer-substring-no-properties (line-beginning-position)
+                                    (line-end-position)))
+
+  (defun inside-block-comment-or-string-p ()
+    "T if point is inside a block, string or comment."
+    (let ((s (syntax-ppss)))
+      (or (= (nth 0 s) 0)               ; outside parens/blocks
+          (nth 4 s)                     ; comment
+          (nth 3 s))))                  ; string
+
+  (defun inside-comment-or-string-p ()
+    "T if point is inside a string or comment."
+    (let ((s (syntax-ppss)))
+      (or (nth 4 s)                     ; comment
+          (nth 3 s))))                  ; string
+
+  (defun add-paren-dwim (_id action _ctx)
+    "Insert space before or semicolon after parens when appropriat."
+    (when (eq action 'insert)
+      (save-excursion
+        ;; caret is between parens (|)
+        (forward-char)
+        (let ((line (current-line-str)))
+          (when (not (inside-block-comment-or-string-p))
+            (if (and (looking-at "\\s-*$")
+                     (not (string-match-p
+                           (regexp-opt '("if" "else" "switch" "for" "while"
+                                         "do" "define")
+                                       'words)
+                           line))
+                     (string-match-p "[\t ]" line))
+                (insert ";")
+              (progn
+                (backward-char)
+                (backward-char)
+                ;; no space if previous char is space or opening parentheses
+                (when (and (not (= (char-before) ?\())
+                           (not (= (char-before) ?\ )))
+                  (insert " ")))))))))
+
+  (defun open-block-dwim (id action context)
+    (when (eq action 'insert)
+      (when (not (inside-comment-or-string-p))
+        (let ((line (current-line-str)))
+          (save-excursion
+            ;; caret is between parens {|}
+            (backward-char)
+            (when (and (or (= (char-before) ?\))
+                           (= (char-before) ?\=)))
+              (insert " "))
+            (forward-char))
+          (message line)
+          (if (not (string-match-p "^[[:space:]]*{}[[:space:]]*$" line))
+              (progn
+                (newline)
+                (newline)
+                (indent-according-to-mode)
+                (previous-line)
+                (indent-according-to-mode)))))))
+
   ;; Stop pairing single quotes in elisp
-  (sp-local-pair 'emacs-lisp-mode "'" nil :actions nil))
+  (sp-local-pair 'emacs-lisp-mode "'" nil :actions nil)
+
+(defmacro def-pairs (pairs)
+  "Define functions for pairing. PAIRS is an alist of (NAME . STRING)
+conses, where NAME is the function name that will be created and
+STRING is a single-character string that marks the opening character.
+
+  (def-pairs ((paren . \"(\")
+              (bracket . \"[\"))
+
+defines the functions WRAP-WITH-PAREN and WRAP-WITH-BRACKET,
+respectively."
+  `(progn
+     ,@(loop for (key . val) in pairs
+             collect
+             `(defun ,(read (concat
+                             "wrap-with-"
+                             (prin1-to-string key)
+                             "s"))
+                  (&optional arg)
+                (interactive "p")
+                (sp-wrap-with-pair ,val)))))
+
+(def-pairs ((paren . "(")
+            (bracket . "[")
+            (brace . "{")
+            (single-quote . "'")
+            (double-quote . "\"")
+            (back-quote . "`"))))
 
 ;; Rainbow-delimiters : colors for parenthesis
 (use-package rainbow-delimiters
@@ -860,7 +976,6 @@ With argument, do this that many times."
               (side            . bottom)
               (reusable-frames . visible)
               (window-height   . 0.33))))
-
 
 ;; Dumb-jump : simple "jump to definition" tool
 (use-package dumb-jump
@@ -1318,7 +1433,7 @@ With argument, do this that many times."
   (org-startup-truncated nil)
   (org-startup-folded 'overview)
   (org-directory "~/org")
-  (org-agenda-files '("perso.org" "work.org" "notes.org"))
+  (org-agenda-files '("perso.org" "work.org" "notes.org" "cloudcal-perso.org" "cloudcal-work.org"))
   (org-refile-targets `((nil :maxlevel . 9)
                         (("perso.org" "work.org" "notes.org") :maxlevel . 9)))
                         ;; (,(directory-files-recursively "~/org/" "^[a-z0-9]*.org$") :maxlevel . 9)))
@@ -1364,8 +1479,10 @@ With argument, do this that many times."
   (org-catch-invisible-edits 'smart)
   (org-use-property-inheritance nil) ; for performance
   (org-cycle-separator-lines 2)
+  (org-id-link-to-org-use-id t)
   :bind
   ("C-z a" . org-agenda)
+  ("C-c l" . org-store-link)
   :config
   (require 'org-id)
   (require 'org-capture)
@@ -1381,14 +1498,26 @@ With argument, do this that many times."
   (let ((org-log-redeadline "note"))
     (call-interactively 'org-deadline)))
   (define-key org-mode-map (kbd "C-c C-S-d") 'org-deadline-force-note)
+
+  (defun my-skip-unless-deadline ()
+    "Skip trees that have no deadline"
+    (let ((subtree-end (save-excursion (org-end-of-subtree t))))
+      (if (re-search-forward "DEADLINE:" subtree-end t)
+          nil          ; tag found, do not skip
+        subtree-end))) ; tag not found, continue after end of subtree
+
   (setq org-agenda-custom-commands
-      '(("c" . "My Custom Agendas")
-        ("cu" "Unscheduled TODO"
-         ((todo ""
-                ((org-agenda-overriding-header "\nUnscheduled TODO")
-                 (org-agenda-skip-function '(org-agenda-skip-entry-if 'scheduled 'deadline 'todo '("SOMEDAY" "WAITING"))))))
-         nil
-         nil)))
+        '(("c" . "My Custom Agendas")
+          ("cu" "Unscheduled TODO"
+           ((todo ""
+                  ((org-agenda-overriding-header "\nUnscheduled TODO")
+                   (org-agenda-skip-function '(org-agenda-skip-entry-if 'scheduled 'deadline 'todo '("SOMEDAY" "WAITING"))))))
+           nil
+           nil)
+          ("cd" "Deadlines"
+           ((todo ""
+                  ((org-agenda-overriding-header "\nDeadlines")
+                   (org-agenda-skip-function 'my-skip-unless-deadline)))))))
 
   ;; From https://github.com/alphapapa/unpackaged.el
   (defun org-fix-blank-lines (&optional prefix)
@@ -1610,7 +1739,7 @@ exist after each headings's drawers."
   (mu4e-index-cleanup t)
   (mu4e-index-lazy-check nil)
                                         ;  (mu4e-html2text-command "html2text -utf8 -width 72")
-  (mu4e-html2text-command "w3m -dump -T text/html")
+  ;; (mu4e-html2text-command "w3m -dump -T text/html")
   (mu4e-decryption-policy 'ask)
   (mu4e-context-policy 'pick-first)
   (mu4e-hide-index-messages t)
