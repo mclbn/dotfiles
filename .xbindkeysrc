@@ -33,13 +33,6 @@
 #keystate_scrolllock = enable
 #keystate_capslock = enable
 
-
-
-#Lock screen
-"/usr/bin/xlock -mode blank -dpmsoff 1"
-    m:0x5 + c:46
-    Control+Shift + l 
-
 #Config
 "xbindkeys_config"
     m:0x5 + c:24
