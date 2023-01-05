@@ -1400,6 +1400,16 @@ respectively."
 ;; CSV-mode
 (use-package csv-mode)
 
+;; Markdown
+(use-package markdown-mode
+  :defer t
+  :config
+  (setq markdown-fontify-code-blocks-natively t)
+  )
+;; Vmd-mode : alternative markdown live preview
+(use-package vmd-mode
+  :defer t)
+
 ;;; File/mode associations
 ;; Script-shell-mode on zsh
 (add-to-list 'auto-mode-alist '(".zsh$" . shell-script-mode))
