@@ -177,7 +177,9 @@ bindsym --release $mod+x exec --no-startup-id import ~/screenshots/$(date +'%F-%
 
 # Lock screen
 #bindsym $mod+l exec 'xlock -mode blank -dpmsoff 1 &'
-bindsym $mod+l exec /usr/bin/xlock -mode blank -dpmsoff 1 &
+#bindsym $mod+l exec /usr/bin/xlock -mode blank -dpmsoff 1 &
+bindsym $mod+l exec /usr/bin/i3lock --color=000000 &
+
 
 # mouse bindings below
 # The middle button over a titlebar kills the window
