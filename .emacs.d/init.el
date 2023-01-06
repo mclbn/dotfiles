@@ -1244,8 +1244,8 @@ respectively."
   (lsp-ui-sideline-show-code-actions nil)
   (lsp-ui-sideline-ignore-duplicate t)
   :config
- ;; WORKAROUND Hide mode-line of the lsp-ui-imenu buffer
- ;; (https://github.com/emacs-lsp/lsp-ui/issues/243)
+  ;; WORKAROUND Hide mode-line of the lsp-ui-imenu buffer
+  ;; (https://github.com/emacs-lsp/lsp-ui/issues/243)
   (defadvice lsp-ui-imenu (after hide-lsp-ui-imenu-mode-line activate)
     (setq mode-line-format nil))
   )
@@ -1504,7 +1504,7 @@ respectively."
       (setq org-directory "~/org")
       (setq org-agenda-files '("perso.org" "work.org" "notes.org" "cloudcal-perso.org" "cloudcal-work.org"))
       (setq org-refile-targets `((nil :maxlevel . 9)
-                            (("perso.org" "work.org" "notes.org") :maxlevel . 9)))))
+                                 (("perso.org" "work.org" "notes.org") :maxlevel . 9)))))
   (require 'org-id)
   (require 'org-capture)
   (defun org-schedule-force-note ()
