@@ -1598,53 +1598,62 @@ exist after each headings's drawers."
   :ensure nil
   :bind ("C-c c" . org-capture)
   :config
-  (setq org-default-notes-file (concat org-directory "/notes.org"))
+
+  (defun perso/org-capture-notes-file ()
+    (concat org-directory "/notes.org"))
+
+  (defun perso/org-capture-tasks-file ()
+    (if (string= (getenv "EMACS_WORK") "Y")
+        (concat org-directory "/tasks.org")
+      (concat org-directory "/perso.org")))
+
+  (setq org-default-notes-file (perso/org-capture-notes-file))
   (setq org-capture-templates
         `(
           ("n" "take a quick note"
-           entry (file+headline ,(concat org-directory "/notes.org") "À classer")
+           entry (file+headline ,(perso/org-capture-notes-file) "À classer")
            "* %?"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("l" "take note with context"
-           entry (file+headline  ,(concat org-directory "/notes.org") "À classer")
+           entry (file+headline  ,(perso/org-capture-notes-file) "À classer")
            "* %?\n%a"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("x" "take note with clipboard"
-           entry (file+headline ,(concat org-directory "/notes.org") "À classer")
+           entry (file+headline ,(perso/org-capture-notes-file) "À classer")
            "* %?\n%x"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("s" "take note with selection"
-           entry (file+headline ,(concat org-directory "/notes.org") "À classer")
+           entry (file+headline ,(perso/org-capture-notes-file) "À classer")
            "* %?\n%i"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("t" "add simple task"
-           entry (file+headline ,(concat org-directory "/perso.org") "Tâches rapides")
+           entry (file+headline ,(perso/org-capture-tasks-file) "Tâches rapides")
            "* TODO %?"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("c" "add task with context"
-           entry (file+headline ,(concat org-directory "/perso.org") "Tâches rapides")
+           entry (file+headline ,(perso/org-capture-tasks-file) "Tâches rapides")
            "* TODO %?"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("m" "meeting notes"
-           entry (file+headline  ,(concat org-directory "/notes.org") "À classer")
+           entry (file+headline  ,(perso/org-capture-notes-file) "À classer")
            "* %? %U"
            :immediate-finish nil
            :clock-in t
@@ -1653,14 +1662,14 @@ exist after each headings's drawers."
            :prepend nil)
 
           ("p" "plan meeting"
-           entry (file+headline  ,(concat org-directory "/notes.org") "À classer")
+           entry (file+headline  ,(perso/org-capture-notes-file) "À classer")
            "* %?\nSCHEDULED: %^T"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("r" "new task: respond to email"
-           entry (file+headline ,(concat org-directory "/perso.org") "Tâches rapides")
+           entry (file+headline ,(perso/org-capture-tasks-file) "Tâches rapides")
            "* TODO Répondre à [[mailto:%:fromaddress][%:fromname]]\nSCHEDULED: %^t"
            :immediate-finish t
            :empty-lines 1
