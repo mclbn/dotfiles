@@ -1410,6 +1410,10 @@ respectively."
 (use-package vmd-mode
   :defer t)
 
+;; Lua
+(use-package lua-mode
+  :defer t)
+
 ;;; File/mode associations
 ;; Script-shell-mode on zsh
 (add-to-list 'auto-mode-alist '(".zsh$" . shell-script-mode))
