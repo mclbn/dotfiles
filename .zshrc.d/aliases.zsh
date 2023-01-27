@@ -1,5 +1,5 @@
 # overriding previous aliases
-alias ls='ls -F'
+alias ls='ls -F --color'
 alias grep='grep'
 alias ln='ln'
 
