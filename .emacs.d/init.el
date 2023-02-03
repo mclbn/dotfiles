@@ -321,6 +321,15 @@
 (use-package sudo-edit
   :commands (sudo-edit))
 
+;; Buffer-move : swap buffer positions
+(use-package buffer-move
+  :config
+  (setq buffer-move-stay-after-swap t)
+  (global-set-key (kbd "<C-S-up>")     'buf-move-up)
+  (global-set-key (kbd "<C-S-down>")   'buf-move-down)
+  (global-set-key (kbd "<C-S-left>")   'buf-move-left)
+  (global-set-key (kbd "<C-S-right>")  'buf-move-right))
+
 ;; Ibuffer : buffer management and sorting
 (use-package ibuffer
   :ensure nil
