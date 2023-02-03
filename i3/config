@@ -34,7 +34,7 @@ floating_modifier $mod
 focus_follows_mouse no
 
 # start a terminal
-bindsym $mod+Return exec i3-sensible-terminal
+bindsym $mod+Return exec xterm +hold -e "script -q /home/marc/log/script/$(date +%Y-%m-%d_%H:%M:%S)"
 
 # kill focused window
 bindsym $mod+Shift+q kill
@@ -152,6 +152,13 @@ mode "resize" {
 }
 
 bindsym $mod+r mode "resize"
+
+# resizing without resize mod
+bindsym $mod+Ctrl+Right resize shrink width 1 px or 1 ppt
+bindsym $mod+Ctrl+Up resize grow height 1 px or 1 ppt
+bindsym $mod+Ctrl+Down resize shrink height 1 px or 1 ppt
+bindsym $mod+Ctrl+Left resize grow width 1 px or 1 ppt
+
 
 # toggle status-bar visibility
 bindsym $mod+b bar mode toggle
