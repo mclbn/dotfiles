@@ -585,8 +585,18 @@ With argument, do this that many times."
 (setq show-paren-delay 0)
 
 ;; make characters after column 80 purple
-(setq whitespace-style
-      (quote (face trailing tab-mark lines-tail space-before-tab)))
+(use-package whitespace
+  :config
+  (setq whitespace-line-column 80)
+  (setq whitespace-style
+        (quote (face trailing tab-mark space-before-tab)))
+  (defun perso/whitespace-lines-tail ()
+    "Toggle whitespace line tails highlighting"
+    (interactive)
+    (whitespace-toggle-options 'lines-tail))
+  (bind-key "C-z l" #'perso/whitespace-lines-tail)
+  )
+
 (add-hook 'prog-mode-hook 'whitespace-mode)
 ;; (add-hook 'find-file-hook 'whitespace-mode)
 ;; also display column number
