@@ -1140,6 +1140,7 @@ respectively."
 ;;; File navigation UI
 ;; Treemacs : visual tree
 (use-package treemacs
+  :pin melpa ;; the good version is on melpa, not melpa-stable
   :ensure t
   :defer t
   :bind
@@ -1194,6 +1195,7 @@ respectively."
 
 ;; LSP-mode : IDE-like features
 (use-package lsp-mode
+  :pin melpa ;; the good version is on melpa, not melpa-stable
   :defer t
   :commands lsp
   :custom
@@ -1215,6 +1217,9 @@ respectively."
                     js-mode js2-mode typescript-mode web-mode
                     c-mode c++-mode objc-mode php-mode) . lsp-deferred)
   :config
+  (use-package lsp-treemacs
+    :pin melpa ;; the good version is on melpa, not melpa-stable
+    )
   (setq lsp-completion-provider :none)
   (setq read-process-output-max (* 1024 1024)) ;; 1MB for better performance
   (setq lsp-idle-delay 0.5) ;; refresh adjustment for better performance
@@ -1229,6 +1234,7 @@ respectively."
 
 ;; Lsp-ui : visual add-ons for LSP
 (use-package lsp-ui
+  :pin melpa ;; the good version is on melpa, not melpa-stable
   :commands lsp-ui-mode
   :custom-face
   (lsp-ui-doc-background ((t (:background nil))))
@@ -1261,11 +1267,12 @@ respectively."
 
 
 ;; I found dap-mode to be extremely buggy at best,
-;; for most of the languages I use, so disabling it for now
-;; ;; Dap-mode
-;; (use-package dap-mode
-;;   :after lsp-mode
-;;   :diminish
+;; for most of the languages I use
+;; Dap-mode
+(use-package dap-mode
+  :pin melpa ;; the good version is on melpa, not melpa-stable
+  :after lsp-mode
+  :diminish
 ;;   :config
 ;;   ;; Could not manage to make any of the following work...
 ;;   ;; (require 'dap-firefox)
@@ -1276,7 +1283,8 @@ respectively."
 ;;   (require 'dap-lldb)
 ;;   (require 'dap-php)
 ;;   (setq dap-lldb-debug-program '("/usr/bin/lldb-vscode"))
-;;   (setq dap-python-debugger 'debugpy))
+;;   (setq dap-python-debugger 'debugpy)
+)
 
 ;;; Language-specific modes and settings
 ;; Python
@@ -1291,6 +1299,7 @@ respectively."
 
 ;; Lsp-pyright : python integration with lsp-mode
 (use-package lsp-pyright
+  :pin melpa ;; the good version is on melpa, not melpa-stable
   :hook (python-mode . (lambda ()
                          (require 'lsp-pyright)
                          (lsp)))  ; or lsp-deferred
@@ -1335,6 +1344,7 @@ respectively."
 ;; Java
 ;; Jsp-java : lsp-mode integration
 (use-package lsp-java
+  :pin melpa ;; the good version is on melpa, not melpa-stable
   :after lsp-mode
   :if (executable-find "mvn")
   :init
