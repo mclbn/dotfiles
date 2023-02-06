@@ -1510,6 +1510,7 @@ respectively."
   (org-use-property-inheritance nil) ; for performance
   (org-cycle-separator-lines 2)
   (org-id-link-to-org-use-id t)
+  (org-latex-listings t)
   :bind
   ("C-z a" . org-agenda)
   ("C-c l" . org-store-link)
