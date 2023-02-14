@@ -1239,8 +1239,10 @@ respectively."
                                   "--pch-storage=memory"
                                   "-background-index"
                                   "-log=error"))
-  ;; We use phpactor (with composer installed too)
-  (setq lsp-disabled-clients '(php-ls iph intelephense)))
+  ;; We used to prefer phpactor (with composer installed too) bit it lacks to many features,
+  ;; so intelephense it is!
+  ;; (setq lsp-disabled-clients '(php-ls iph intelephense))
+  )
 
 ;; Lsp-ui : visual add-ons for LSP
 (use-package lsp-ui
