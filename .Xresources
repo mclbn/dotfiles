@@ -19,7 +19,7 @@ XTerm*metaSendsEscape: true
 
 XTerm*visualBell: false
 
-xterm*faceName: DejaVu Sans Mono Book
+xterm*faceName: DejaVu Sans Mono
 ! xterm*faceSize: 11
 xterm*faceSize: 13
 xterm*vt100*geometry: 120x40
