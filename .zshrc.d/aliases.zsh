@@ -1,5 +1,5 @@
 # overriding previous aliases
-alias ls='ls -F'
+alias ls='ls -F --color'
 alias grep='grep'
 alias ln='ln'
 
@@ -14,6 +14,7 @@ alias gdb='gdb -q'
 alias mp='mkdir -p'
 alias ssh='ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -o UseRoaming=no'
 alias sshx='ssh -X -Y -C -c blowfish-cbc,arcfour'
+alias grep='grep --color=always'
 alias grep_urls="grep -aiRPoH 'https?://[a-zA-Z0-9\-\_\.\~\!\*'\''\(\)\;\:\@\&\=\+\$\,\/\?\#\[\]\%]+'|sed 's/:/,/'"
 alias grep_full='grep -aiRPoH'
 alias wget_no_cert_verify 'wget --no-check-certificate'
@@ -22,6 +23,7 @@ alias chmox='chmod +x'
 alias emacs='emacs -nw'
 alias ne='emacs -Q'
 alias rag='ranger'
+alias rg='rg --color=always'
 alias py='python'
 alias py2='python2'
 alias py3='python3'

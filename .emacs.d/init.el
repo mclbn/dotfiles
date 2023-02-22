@@ -219,16 +219,16 @@
     (let* ((file (dired-get-filename nil t)))
       (call-process "xdg-open" nil 0 nil file)))
   (define-key dired-mode-map (kbd "C-<return>") #'dired-open-external)
-;;   (defun open-in-external-app ()
-;;     "Open the file where point is or the marked files in Dired in external
-;; app. The app is chosen from your OS's preference."
-;;     (interactive)
-;;     (let* ((file-list
-;;             (dired-get-marked-files)))
-;;       (mapc
-;;        (lambda (file-path)
-;;          (let ((process-connection-type nil))
-;;            (start-process "" nil "xdg-open" (shell-quote-argument file-path)))) file-list)))
+  ;;   (defun open-in-external-app ()
+  ;;     "Open the file where point is or the marked files in Dired in external
+  ;; app. The app is chosen from your OS's preference."
+  ;;     (interactive)
+  ;;     (let* ((file-list
+  ;;             (dired-get-marked-files)))
+  ;;       (mapc
+  ;;        (lambda (file-path)
+  ;;          (let ((process-connection-type nil))
+  ;;            (start-process "" nil "xdg-open" (shell-quote-argument file-path)))) file-list)))
 
 
   (use-package diredfl
@@ -287,17 +287,17 @@
   (which-key-mode))
 
 (defun clipboard-swap () "Swaps the clipboard contents with the highlighted region"
-    (interactive)
-    (if (use-region-p)
-        (progn
-            (setq
-                reg-beg (region-beginning)
-                reg-end (region-end))
-            (deactivate-mark)
-            (goto-char reg-end)
-            (clipboard-yank)
-            (clipboard-kill-region reg-beg reg-end))
-        (clipboard-yank)))
+       (interactive)
+       (if (use-region-p)
+           (progn
+             (setq
+              reg-beg (region-beginning)
+              reg-end (region-end))
+             (deactivate-mark)
+             (goto-char reg-end)
+             (clipboard-yank)
+             (clipboard-kill-region reg-beg reg-end))
+         (clipboard-yank)))
 (global-set-key (kbd "C-z y") 'clipboard-swap) ; Yank with the Shift key to swap instead of paste.
 
 ;; Undo-tree
@@ -320,6 +320,15 @@
 ;; Sudo-edit : simple commands for privileged editing
 (use-package sudo-edit
   :commands (sudo-edit))
+
+;; Buffer-move : swap buffer positions
+(use-package buffer-move
+  :config
+  (setq buffer-move-stay-after-swap t)
+  (global-set-key (kbd "<C-S-up>")     'buf-move-up)
+  (global-set-key (kbd "<C-S-down>")   'buf-move-down)
+  (global-set-key (kbd "<C-S-left>")   'buf-move-left)
+  (global-set-key (kbd "<C-S-right>")  'buf-move-right))
 
 ;; Ibuffer : buffer management and sorting
 (use-package ibuffer
@@ -576,8 +585,18 @@ With argument, do this that many times."
 (setq show-paren-delay 0)
 
 ;; make characters after column 80 purple
-(setq whitespace-style
-  (quote (face trailing tab-mark lines-tail space-before-tab)))
+(use-package whitespace
+  :config
+  (setq whitespace-line-column 80)
+  (setq whitespace-style
+        (quote (face trailing tab-mark space-before-tab)))
+  (defun perso/whitespace-lines-tail ()
+    "Toggle whitespace line tails highlighting"
+    (interactive)
+    (whitespace-toggle-options 'lines-tail))
+  (bind-key "C-z l" #'perso/whitespace-lines-tail)
+  )
+
 (add-hook 'prog-mode-hook 'whitespace-mode)
 ;; (add-hook 'find-file-hook 'whitespace-mode)
 ;; also display column number
@@ -618,14 +637,14 @@ With argument, do this that many times."
   :diminish minimap-mode
   :init
   (setq minimap-window-location 'right
-    minimap-width-fraction 0.04
-    minimap-hide-scroll-bar nil
-    minimap-hide-fringes nil
-    minimap-dedicated-window t
-    minimap-minimum-width 15)
+        minimap-width-fraction 0.04
+        minimap-hide-scroll-bar nil
+        minimap-hide-fringes nil
+        minimap-dedicated-window t
+        minimap-minimum-width 15)
   :custom-face
   (minimap-font-face ((t (:height 13 :weight bold :width condensed
-                          :spacing dual-width :family "VT323"))))
+                                  :spacing dual-width :family "VT323"))))
   (minimap-active-region-background ((t (:extend t :background "gray24"))))
   :config
   (setq minimap-major-modes '(prog-mode text-mode))
@@ -654,7 +673,7 @@ With argument, do this that many times."
                       :foreground "#2B2B2B" :distant-foreground "#2B2B2B"
                       :height 1.0 :box nil)
   (global-set-key (kbd "C-c t") 'centaur-tabs-mode)
-;;  (centaur-tabs-mode t)
+  ;;  (centaur-tabs-mode t)
   :bind
   ("C-<prior>" . centaur-tabs-backward)
   ("C-<next>" . centaur-tabs-forward))
@@ -695,12 +714,12 @@ With argument, do this that many times."
   :ensure nil
   :if (executable-find "hunspell")
   :hook (((text-mode outline-mode latex-mode org-mode markdown-mode) . flyspell-mode)
-	 (prog-mode . flyspell-prog-mode))
+	     (prog-mode . flyspell-prog-mode))
   :bind
   ("C-c e" . (lambda () (interactive)
-	       (ispell-change-dictionary "en_US") (typo-change-language "English") (flyspell-buffer)))
+	           (ispell-change-dictionary "en_US") (typo-change-language "English") (flyspell-buffer)))
   ("C-c f" . (lambda () (interactive)
-	       (ispell-change-dictionary "fr_FR") (typo-change-language "French") (flyspell-buffer)))
+	           (ispell-change-dictionary "fr_FR") (typo-change-language "French") (flyspell-buffer)))
   :init
   ;; The personal dictionary file has to exist, otherwise hunspell will
   ;; silently not use it.
@@ -889,8 +908,8 @@ With argument, do this that many times."
   ;; Stop pairing single quotes in elisp
   (sp-local-pair 'emacs-lisp-mode "'" nil :actions nil)
 
-(defmacro def-pairs (pairs)
-  "Define functions for pairing. PAIRS is an alist of (NAME . STRING)
+  (defmacro def-pairs (pairs)
+    "Define functions for pairing. PAIRS is an alist of (NAME . STRING)
 conses, where NAME is the function name that will be created and
 STRING is a single-character string that marks the opening character.
 
@@ -899,23 +918,23 @@ STRING is a single-character string that marks the opening character.
 
 defines the functions WRAP-WITH-PAREN and WRAP-WITH-BRACKET,
 respectively."
-  `(progn
-     ,@(loop for (key . val) in pairs
-             collect
-             `(defun ,(read (concat
-                             "wrap-with-"
-                             (prin1-to-string key)
-                             "s"))
-                  (&optional arg)
-                (interactive "p")
-                (sp-wrap-with-pair ,val)))))
+    `(progn
+       ,@(loop for (key . val) in pairs
+               collect
+               `(defun ,(read (concat
+                               "wrap-with-"
+                               (prin1-to-string key)
+                               "s"))
+                    (&optional arg)
+                  (interactive "p")
+                  (sp-wrap-with-pair ,val)))))
 
-(def-pairs ((paren . "(")
-            (bracket . "[")
-            (brace . "{")
-            (single-quote . "'")
-            (double-quote . "\"")
-            (back-quote . "`"))))
+  (def-pairs ((paren . "(")
+              (bracket . "[")
+              (brace . "{")
+              (single-quote . "'")
+              (double-quote . "\"")
+              (back-quote . "`"))))
 
 ;; Rainbow-delimiters : colors for parenthesis
 (use-package rainbow-delimiters
@@ -970,12 +989,12 @@ respectively."
   (use-package flycheck-popup-tip
     :hook (flycheck-mode . flycheck-popup-tip-mode))
   (add-to-list 'display-buffer-alist
-             `(,(rx bos "*Flycheck errors*" eos)
-              (display-buffer-reuse-window
-               display-buffer-in-side-window)
-              (side            . bottom)
-              (reusable-frames . visible)
-              (window-height   . 0.33))))
+               `(,(rx bos "*Flycheck errors*" eos)
+                 (display-buffer-reuse-window
+                  display-buffer-in-side-window)
+                 (side            . bottom)
+                 (reusable-frames . visible)
+                 (window-height   . 0.33))))
 
 ;; Dumb-jump : simple "jump to definition" tool
 (use-package dumb-jump
@@ -1099,7 +1118,7 @@ respectively."
   :after prescient
   :hook (company-mode . company-prescient-mode)
   :config
-   (company-quickhelp-terminal-mode 1))
+  (company-quickhelp-terminal-mode 1))
 
 (use-package company-box
   :diminish
@@ -1129,13 +1148,14 @@ respectively."
   :init (doom-modeline-mode 1)
   :config
   (doom-modeline-def-modeline 'main
-                              '(bar workspace-name window-number matches follow buffer-info remote-host buffer-position word-count selection-info)
-                              '(objed-state misc-info persp-name grip debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process vcs checker " "))
+    '(bar workspace-name window-number matches follow buffer-info remote-host buffer-position word-count selection-info)
+    '(objed-state misc-info persp-name grip debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process vcs checker " "))
   )
 
 ;;; File navigation UI
 ;; Treemacs : visual tree
 (use-package treemacs
+  :pin melpa ;; the good version is on melpa, not melpa-stable
   :ensure t
   :defer t
   :bind
@@ -1190,6 +1210,7 @@ respectively."
 
 ;; LSP-mode : IDE-like features
 (use-package lsp-mode
+  :pin melpa ;; the good version is on melpa, not melpa-stable
   :defer t
   :commands lsp
   :custom
@@ -1208,32 +1229,34 @@ respectively."
   (lsp-enable-folding nil)
   :bind (:map lsp-mode-map ("C-c C-f" . lsp-format-buffer))
   :hook ((java-mode python-mode go-mode rust-mode
-          js-mode js2-mode typescript-mode web-mode
-          c-mode c++-mode objc-mode php-mode) . lsp-deferred)
-  (lsp-mode . lsp-enable-which-key-integration)
+                    js-mode js2-mode typescript-mode web-mode
+                    c-mode c++-mode objc-mode php-mode) . lsp-deferred)
   :config
+  (use-package lsp-treemacs
+    :pin melpa ;; the good version is on melpa, not melpa-stable
+    )
   (setq lsp-completion-provider :none)
   (setq read-process-output-max (* 1024 1024)) ;; 1MB for better performance
   (setq lsp-idle-delay 0.5) ;; refresh adjustment for better performance
-  ;; (setq lsp-clients-clangd-executable "clangd")
-  ;; (setq lsp-clients-clangd-args `(;;"--query-driver=~/.platformio/packages/toolchain-xtensa32@2.50200.97/bin/xtensa-esp32-elf-*"
-  ;;                                 ;; "--include "
-  ;;                                 ;; "--query-driver=~/.platformio/packages/toolchain-atmelavr/bin/avr-g++"
-  ;;                                 "-j=2"
-  ;;                                 "--header-insertion=never"
-  ;;                                 "--header-insertion-decorators=0"
-  ;;                                 "--pch-storage=memory"
-  ;;                                 "-background-index"
-  ;;                                 "-log=error"))
-  ;; We use phpactor (with composer installed too)
-  (setq lsp-disabled-clients '(php-ls iph intelephense)))
+  (setq lsp-clients-clangd-args '("-j=2"
+                                  "--header-insertion=never"
+                                  "--header-insertion-decorators=0"
+                                  "--pch-storage=memory"
+                                  "-background-index"
+                                  "-log=error"))
+  ;; We used to prefer phpactor (with composer installed too) bit it lacks to many features,
+  ;; so intelephense it is!
+  ;; (setq lsp-disabled-clients '(php-ls iph intelephense))
+  )
 
 ;; Lsp-ui : visual add-ons for LSP
 (use-package lsp-ui
+  :pin melpa ;; the good version is on melpa, not melpa-stable
   :commands lsp-ui-mode
   :custom-face
   (lsp-ui-doc-background ((t (:background nil))))
-  (lsp-ui-doc-border (face-foreground 'default))
+  ;; I don't know why but the following does not work on all my machines
+  ;; (lsp-ui-doc-border (face-foreground 'default))
   :bind
   ("C-z i" . lsp-ui-doc-glance)
   (:map lsp-ui-mode-map
@@ -1253,18 +1276,20 @@ respectively."
   (lsp-ui-sideline-show-code-actions nil)
   (lsp-ui-sideline-ignore-duplicate t)
   :config
- ;; WORKAROUND Hide mode-line of the lsp-ui-imenu buffer
- ;; (https://github.com/emacs-lsp/lsp-ui/issues/243)
+  ;; WORKAROUND Hide mode-line of the lsp-ui-imenu buffer
+  ;; (https://github.com/emacs-lsp/lsp-ui/issues/243)
   (defadvice lsp-ui-imenu (after hide-lsp-ui-imenu-mode-line activate)
     (setq mode-line-format nil))
   )
 
+
 ;; I found dap-mode to be extremely buggy at best,
-;; for most of the languages I use, so disabling it for now
-;; ;; Dap-mode
-;; (use-package dap-mode
-;;   :after lsp-mode
-;;   :diminish
+;; for most of the languages I use
+;; Dap-mode
+(use-package dap-mode
+  :pin melpa ;; the good version is on melpa, not melpa-stable
+  :after lsp-mode
+  :diminish
 ;;   :config
 ;;   ;; Could not manage to make any of the following work...
 ;;   ;; (require 'dap-firefox)
@@ -1275,7 +1300,8 @@ respectively."
 ;;   (require 'dap-lldb)
 ;;   (require 'dap-php)
 ;;   (setq dap-lldb-debug-program '("/usr/bin/lldb-vscode"))
-;;   (setq dap-python-debugger 'debugpy))
+;;   (setq dap-python-debugger 'debugpy)
+)
 
 ;;; Language-specific modes and settings
 ;; Python
@@ -1290,6 +1316,7 @@ respectively."
 
 ;; Lsp-pyright : python integration with lsp-mode
 (use-package lsp-pyright
+  :pin melpa ;; the good version is on melpa, not melpa-stable
   :hook (python-mode . (lambda ()
                          (require 'lsp-pyright)
                          (lsp)))  ; or lsp-deferred
@@ -1334,6 +1361,7 @@ respectively."
 ;; Java
 ;; Jsp-java : lsp-mode integration
 (use-package lsp-java
+  :pin melpa ;; the good version is on melpa, not melpa-stable
   :after lsp-mode
   :if (executable-find "mvn")
   :init
@@ -1422,6 +1450,20 @@ respectively."
 ;; CSV-mode
 (use-package csv-mode)
 
+;; Markdown
+(use-package markdown-mode
+  :defer t
+  :config
+  (setq markdown-fontify-code-blocks-natively t)
+  )
+;; Vmd-mode : alternative markdown live preview
+(use-package vmd-mode
+  :defer t)
+
+;; Lua
+(use-package lua-mode
+  :defer t)
+
 ;;; File/mode associations
 ;; Script-shell-mode on zsh
 (add-to-list 'auto-mode-alist '(".zsh$" . shell-script-mode))
@@ -1456,11 +1498,6 @@ respectively."
   (org-adapt-indentation nil)
   (org-startup-truncated nil)
   (org-startup-folded 'overview)
-  (org-directory "~/org")
-  (org-agenda-files '("perso.org" "work.org" "notes.org" "cloudcal-perso.org" "cloudcal-work.org"))
-  (org-refile-targets `((nil :maxlevel . 9)
-                        (("perso.org" "work.org" "notes.org") :maxlevel . 9)))
-                        ;; (,(directory-files-recursively "~/org/" "^[a-z0-9]*.org$") :maxlevel . 9)))
   (org-refile-use-outline-path 'file)
   (org-outline-path-complete-in-steps nil)
   (org-refile-allow-creating-parent-nodes 'confirm)
@@ -1474,7 +1511,7 @@ respectively."
      ("RATED" . (:foreground "Gold" :weight bold))
      ))
   (org-src-fontify-natively t)
-;  (org-todo-repeat-to-state "TODO")
+                                        ;  (org-todo-repeat-to-state "TODO")
   (org-log-into-drawer "LOGBOOK")
   (org-log-done 'time)
   (org-log-reschedule 'time)
@@ -1504,10 +1541,25 @@ respectively."
   (org-use-property-inheritance nil) ; for performance
   (org-cycle-separator-lines 2)
   (org-id-link-to-org-use-id t)
+  (org-latex-listings t)
   :bind
   ("C-z a" . org-agenda)
   ("C-c l" . org-store-link)
   :config
+  (if (string= (getenv "EMACS_WORK") "Y")
+      (progn
+        (defun perso/org-work-files ()
+          (seq-filter (lambda(x) (not (string-match "/templates/"(file-name-directory x))))
+                      (directory-files-recursively "~/org-work" "\\.org$")))
+        (setq org-directory "~/org-work")
+        (setq org-agenda-files (perso/org-work-files))
+        (setq org-refile-targets '((nil :maxlevel . 9)
+                                   (org-agenda-files :maxlevel . 9))))
+    (progn
+      (setq org-directory "~/org")
+      (setq org-agenda-files '("perso.org" "work.org" "notes.org" "cloudcal-perso.org" "cloudcal-work.org"))
+      (setq org-refile-targets `((nil :maxlevel . 9)
+                                 (("perso.org" "work.org" "notes.org") :maxlevel . 9)))))
   (require 'org-id)
   (require 'org-capture)
   (defun org-schedule-force-note ()
@@ -1517,10 +1569,10 @@ respectively."
       (call-interactively 'org-schedule)))
   (define-key org-mode-map (kbd "C-c C-S-s") 'org-schedule-force-note)
   (defun org-deadline-force-note ()
-  "Call org-deadline but make sure it prompts for re-deadlining note."
-  (interactive)
-  (let ((org-log-redeadline "note"))
-    (call-interactively 'org-deadline)))
+    "Call org-deadline but make sure it prompts for re-deadlining note."
+    (interactive)
+    (let ((org-log-redeadline "note"))
+      (call-interactively 'org-deadline)))
   (define-key org-mode-map (kbd "C-c C-S-d") 'org-deadline-force-note)
 
   (defun my-skip-unless-deadline ()
@@ -1597,53 +1649,62 @@ exist after each headings's drawers."
   :ensure nil
   :bind ("C-c c" . org-capture)
   :config
-  (setq org-default-notes-file (concat org-directory "/notes.org"))
+
+  (defun perso/org-capture-notes-file ()
+    (concat org-directory "/notes.org"))
+
+  (defun perso/org-capture-tasks-file ()
+    (if (string= (getenv "EMACS_WORK") "Y")
+        (concat org-directory "/tasks.org")
+      (concat org-directory "/perso.org")))
+
+  (setq org-default-notes-file (perso/org-capture-notes-file))
   (setq org-capture-templates
         `(
           ("n" "take a quick note"
-           entry (file+headline ,(concat org-directory "/notes.org") "À classer")
+           entry (file+headline ,(perso/org-capture-notes-file) "À classer")
            "* %?"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("l" "take note with context"
-           entry (file+headline  ,(concat org-directory "/notes.org") "À classer")
+           entry (file+headline  ,(perso/org-capture-notes-file) "À classer")
            "* %?\n%a"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("x" "take note with clipboard"
-           entry (file+headline ,(concat org-directory "/notes.org") "À classer")
+           entry (file+headline ,(perso/org-capture-notes-file) "À classer")
            "* %?\n%x"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("s" "take note with selection"
-           entry (file+headline ,(concat org-directory "/notes.org") "À classer")
+           entry (file+headline ,(perso/org-capture-notes-file) "À classer")
            "* %?\n%i"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("t" "add simple task"
-           entry (file+headline ,(concat org-directory "/perso.org") "Tâches rapides")
+           entry (file+headline ,(perso/org-capture-tasks-file) "Tâches rapides")
            "* TODO %?"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("c" "add task with context"
-           entry (file+headline ,(concat org-directory "/perso.org") "Tâches rapides")
+           entry (file+headline ,(perso/org-capture-tasks-file) "Tâches rapides")
            "* TODO %?"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("m" "meeting notes"
-           entry (file+headline  ,(concat org-directory "/notes.org") "À classer")
+           entry (file+headline  ,(perso/org-capture-notes-file) "À classer")
            "* %? %U"
            :immediate-finish nil
            :clock-in t
@@ -1652,20 +1713,20 @@ exist after each headings's drawers."
            :prepend nil)
 
           ("p" "plan meeting"
-           entry (file+headline  ,(concat org-directory "/notes.org") "À classer")
+           entry (file+headline  ,(perso/org-capture-notes-file) "À classer")
            "* %?\nSCHEDULED: %^T"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
 
           ("r" "new task: respond to email"
-           entry (file+headline ,(concat org-directory "/perso.org") "Tâches rapides")
+           entry (file+headline ,(perso/org-capture-tasks-file) "Tâches rapides")
            "* TODO Répondre à [[mailto:%:fromaddress][%:fromname]]\nSCHEDULED: %^t"
            :immediate-finish t
            :empty-lines 1
            :prepend nil)))
   (setq org-capture-templates-contexts
-      '(("r" ((in-mode . "mu4e-view-mode"))))))
+        '(("r" ((in-mode . "mu4e-view-mode"))))))
 
 (use-package org-caldav
   :init
@@ -1753,260 +1814,263 @@ exist after each headings's drawers."
   )
 
 ;;; Mail management
-;; Include protonmail-bridge cert
-(require 'gnutls)
-(add-to-list 'gnutls-trustfiles (expand-file-name "~/.config/protonmail/bridge/cert.pem"))
-;; mu4e
-(use-package mu4e
-  ;; We want the version that comes with mu, not from melpa
-  :ensure nil
-  :commands (mu4e make-mu4e-context)
-  :custom
-  (mu4e-maildir (expand-file-name "~/.mail"))
-  (mu4e-attachment-dir  "~/Downloads/")
-  (mu4e-change-filenames-when-moving t) ; work better for mbsync
-  (mu4e-get-mail-command "mbsync protonmail gmail")
-  (mu4e-view-show-addresses t)
-  (mu4e-compose-dont-reply-to-self t)
-  (message-kill-buffer-on-exit t)
-  (mu4e-headers-auto-update t)
-  (mu4e-headers-skip-duplicates t)
-  ;; We will display manually with W if needed
-  (mu4e-headers-include-related nil)
-  (mu4e-view-show-images t)
-  (mu4e-view-prefer-html t)
-  (mu4e-use-fancy-chars t)
-  (mu4e-headers-precise-alignment t)
-  (mu4e-headers-date-format "%d-%m-%Y")
-  (mu4e-headers-fields
-   '((:human-date . 13)
-     (:mdir . 15)
-     (:flags . 10)
-     (:mailing-list . 10)
-     (:from-or-to . 25)
-     (:subject)))
-  (mu4e-headers-results-limit -1)
-  ;; index-cleanup and index-lazy-check are needed with mbsync/gmail
-  (mu4e-index-cleanup t)
-  (mu4e-index-lazy-check nil)
+(if (not (string= (getenv "EMACS_NOMU") "Y"))
+    (progn
+      ;; Include protonmail-bridge cert
+      (require 'gnutls)
+      (add-to-list 'gnutls-trustfiles (expand-file-name "~/.config/protonmail/bridge/cert.pem"))
+      ;; mu4e
+      (use-package mu4e
+        ;; We want the version that comes with mu, not from melpa
+        :ensure nil
+        :commands (mu4e make-mu4e-context)
+        :custom
+        (mu4e-maildir (expand-file-name "~/.mail"))
+        (mu4e-attachment-dir  "~/Downloads/")
+        (mu4e-change-filenames-when-moving t) ; work better for mbsync
+        (mu4e-get-mail-command "mbsync protonmail gmail")
+        (mu4e-view-show-addresses t)
+        (mu4e-compose-dont-reply-to-self t)
+        (message-kill-buffer-on-exit t)
+        (mu4e-headers-auto-update t)
+        (mu4e-headers-skip-duplicates t)
+        ;; We will display manually with W if needed
+        (mu4e-headers-include-related nil)
+        (mu4e-view-show-images t)
+        (mu4e-view-prefer-html t)
+        (mu4e-use-fancy-chars t)
+        (mu4e-headers-precise-alignment t)
+        (mu4e-headers-date-format "%d-%m-%Y")
+        (mu4e-headers-fields
+         '((:human-date . 13)
+           (:mdir . 15)
+           (:flags . 10)
+           (:mailing-list . 10)
+           (:from-or-to . 25)
+           (:subject)))
+        (mu4e-headers-results-limit -1)
+        ;; index-cleanup and index-lazy-check are needed with mbsync/gmail
+        (mu4e-index-cleanup t)
+        (mu4e-index-lazy-check nil)
                                         ;  (mu4e-html2text-command "html2text -utf8 -width 72")
-  ;; (mu4e-html2text-command "w3m -dump -T text/html")
-  (mu4e-decryption-policy 'ask)
-  (mu4e-context-policy 'pick-first)
-  (mu4e-hide-index-messages t)
-  ;; Since we are using Ivy:
-  (mu4e-completing-read-function 'ivy-completing-read)
-  :config
-  (setq mu4e-maildir-shortcuts
-        '((:maildir "/protonmail/inbox"     :key  ?i)
-          (:maildir "/protonmail/archive"   :key  ?a)
-          (:maildir "/protonmail/drafts"     :key  ?d)
-          (:maildir "/protonmail/sent"      :key  ?s)
-          (:maildir "/gmail/inbox"     :key  ?I)
-          (:maildir "/gmail/archive"   :key  ?A)
-          (:maildir "/gmail/drafts"     :key  ?D)
-          (:maildir "/gmail/sent"      :key  ?S)))
-  (add-to-list 'mu4e-bookmarks
-               '( :name "With attachment"
-                  :query "mime:application/* AND NOT mime:application/pgp* AND NOT (maildir:/protonmail/trash OR maildir:/gmail/trash OR maildir:/protonmail/spam OR maildir:/gmail/spam)"
-                  :key ?a))
-  (add-to-list 'mu4e-bookmarks
-               '( :name  "Focused"
-                  :query "flag:flagged OR (flag:unread AND NOT flag:list AND NOT (maildir:/protonmail/sent OR maildir:/gmail/sent OR maildir:/protonmail/trash OR maildir:/gmail/trash OR maildir:/protonmail/spam OR maildir:/gmail/spam))"
-                  :key ?f))
-  ;; org-mode integration
-  (require 'org-mu4e)
-  ;; This is bound globally later
-  (unbind-key "C--" mu4e-headers-mode-map)
-  ;; mu4e-action-view-in-browser is built into mu4e
-  ;; by adding it to these lists of custom actions
-  ;; it can be invoked by first pressing a, then selecting
-  (add-to-list 'mu4e-headers-actions
-               '("in browser" . mu4e-action-view-in-browser) t)
-  (add-to-list 'mu4e-view-actions
-               '("in browser" . mu4e-action-view-in-browser) t)
+        ;; (mu4e-html2text-command "w3m -dump -T text/html")
+        (mu4e-decryption-policy 'ask)
+        (mu4e-context-policy 'pick-first)
+        (mu4e-hide-index-messages t)
+        ;; Since we are using Ivy:
+        (mu4e-completing-read-function 'ivy-completing-read)
+        :config
+        (setq mu4e-maildir-shortcuts
+              '((:maildir "/protonmail/inbox"     :key  ?i)
+                (:maildir "/protonmail/archive"   :key  ?a)
+                (:maildir "/protonmail/drafts"     :key  ?d)
+                (:maildir "/protonmail/sent"      :key  ?s)
+                (:maildir "/gmail/inbox"     :key  ?I)
+                (:maildir "/gmail/archive"   :key  ?A)
+                (:maildir "/gmail/drafts"     :key  ?D)
+                (:maildir "/gmail/sent"      :key  ?S)))
+        (add-to-list 'mu4e-bookmarks
+                     '( :name "With attachment"
+                        :query "mime:application/* AND NOT mime:application/pgp* AND NOT (maildir:/protonmail/trash OR maildir:/gmail/trash OR maildir:/protonmail/spam OR maildir:/gmail/spam)"
+                        :key ?a))
+        (add-to-list 'mu4e-bookmarks
+                     '( :name  "Focused"
+                        :query "flag:flagged OR (flag:unread AND NOT flag:list AND NOT (maildir:/protonmail/sent OR maildir:/gmail/sent OR maildir:/protonmail/trash OR maildir:/gmail/trash OR maildir:/protonmail/spam OR maildir:/gmail/spam))"
+                        :key ?f))
+        ;; org-mode integration
+        (require 'org-mu4e)
+        ;; This is bound globally later
+        (unbind-key "C--" mu4e-headers-mode-map)
+        ;; mu4e-action-view-in-browser is built into mu4e
+        ;; by adding it to these lists of custom actions
+        ;; it can be invoked by first pressing a, then selecting
+        (add-to-list 'mu4e-headers-actions
+                     '("in browser" . mu4e-action-view-in-browser) t)
+        (add-to-list 'mu4e-view-actions
+                     '("in browser" . mu4e-action-view-in-browser) t)
 
-  ;; From https://etienne.depar.is/emacs.d/mu4e.html
-  (defun ed/mu4e-view-go-to-private-url (&optional multi)
-    "Offer to go to url(s) in a private window of Firefox.
+        ;; From https://etienne.depar.is/emacs.d/mu4e.html
+        (defun ed/mu4e-view-go-to-private-url (&optional multi)
+          "Offer to go to url(s) in a private window of Firefox.
 If MULTI (prefix-argument) is nil, go to a single one, otherwise,
 offer to go to a range of urls."
-    (interactive "P")
-    (mu4e~view-handle-urls
-     "URL to visit" multi
-     (lambda (url)
-       (start-process
-        "private-firefox" nil
-        "firefox" "--private-window" url))))
+          (interactive "P")
+          (mu4e~view-handle-urls
+           "URL to visit" multi
+           (lambda (url)
+             (start-process
+              "private-firefox" nil
+              "firefox" "--private-window" url))))
 
-  (define-key mu4e-view-mode-map "G" #'ed/mu4e-view-go-to-private-url)
+        (define-key mu4e-view-mode-map "G" #'ed/mu4e-view-go-to-private-url)
 
-  (add-to-list 'mu4e-header-info-custom
-               '(:mdir .
-                       ( :name "Shortend Maildir path"
-                         :shortname "Maildir"
-                         :help "Shows a collapsed maildir path"
-                         :function (lambda (msg)
-                                     (let ((maildir (or (mu4e-message-field msg :maildir) "")))
-                                       (cond ((string-match-p "Archives/" maildir)
-                                              (replace-regexp-in-string "^/\\(.\\).*/\\(.\\).*/\\(.*\\)" "\\1/\\2/\\3" maildir))
-                                             ((string-match-p "Archives" maildir)
-                                              (replace-regexp-in-string "^/\\(.\\).*/\\(.\\).*" "\\1/\\2" maildir))
-                                             (t
-                                              (replace-regexp-in-string "^/\\(.\\).*/\\(.*\\)" "\\1/\\2" maildir))))))))
+        (add-to-list 'mu4e-header-info-custom
+                     '(:mdir .
+                             ( :name "Shortend Maildir path"
+                               :shortname "Maildir"
+                               :help "Shows a collapsed maildir path"
+                               :function (lambda (msg)
+                                           (let ((maildir (or (mu4e-message-field msg :maildir) "")))
+                                             (cond ((string-match-p "Archives/" maildir)
+                                                    (replace-regexp-in-string "^/\\(.\\).*/\\(.\\).*/\\(.*\\)" "\\1/\\2/\\3" maildir))
+                                                   ((string-match-p "Archives" maildir)
+                                                    (replace-regexp-in-string "^/\\(.\\).*/\\(.\\).*" "\\1/\\2" maildir))
+                                                   (t
+                                                    (replace-regexp-in-string "^/\\(.\\).*/\\(.*\\)" "\\1/\\2" maildir))))))))
 
-  ;; Marking for deletion only move to trash folder
-  (setf (alist-get 'trash mu4e-marks)
-        (list :char '("d" . "▼")
-              :prompt "dtrash"
-              :dyn-target (lambda (target msg)
-                            (mu4e-get-trash-folder msg))
-              :action (lambda (docid msg target)
-                        ;; Here's the main difference to the regular trash mark,
-                        ;; no +T before -N so the message is not marked as
-                        ;; IMAP-deleted:
-                        (mu4e--server-move docid (mu4e--mark-check-target target) "+S-u-N"))))
+        ;; Marking for deletion only move to trash folder
+        (setf (alist-get 'trash mu4e-marks)
+              (list :char '("d" . "▼")
+                    :prompt "dtrash"
+                    :dyn-target (lambda (target msg)
+                                  (mu4e-get-trash-folder msg))
+                    :action (lambda (docid msg target)
+                              ;; Here's the main difference to the regular trash mark,
+                              ;; no +T before -N so the message is not marked as
+                              ;; IMAP-deleted:
+                              (mu4e--server-move docid (mu4e--mark-check-target target) "+S-u-N"))))
 
-  ;; Tag message
-  (add-to-list 'mu4e-marks
-               '(tag
-                 :char       "g"
-                 :prompt     "gtag"
-                 :ask-target (lambda () (read-string "What tag do you want to add?"))
-                 :action      (lambda (docid msg target)
-                                (mu4e-action-retag-message msg (concat "+" target)))))
-  (mu4e~headers-defun-mark-for tag)
-  (define-key mu4e-headers-mode-map (kbd "g") 'mu4e-headers-mark-for-tag)
+        ;; Tag message
+        (add-to-list 'mu4e-marks
+                     '(tag
+                       :char       "g"
+                       :prompt     "gtag"
+                       :ask-target (lambda () (read-string "What tag do you want to add?"))
+                       :action      (lambda (docid msg target)
+                                      (mu4e-action-retag-message msg (concat "+" target)))))
+        (mu4e~headers-defun-mark-for tag)
+        (define-key mu4e-headers-mode-map (kbd "g") 'mu4e-headers-mark-for-tag)
 
-  ;; Archive Gmail-style
-  (add-to-list 'mu4e-marks
-               '(archive
-                 :char       "A"
-                 :prompt     "Archive"
-                 :show-target (lambda (target) mu4e-archive-folder)
-                 :action      (lambda (docid msg target)
-                                ;; must come before proc-move since retag runs
-                                ;; 'sed' on the file
-                                (mu4e-action-retag-message msg "-\\Inbox")
-                                (mu4e--server-move docid mu4e-archive-folder "+S-u-N"))))
-  (mu4e~headers-defun-mark-for archive)
-  (define-key mu4e-headers-mode-map (kbd "A") 'mu4e-headers-mark-for-archive)
+        ;; Archive Gmail-style
+        (add-to-list 'mu4e-marks
+                     '(archive
+                       :char       "A"
+                       :prompt     "Archive"
+                       :show-target (lambda (target) mu4e-archive-folder)
+                       :action      (lambda (docid msg target)
+                                      ;; must come before proc-move since retag runs
+                                      ;; 'sed' on the file
+                                      (mu4e-action-retag-message msg "-\\Inbox")
+                                      (mu4e--server-move docid mu4e-archive-folder "+S-u-N"))))
+        (mu4e~headers-defun-mark-for archive)
+        (define-key mu4e-headers-mode-map (kbd "A") 'mu4e-headers-mark-for-archive)
 
-  ;; Mark as read and move to spam
-  (add-to-list 'mu4e-marks
-               '(spam
-                 :char       "X"
-                 :prompt     "Spam"
-                 :show-target (lambda (target) mu4e-spam-folder)
-                 :action      (lambda (docid msg target)
-                                (mu4e-action-retag-message msg "-\\Inbox")
-                                (mu4e--server-move docid mu4e-spam-folder "+S-u-N"))))
-  (mu4e~headers-defun-mark-for spam)
-  (define-key mu4e-headers-mode-map (kbd "X") 'mu4e-headers-mark-for-spam)
+        ;; Mark as read and move to spam
+        (add-to-list 'mu4e-marks
+                     '(spam
+                       :char       "X"
+                       :prompt     "Spam"
+                       :show-target (lambda (target) mu4e-spam-folder)
+                       :action      (lambda (docid msg target)
+                                      (mu4e-action-retag-message msg "-\\Inbox")
+                                      (mu4e--server-move docid mu4e-spam-folder "+S-u-N"))))
+        (mu4e~headers-defun-mark-for spam)
+        (define-key mu4e-headers-mode-map (kbd "X") 'mu4e-headers-mark-for-spam)
 
-  (setq mu4e-contexts
-        (list
-         (make-mu4e-context
-          :name "protonmail"
-          :enter-func (lambda () (mu4e-message "Entering context protonmail"))
-          :leave-func (lambda () (mu4e-message "Leaving context protonmail"))
-          :match-func
-          (lambda (msg)
-            (when msg
-              (string-match "protonmail" (mu4e-message-field msg :maildir))))
-          :vars `((user-mail-address . ,protonmail-user-mail-address) ; in perso.el
-                  (user-full-name . ,protonmail-user-full-name) ; in perso.el
-                  (mu4e-sent-folder . "/protonmail/sent")
-                  (mu4e-drafts-folder . "/protonmail/drafts")
-                  (mu4e-trash-folder . "/protonmail/trash")
-                  (mu4e-refile-folder. "/protonmail/archive")
-                  (mu4e-archive-folder . "/protonmail/archive")
-                  (mu4e-spam-folder . "/protonmail/spam")
-                  (message-send-mail-function . smtpmail-send-it)
-                  (smtpmail-stream-type . starttls)
-                  (smtpmail-default-smtp-server . "127.0.0.1")
-                  (smtpmail-smtp-server . "127.0.0.1")
-                  (smtpmail-smtp-service . 1025)))
-         (make-mu4e-context
-          :name "gmail"
-          :enter-func (lambda () (mu4e-message "Entering context gmail"))
-          :leave-func (lambda () (mu4e-message "Leaving context gmail"))
-          :match-func
-          (lambda (msg)
-            (when msg
-              (string-match "gmail" (mu4e-message-field msg :maildir))))
-          :vars `((user-mail-address . ,gmail-user-mail-address) ; in perso.el
-                  (user-full-name . ,gmail-user-full-name) ; in perso.el
-                  (mu4e-sent-folder . "/gmail/sent")
-                  (mu4e-drafts-folder . "/gmail/drafts")
-                  (mu4e-trash-folder . "/gmail/trash")
-                  (mu4e-refile-folder. "/gmail/archive")
-                  (mu4e-archive-folder . "/gmail/archive")
-                  (mu4e-spam-folder . "/gmail/spam")
-                  (mu4e-sent-messages-behavior . delete) ; IMAP takes care of it
-                  (message-send-mail-function . smtpmail-send-it)
-                  (smtpmail-stream-type . starttls)
-                  (smtpmail-default-smtp-server . "smtp.gmail.com")
-                  (smtpmail-smtp-server . "smtp.gmail.com")
-                  (smtpmail-smtp-service . 587)
-                  ))))
-  ;; Encryption settings
-  (setq mml-secure-openpgp-sign-with-sender t
-        mml-secure-openpgp-encrypt-to-self t)
+        (setq mu4e-contexts
+              (list
+               (make-mu4e-context
+                :name "protonmail"
+                :enter-func (lambda () (mu4e-message "Entering context protonmail"))
+                :leave-func (lambda () (mu4e-message "Leaving context protonmail"))
+                :match-func
+                (lambda (msg)
+                  (when msg
+                    (string-match "protonmail" (mu4e-message-field msg :maildir))))
+                :vars `((user-mail-address . ,protonmail-user-mail-address) ; in perso.el
+                        (user-full-name . ,protonmail-user-full-name) ; in perso.el
+                        (mu4e-sent-folder . "/protonmail/sent")
+                        (mu4e-drafts-folder . "/protonmail/drafts")
+                        (mu4e-trash-folder . "/protonmail/trash")
+                        (mu4e-refile-folder. "/protonmail/archive")
+                        (mu4e-archive-folder . "/protonmail/archive")
+                        (mu4e-spam-folder . "/protonmail/spam")
+                        (message-send-mail-function . smtpmail-send-it)
+                        (smtpmail-stream-type . starttls)
+                        (smtpmail-default-smtp-server . "127.0.0.1")
+                        (smtpmail-smtp-server . "127.0.0.1")
+                        (smtpmail-smtp-service . 1025)))
+               (make-mu4e-context
+                :name "gmail"
+                :enter-func (lambda () (mu4e-message "Entering context gmail"))
+                :leave-func (lambda () (mu4e-message "Leaving context gmail"))
+                :match-func
+                (lambda (msg)
+                  (when msg
+                    (string-match "gmail" (mu4e-message-field msg :maildir))))
+                :vars `((user-mail-address . ,gmail-user-mail-address) ; in perso.el
+                        (user-full-name . ,gmail-user-full-name) ; in perso.el
+                        (mu4e-sent-folder . "/gmail/sent")
+                        (mu4e-drafts-folder . "/gmail/drafts")
+                        (mu4e-trash-folder . "/gmail/trash")
+                        (mu4e-refile-folder. "/gmail/archive")
+                        (mu4e-archive-folder . "/gmail/archive")
+                        (mu4e-spam-folder . "/gmail/spam")
+                        (mu4e-sent-messages-behavior . delete) ; IMAP takes care of it
+                        (message-send-mail-function . smtpmail-send-it)
+                        (smtpmail-stream-type . starttls)
+                        (smtpmail-default-smtp-server . "smtp.gmail.com")
+                        (smtpmail-smtp-server . "smtp.gmail.com")
+                        (smtpmail-smtp-service . 587)
+                        ))))
+        ;; Encryption settings
+        (setq mml-secure-openpgp-sign-with-sender t
+              mml-secure-openpgp-encrypt-to-self t)
 
-  ;; From https://macowners.club/posts/mu4e-save-attachments-faster-with-ivy/#edits
-  (defun timu/mu4e-view-save-attachments ()
-  "Save All Attachements in a selected directory using completion.
+        ;; From https://macowners.club/posts/mu4e-save-attachments-faster-with-ivy/#edits
+        (defun timu/mu4e-view-save-attachments ()
+          "Save All Attachements in a selected directory using completion.
 This is a modified version of `mu4e-view-save-attachments'."
-  (interactive)
-  (cl-assert (and (eq major-mode 'mu4e-view-mode)
-                  (derived-mode-p 'gnus-article-mode)))
-  (let* ((parts (mu4e~view-gather-mime-parts))
-         (handles '())
-         (files '())
-         dir)
-    (dolist (part parts)
-      (let ((fname (cdr (assoc 'filename (assoc "attachment" (cdr part))))))
-        (when fname
-          (push `(,fname . ,(cdr part)) handles)
-          (push fname files))))
-    (if files
-        (progn
-          (setq dir (read-directory-name "Save to directory: "))
-          (cl-loop for (f . h) in handles
-                   when (member f files)
-                   do (mm-save-part-to-file h (expand-file-name f dir))))
-      (mu4e-message "No attached files found"))))
-  (define-key mu4e-view-mode-map ">" 'timu/mu4e-view-save-attachments)
-  (defun timu/mu4e-view-save-attachment ()
-  "Save one attachements in a selected directory using completion.
+          (interactive)
+          (cl-assert (and (eq major-mode 'mu4e-view-mode)
+                          (derived-mode-p 'gnus-article-mode)))
+          (let* ((parts (mu4e~view-gather-mime-parts))
+                 (handles '())
+                 (files '())
+                 dir)
+            (dolist (part parts)
+              (let ((fname (cdr (assoc 'filename (assoc "attachment" (cdr part))))))
+                (when fname
+                  (push `(,fname . ,(cdr part)) handles)
+                  (push fname files))))
+            (if files
+                (progn
+                  (setq dir (read-directory-name "Save to directory: "))
+                  (cl-loop for (f . h) in handles
+                           when (member f files)
+                           do (mm-save-part-to-file h (expand-file-name f dir))))
+              (mu4e-message "No attached files found"))))
+        (define-key mu4e-view-mode-map ">" 'timu/mu4e-view-save-attachments)
+        (defun timu/mu4e-view-save-attachment ()
+          "Save one attachements in a selected directory using completion.
 This is a modified version of `mu4e-view-save-attachments'."
-  (interactive)
-  (cl-assert (and (eq major-mode 'mu4e-view-mode)
-                  (derived-mode-p 'gnus-article-mode)))
-  (let* ((parts (mu4e~view-gather-mime-parts))
-         (handles '())
-         (files '())
-         dir)
-    (dolist (part parts)
-      (let ((fname (cdr (assoc 'filename (assoc "attachment" (cdr part))))))
-        (when fname
-          (push `(,fname . ,(cdr part)) handles)
-          (push fname files))))
-    (if files
-        (progn
-          (setq files (completing-read-multiple "Save part(s): " files)
-                dir (read-directory-name "Save to directory: "))
-          (cl-loop for (f . h) in handles
-                   when (member f files)
-                   do (mm-save-part-to-file h (expand-file-name f dir))))
-      (mu4e-message "No attached files found"))))
-    (define-key mu4e-view-mode-map "e" 'timu/mu4e-view-save-attachment)
-  )
+          (interactive)
+          (cl-assert (and (eq major-mode 'mu4e-view-mode)
+                          (derived-mode-p 'gnus-article-mode)))
+          (let* ((parts (mu4e~view-gather-mime-parts))
+                 (handles '())
+                 (files '())
+                 dir)
+            (dolist (part parts)
+              (let ((fname (cdr (assoc 'filename (assoc "attachment" (cdr part))))))
+                (when fname
+                  (push `(,fname . ,(cdr part)) handles)
+                  (push fname files))))
+            (if files
+                (progn
+                  (setq files (completing-read-multiple "Save part(s): " files)
+                        dir (read-directory-name "Save to directory: "))
+                  (cl-loop for (f . h) in handles
+                           when (member f files)
+                           do (mm-save-part-to-file h (expand-file-name f dir))))
+              (mu4e-message "No attached files found"))))
+        (define-key mu4e-view-mode-map "e" 'timu/mu4e-view-save-attachment)
+        )
 
-;; Default mail agent for emacs
-(require 'mu4e)
-(setq mail-user-agent 'mu4e-user-agent)
+      ;; Default mail agent for emacs
+      (require 'mu4e)
+      (setq mail-user-agent 'mu4e-user-agent)
+      ))
 
 ;; Small hook so Flyspell skip headers
 (defun flyspell-skip-mail-headers (begin _end _ignored)
