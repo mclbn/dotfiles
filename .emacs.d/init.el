@@ -1016,6 +1016,11 @@ respectively."
 ;; Electric-operator : add spaces around operators
 (use-package electric-operator
   :diminish
+  :config
+  ;; I like my pointers like this: char * var;
+  (electric-operator-add-rules-for-mode 'c-mode
+                                        (cons "{" " {")
+                                        (cons "*" nil))
   :hook ((c-mode c++-mode python-mode rust-mode java-mode php-mode) . electric-operator-mode))
 
 ;; Quickrun : compile and run quickly
@@ -1334,12 +1339,18 @@ respectively."
   )
 
 ;; C / C++ / Objective-C
-;; OpenBSD KNF for C/C++ ()
-(add-to-list 'load-path (expand-file-name "~/.emacs.d/openbsd-knf-emacs"))
-(require 'openbsd-knf-style)
-(c-add-style "OpenBSD" openbsd-knf-style)
-(setq c-default-style '((c-mode . "bsd")))
-(setq c-default-style '((c++-mode . "bsd")))
+;; Create my personal style.
+(defconst my-c-style
+  '((c-enable-xemacs-performance-kludge-p . t) ; speed up indentation in XEmacs
+    (indent-tabs-mode . nil)
+    (c-basic-offset . 2)
+    (c-comment-only-line-offset . 0))
+  "My C Programming Style")
+(c-add-style "perso" my-c-style)
+
+(defun my-c-mode-common-hook ()
+  (c-set-style "perso"))
+(add-hook 'c-mode-common-hook 'my-c-mode-common-hook)
 
 (use-package company-c-headers
   :after (company)
