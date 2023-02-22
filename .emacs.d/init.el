@@ -1358,6 +1358,14 @@ respectively."
   (add-to-list 'company-backends 'company-c-headers)
   )
 
+;; Emacs-ccls, compiled from source (https://github.com/MaskRay/ccls)
+(use-package ccls
+  :config
+  (setq ccls-executable (expand-file-name "~/src/ccls/Release/ccls"))
+  (setq ccls-args '("--log-file=/tmp/ccls.log"))
+  :hook ((c-mode c++-mode objc-mode cuda-mode) .
+         (lambda () (require 'ccls) (lsp))))
+
 ;; Rust
 (use-package rust-mode
   :mode "\\.rs\\'"
