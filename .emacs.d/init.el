@@ -1210,16 +1210,21 @@ respectively."
   :hook ((java-mode python-mode go-mode rust-mode
           js-mode js2-mode typescript-mode web-mode
           c-mode c++-mode objc-mode php-mode) . lsp-deferred)
+  (lsp-mode . lsp-enable-which-key-integration)
   :config
   (setq lsp-completion-provider :none)
   (setq read-process-output-max (* 1024 1024)) ;; 1MB for better performance
   (setq lsp-idle-delay 0.5) ;; refresh adjustment for better performance
-  (setq lsp-clients-clangd-args '("-j=2"
-                                  "--header-insertion=never"
-                                  "--header-insertion-decorators=0"
-                                  "--pch-storage=memory"
-                                  "-background-index"
-                                  "-log=error"))
+  ;; (setq lsp-clients-clangd-executable "clangd")
+  ;; (setq lsp-clients-clangd-args `(;;"--query-driver=~/.platformio/packages/toolchain-xtensa32@2.50200.97/bin/xtensa-esp32-elf-*"
+  ;;                                 ;; "--include "
+  ;;                                 ;; "--query-driver=~/.platformio/packages/toolchain-atmelavr/bin/avr-g++"
+  ;;                                 "-j=2"
+  ;;                                 "--header-insertion=never"
+  ;;                                 "--header-insertion-decorators=0"
+  ;;                                 "--pch-storage=memory"
+  ;;                                 "-background-index"
+  ;;                                 "-log=error"))
   ;; We use phpactor (with composer installed too)
   (setq lsp-disabled-clients '(php-ls iph intelephense)))
 
