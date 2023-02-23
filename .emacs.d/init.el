@@ -1728,32 +1728,36 @@ exist after each headings's drawers."
   (setq org-capture-templates-contexts
         '(("r" ((in-mode . "mu4e-view-mode"))))))
 
-(use-package org-caldav
-  :init
-  (setq org-caldav-url cloud-caldav-url)
-  (setq org-caldav-calendars
-        '((:calendar-id "org-perso"
-                :sync-direction twoway
-                :files ("~/org/perso.org")
-                :inbox "~/org/cloudcal-perso.org")
-          (:calendar-id "org-work"
-                :sync-direction twoway
-                :files ("~/org/work.org")
-                :inbox "~/org/cloudcal-work.org")))
-  :config
-  ;; Need this to avoid breaking on tel: links
-  (setq org-export-with-broken-links t)
-  (setq org-icalendar-timezone "Europe/Paris")
-  (setq org-icalendar-alarm-time 1)
-  ;; This makes sure to-do items as a category can show up on the calendar
-  (setq org-icalendar-include-todo t)
-  ;; Deadline disabled because it creates duplicates entry when used also schedueled
-  ;; See: https://github.com/dengste/org-caldav/issues/121
-  ;; This ensures all org "deadlines" show up, and show up as due dates
-  ;; (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo todo-due))
-  (setq org-icalendar-use-deadline '(nil))
-  ;; This ensures "scheduled" org items show up, and show up as start times
-  (setq org-icalendar-use-scheduled '(todo-start event-if-todo event-if-not-todo)))
+;; Org-caldav : caldav sync
+;; Only for personal stuff
+(if (not (string= (getenv "EMACS_WORK") "Y"))
+    (progn
+      (use-package org-caldav
+		   :init
+		   (setq org-caldav-url cloud-caldav-url)
+		   (setq org-caldav-calendars
+			 '((:calendar-id "org-perso"
+					 :sync-direction twoway
+					 :files ("~/org/perso.org")
+					 :inbox "~/org/cloudcal-perso.org")
+			   (:calendar-id "org-work"
+					 :sync-direction twoway
+					 :files ("~/org/work.org")
+					 :inbox "~/org/cloudcal-work.org")))
+		   :config
+		   ;; Need this to avoid breaking on tel: links
+		   (setq org-export-with-broken-links t)
+		   (setq org-icalendar-timezone "Europe/Paris")
+		   (setq org-icalendar-alarm-time 1)
+		   ;; This makes sure to-do items as a category can show up on the calendar
+		   (setq org-icalendar-include-todo t)
+		   ;; Deadline disabled because it creates duplicates entry when used also schedueled
+		   ;; See: https://github.com/dengste/org-caldav/issues/121
+		   ;; This ensures all org "deadlines" show up, and show up as due dates
+		   ;; (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo todo-due))
+		   (setq org-icalendar-use-deadline '(nil))
+		   ;; This ensures "scheduled" org items show up, and show up as start times
+		   (setq org-icalendar-use-scheduled '(todo-start event-if-todo event-if-not-todo)))))
 
 ;; Org-superstar : beautify org-mode
 (use-package org-superstar
