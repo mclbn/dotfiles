@@ -351,7 +351,20 @@
            " " filename-and-process)
      (mark " "
            (name 16 -1)
-           " " filename))))
+           " " filename)))
+  :config
+  (add-to-list 'ibuffer-never-show-predicates " .*")
+  ;; From https://emacs.stackexchange.com/a/2179
+  ;; Allow nice auto-refresh without post-command-hook
+  (defun my-ibuffer-stale-p (&optional noconfirm)
+    ;; let's reuse the variable that's used for 'ibuffer-auto-mode
+    (frame-or-buffer-changed-p 'ibuffer-auto-buffers-changed))
+  (defun my-ibuffer-auto-revert-setup ()
+    (set (make-local-variable 'buffer-stale-function)
+         'my-ibuffer-stale-p)
+    (set (make-local-variable 'auto-revert-verbose) nil)
+    (auto-revert-mode 1))
+  (add-hook 'ibuffer-mode-hook 'my-ibuffer-auto-revert-setup))
 
 ;; Helpful: help menu replacement
 (use-package helpful
