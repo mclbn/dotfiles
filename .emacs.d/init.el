@@ -1227,6 +1227,7 @@ respectively."
   (lsp-enable-on-type-formatting nil)
   (lsp-signature-auto-activate t)
   (lsp-enable-folding nil)
+  (lsp-enable-links nil)
   :bind (:map lsp-mode-map ("C-c C-f" . lsp-format-buffer))
   :hook ((java-mode python-mode go-mode rust-mode
                     js-mode js2-mode typescript-mode web-mode
