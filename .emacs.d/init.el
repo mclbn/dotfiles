@@ -353,9 +353,10 @@
            (name 16 -1)
            " " filename)))
   :config
-  (add-to-list 'ibuffer-never-show-predicates " .*")
   ;; From https://emacs.stackexchange.com/a/2179
   ;; Allow nice auto-refresh without post-command-hook
+  (require 'ibuf-ext)
+  (add-to-list 'ibuffer-never-show-predicates " .*")
   (defun my-ibuffer-stale-p (&optional noconfirm)
     ;; let's reuse the variable that's used for 'ibuffer-auto-mode
     (frame-or-buffer-changed-p 'ibuffer-auto-buffers-changed))
@@ -378,6 +379,7 @@
   (setq counsel-describe-function-function #'helpful-callable)
   (setq counsel-describe-variable-function #'helpful-variable)
   )
+
 
 ;;; Absolute must-have tweaks and settings
 ;; Disable the welcome message
