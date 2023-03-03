@@ -1753,6 +1753,8 @@ exist after each headings's drawers."
 		   (setq org-icalendar-alarm-time 1)
 		   ;; This makes sure to-do items as a category can show up on the calendar
 		   (setq org-icalendar-include-todo t)
+           (setq org-caldav-todo-percent-states
+                 '((0 "TODO") (1 "SOMEDAY") (5 "NEXT") (10 "STARTED") (30 "WAITING") (100 "DONE")))
 		   ;; Deadline disabled because it creates duplicates entry when used also schedueled
 		   ;; See: https://github.com/dengste/org-caldav/issues/121
 		   ;; This ensures all org "deadlines" show up, and show up as due dates
