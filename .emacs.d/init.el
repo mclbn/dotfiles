@@ -571,6 +571,9 @@ With argument, do this that many times."
   (setq ediff-diff-options "-w")
   )
 
+;; Nhexl-mode : better hex editor
+(use-package nhexl-mode)
+
 ;;; Visual configuration
 ;; Show line numbers on the left
 (require 'linum)
