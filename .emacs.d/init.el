@@ -1325,7 +1325,11 @@ respectively."
   )
 
 ;; Pyenv : managing python version/venv with pyenv and pyenv-virtualenv
+;; Had to fork it to make it buffer-local because it has global keybindings
+;; that conflict with org-mode
 (use-package pyenv-mode
+  :ensure nil
+  :quelpa (pyenv-mode :repo "mclbn/pyenv-mode" :fetcher github :commit "master")
   :diminish
   :config
   (defun projectile-pyenv-mode-set ()
@@ -1335,10 +1339,11 @@ respectively."
           (pyenv-mode-set project)
         (pyenv-mode-unset))))
   (add-hook 'projectile-after-switch-project-hook 'projectile-pyenv-mode-set)
+  :hook (python-mode . pyenv-mode)
   :init
   (add-to-list 'exec-path "~/.pyenv/bin")
   (add-to-list 'exec-path "~/.pyenv/shims")
-  (pyenv-mode t)
+  ;; (pyenv-mode t)
   (pyenv-mode-set  "default"))
 
 ;;; C / C++ / Objective-C modes and settings
