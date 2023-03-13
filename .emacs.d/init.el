@@ -1168,17 +1168,6 @@ respectively."
   :after prescient
   :hook (company-mode . company-prescient-mode))
 
-;; ;; Company-box : nice icons for company
-;; ;; Supposedly able to show candidates' doc, but FIXME
-;; (use-package company-box
-;;   :diminish
-;;   :hook (company-mode . company-box-mode)
-;;   :config
-;;   (when (require 'all-the-icons nil t)
-;;     (declare-function all-the-icons-faicon 'all-the-icons)
-;;     (declare-function all-the-icons-material 'all-the-icons)
-;;     (declare-function all-the-icons-octicon 'all-the-icons)))
-
 (use-package company-c-headers
   :after (company)
   :config
