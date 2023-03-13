@@ -1219,9 +1219,10 @@ respectively."
   :hook
   ((java-mode python-mode go-mode rust-mode js-mode js2-mode
               typescript-mode web-mode c-mode c++-mode objc-mode php-mode) . lsp-deferred)
-  :commands lsp)
+  :commands (lsp lsp-deferred))
 
 (use-package lsp-ui
+  :defer t
   :pin melpa ;; the good version is on melpa, not melpa-stable
   :custom
   ;; Let's start by enabling/disabling features
@@ -1253,10 +1254,7 @@ respectively."
 ;; Lsp-pyright : lsp-mode integration for Python
 (use-package lsp-pyright
   :pin melpa ;; the good version is on melpa, not melpa-stable
-  :ensure t
-  :hook (python-mode . (lambda ()
-                          (require 'lsp-pyright)
-                          (lsp-deferred))))  ; or lsp-deferred
+  :ensure t)
 
 ;; Lsp-java : lsp-mode integration for Java
 (use-package lsp-java
@@ -1321,18 +1319,23 @@ respectively."
   :quelpa (pyenv-mode :repo "mclbn/pyenv-mode" :fetcher github :commit "master")
   :diminish
   :config
-  (defun projectile-pyenv-mode-set ()
-    "Set pyenv version matching project name."
+  (defun pyenv-detect-env ()
+    "Try to identify pyenv via projectile, then .python-version."
     (let ((project (projectile-project-name)))
-      (if (member project (pyenv-mode-versions))
+      (if (and project (member project (pyenv-mode-versions)))
           (pyenv-mode-set project)
-        (pyenv-mode-unset))))
-  (add-hook 'projectile-after-switch-project-hook 'projectile-pyenv-mode-set)
+          (let ((pyenv-file (concat (projectile-project-root) ".python-version")))
+            (if (and (file-exists-p pyenv-file))
+                (let ((pyversion (first (split-string (f-read-text pyenv-file) "\n" t))))
+                  (if (member pyversion (pyenv-mode-versions))
+                      (pyenv-mode-set (first (split-string (f-read-text pyenv-file) "\n" t)))
+                      (pyenv-mode-unset)))
+                (pyenv-mode-unset))))))
+  (add-hook 'python-mode-hook 'pyenv-detect-env)
   :hook (python-mode . pyenv-mode)
   :init
   (add-to-list 'exec-path "~/.pyenv/bin")
   (add-to-list 'exec-path "~/.pyenv/shims")
-  ;; (pyenv-mode t)
   (pyenv-mode-set  "default"))
 
 ;;; C / C++ / Objective-C modes and settings
