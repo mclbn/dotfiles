@@ -1168,16 +1168,16 @@ respectively."
   :after prescient
   :hook (company-mode . company-prescient-mode))
 
-;; Company-box : nice icons for company
-;; Supposedly able to show candidates' doc, but FIXME
-(use-package company-box
-  :diminish
-  :hook (company-mode . company-box-mode)
-  :config
-  (when (require 'all-the-icons nil t)
-    (declare-function all-the-icons-faicon 'all-the-icons)
-    (declare-function all-the-icons-material 'all-the-icons)
-    (declare-function all-the-icons-octicon 'all-the-icons)))
+;; ;; Company-box : nice icons for company
+;; ;; Supposedly able to show candidates' doc, but FIXME
+;; (use-package company-box
+;;   :diminish
+;;   :hook (company-mode . company-box-mode)
+;;   :config
+;;   (when (require 'all-the-icons nil t)
+;;     (declare-function all-the-icons-faicon 'all-the-icons)
+;;     (declare-function all-the-icons-material 'all-the-icons)
+;;     (declare-function all-the-icons-octicon 'all-the-icons)))
 
 (use-package company-c-headers
   :after (company)
@@ -2127,6 +2127,8 @@ This is a modified version of `mu4e-view-save-attachments'."
     (highlight-indent-guides-auto-set-faces)
     ;; Fix which-key settings not applied when started by daemon
     (which-key-setup-side-window-right)
+    ;; Fix company-box breaking completion when started by daemon
+
     ))
 
 (if (display-graphic-p)
