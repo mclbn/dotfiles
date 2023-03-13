@@ -1271,8 +1271,15 @@ respectively."
 ;; /!\ FIXME DAP-MODE /!\
 (use-package dap-mode
   :pin melpa ;; the good version is on melpa, not melpa-stable
-  :after lsp-mode
+  :after (lsp-mode pyenv-mode)
+  :commands dap-debug
   :diminish
+  :config
+  (require 'dap-java)
+  (require 'dap-python)
+  (setq dap-python-debugger 'debugpy)
+  (add-hook 'dap-stopped-hook
+            (lambda (arg) (call-interactively #'dap-hydra)))
 ;;   :config
 ;;   ;; Could not manage to make any of the following work...
 ;;   ;; (require 'dap-firefox)
@@ -1295,6 +1302,7 @@ respectively."
 ;; Python settings
 (use-package python
   :config
+  ;; I usually prefer a dedicated terminal, so maybe remove it
   (setq python-shell-interpreter "ipython"
         python-shell-interpreter-args "--simple-prompt -i --pprint"
         python-indent-offset 4
@@ -1318,25 +1326,36 @@ respectively."
   :ensure nil
   :quelpa (pyenv-mode :repo "mclbn/pyenv-mode" :fetcher github :commit "master")
   :diminish
+  :after projectile
   :config
   (defun pyenv-detect-env ()
     "Try to identify pyenv via projectile, then .python-version."
+    (interactive)
     (let ((project (projectile-project-name)))
       (if (and project (member project (pyenv-mode-versions)))
-          (pyenv-mode-set project)
+          (project)
           (let ((pyenv-file (concat (projectile-project-root) ".python-version")))
             (if (and (file-exists-p pyenv-file))
                 (let ((pyversion (first (split-string (f-read-text pyenv-file) "\n" t))))
                   (if (member pyversion (pyenv-mode-versions))
-                      (pyenv-mode-set (first (split-string (f-read-text pyenv-file) "\n" t)))
-                      (pyenv-mode-unset)))
-                (pyenv-mode-unset))))))
-  (add-hook 'python-mode-hook 'pyenv-detect-env)
+                      (first (split-string (f-read-text pyenv-file) "\n" t))
+                    nil))
+              nil)))))
+  (defun pyenv-set-env ()
+    "Try to identify and set pyenv."
+    (interactive)
+    (let ((pyenv-name (pyenv-detect-env)))
+      (if pyenv-name
+          (pyenv-mode-set pyenv-name)
+        (pyenv-mode-set "default"))))
+  (add-hook 'python-mode-hook 'pyenv-set-env)
+  ;; We will need this at some point
+  (use-package with-venv)
   :hook (python-mode . pyenv-mode)
   :init
   (add-to-list 'exec-path "~/.pyenv/bin")
   (add-to-list 'exec-path "~/.pyenv/shims")
-  (pyenv-mode-set  "default"))
+  (pyenv-mode-set "default"))
 
 ;;; C / C++ / Objective-C modes and settings
 ;; Create my personal style.
