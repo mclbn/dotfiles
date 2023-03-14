@@ -877,6 +877,14 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
             ))
     ))
 
+;; Small function to disable all text analysis modes
+(defun disable-text-analysis-modes ()
+  "Explicitely disable flycheck, flyspell and typo"
+  (interactive)
+  (flycheck-mode -1)
+  (flyspell-mode -1)
+  (typo-mode -1))
+
 ;;; General programming
 ;; Better Compilation
 (setq-default compilation-always-kill t) ; kill compilation process before starting another
