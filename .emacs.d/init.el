@@ -1533,6 +1533,7 @@ respectively."
   (org-id-link-to-org-use-id t)
   (org-latex-listings t)
   (org-startup-indented t)
+  (org-startup-with-inline-images t)
   :bind
   ("C-z a" . org-agenda)
   ("C-c l" . org-store-link)
