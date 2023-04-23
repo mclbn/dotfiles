@@ -376,6 +376,14 @@
     (interactive)
     (magit-log-buffer-file t)))
 
+;; Rg : ripgrep search
+(use-package rg
+  :if (executable-find "rg")
+  :quelpa (rg :repo "dajva/rg.el" :fetcher github :commit "master")
+  :bind
+  (("C-z C-r" . rg-menu))
+  )
+
 ;;; Buffer and window management
 (defun pt/split-window ()
   "Split a window."
@@ -1111,6 +1119,7 @@ respectively."
   (:map yas-minor-mode-map ([(tab)] . nil))
   (:map yas-minor-mode-map ("TAB" . nil))
   (:map yas-minor-mode-map ("<tab>" . nil))
+  ("C-z C-s" . yas-insert-snippet)
   :config
   (yas-reload-all))
 
@@ -1166,7 +1175,7 @@ respectively."
                              company-dabbrev
                              company-ispell
                              company-files
-                             :separate)
+                             :separate :with company-yasnippet)
                             company-files))
               ))
   )
