@@ -1893,8 +1893,8 @@ exist after each headings's drawers."
                      '( :name  "Focused"
                         :query "flag:flagged OR (flag:unread AND NOT flag:list AND NOT (maildir:/protonmail/sent OR maildir:/gmail/sent OR maildir:/protonmail/trash OR maildir:/gmail/trash OR maildir:/protonmail/spam OR maildir:/gmail/spam))"
                         :key ?f))
-        ;; org-mode integration
-        (require 'org-mu4e)
+        ;; org-mode integration (not required anymore, it's default since 1.10)
+        ;; (require 'org-mu4e)
         ;; This is bound globally later
         (unbind-key "C--" mu4e-headers-mode-map)
         ;; mu4e-action-view-in-browser is built into mu4e
