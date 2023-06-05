@@ -1457,6 +1457,9 @@ respectively."
 ;; Scad-modes and settings
 (use-package scad-mode)
 
+;; Powershell-mode
+(use-package powershell)
+
 ;;; I3WM modes and settings
 (use-package i3wm-config-mode
   :ensure t)
