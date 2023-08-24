@@ -35,6 +35,7 @@ alias py2='python2'
 alias py3='python3'
 alias z='zathura'
 alias zzz='systemctl suspend && /home/marc/bin/lock'
+alias ZZZ='systemctl hibernate'
 
 alias git_update_fork='git pull && git fetch upstream && git merge upstream/master && git push origin master'
 alias ipython='ipython3'
