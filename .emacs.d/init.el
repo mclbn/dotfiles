@@ -275,6 +275,15 @@
   :init
   (advice-add 'all-the-icons-dired--icon :around #'all-the-icons-pad-families-on-tty-advice+))
 
+;; Shell : Inferior shell mode
+(use-package shell
+  :custom
+  (comint-process-echoes 0)
+  :config
+  (when (executable-find "zsh")
+    (setq explicit-shell-file-name (executable-find "zsh"))
+    (setq explicit-zsh-args '("--interactive"))))
+
 ;; Treemacs : visual tree
 (use-package treemacs
   :pin melpa ;; the good version is on melpa, not melpa-stable
@@ -1369,7 +1378,10 @@ respectively."
   (use-package with-venv)
   :hook (python-mode . pyenv-mode)
   :init
-  (add-to-list 'exec-path "~/.pyenv/bin")
+  (let ((pyenv-path (expand-file-name "~/.pyenv/bin")))
+    (setenv "PATH" (concat pyenv-path ":" (getenv "PATH")))
+    (add-to-list 'exec-path pyenv-path))
+  ;; is the following line needed ?
   (add-to-list 'exec-path "~/.pyenv/shims")
   (pyenv-mode-set "default"))
 
@@ -2138,7 +2150,9 @@ This is a modified version of `mu4e-view-save-attachments'."
     (setq use-dialog-box nil)
     ;; X11 Alt is Meta
     (setq x-alt-keysym 'meta)
-    ;; Smooth scrolling
+    ;; Smooth scrolling (Emacs <= 29.1)
+    (when (fboundp 'pixel-scroll-precision-mode)
+      (pixel-scroll-precision-mode t))
     ;; Vertical Scroll
     (setq scroll-step 1)
     (setq scroll-margin 1)
