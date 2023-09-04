@@ -1661,6 +1661,14 @@ exist after each headings's drawers."
   )
 
 ;; FIXME : should be inside org-mode config block (?)
+(use-package org-sidebar
+  :quelpa (org-sidebar :fetcher github :repo "alphapapa/org-sidebar")
+  :bind ("C-z o t" . org-sidebar-tree-toggle)
+  :custom
+  (org-sidebar-tree-side 'right)
+  (org-sidebar-tree-jump-fn 'org-sidebar-tree-jump-source))
+
+;; FIXME : should be inside org-mode config block (?)
 (use-package org-capture
   ;; No need to get it, comes with emacs/org
   :ensure nil
