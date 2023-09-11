@@ -232,6 +232,7 @@
     (let* ((file (dired-get-filename nil t)))
       (call-process "xdg-open" nil 0 nil file)))
   (define-key dired-mode-map (kbd "C-<return>") #'dired-open-external)
+  (define-key dired-mode-map (kbd "M-<up>") (lambda () (interactive) (find-alternate-file "..")))
   ;;   (defun open-in-external-app ()
   ;;     "Open the file where point is or the marked files in Dired in external
   ;; app. The app is chosen from your OS's preference."
