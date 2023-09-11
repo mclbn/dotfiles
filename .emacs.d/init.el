@@ -400,6 +400,7 @@
   (split-window-right)
   (balance-windows))
 (bind-key "C-c 2" #'pt/split-window)
+(bind-key "C-x q" #'kill-buffer-and-window)
 
 (defun pt/split-window-thirds ()
   "Split a window into thirds."
