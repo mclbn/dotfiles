@@ -401,6 +401,10 @@
   (balance-windows))
 (bind-key "C-c 2" #'pt/split-window)
 (bind-key "C-x q" #'kill-buffer-and-window)
+(bind-key "C-x <up>" #'windmove-up)
+(bind-key "C-x <down>" #'windmove-down)
+(bind-key "C-x <left>" #'windmove-left)
+(bind-key "C-x <right>" #'windmove-right)
 
 (defun pt/split-window-thirds ()
   "Split a window into thirds."
