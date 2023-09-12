@@ -244,10 +244,7 @@
   ;;            (start-process "" nil "xdg-open" (shell-quote-argument file-path)))) file-list)))
 
   (use-package diredfl
-    :config
-    (setq
-     diredfl-dir-heading '(:foreground ,zenburn-green)
-     diredfl-dir-name '(:foreground ,zenburn-green))
+    :after zenburn-theme
     :hook (dired-mode . diredfl-mode))
 
   (use-package dired-git-info
@@ -267,13 +264,12 @@
                   (local-set-key (kbd "M-<up>")
                                  (lambda () (interactive) (find-alternate-file ".."))))))
 
-(use-package all-the-icons-dired
-  :after all-the-icons
-  :hook (dired-mode . all-the-icons-dired-mode)
-  :custom
-  (all-the-icons-dired-monochrome nil)
-  :init
-  (advice-add 'all-the-icons-dired--icon :around #'all-the-icons-pad-families-on-tty-advice+))
+;; Seems broken ATM, maybe related to dired-omit-mode oO
+;; (use-package all-the-icons-dired
+;;   :after all-the-icons
+;;   :hook (dired-mode . all-the-icons-dired-mode)
+;;   :custom
+;;   (all-the-icons-dired-monochrome nil))
 
 ;; Shell : Inferior shell mode
 (use-package shell
@@ -745,8 +741,9 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
   :init (global-page-break-lines-mode))
 
 ;;All-the-icons : unified icon pack
-;; Requires manually installing the fonts with M-x all-the-icons-install-fonts
+;; Requires manually installing the fonts with M-x all-the-icons-install-fonts and M-x nerd-icons-install-fonts
 (use-package all-the-icons
+  :pin melpa
   :if (display-graphic-p))
 
 (use-package beacon
@@ -2207,10 +2204,8 @@ This is a modified version of `mu4e-view-save-attachments'."
      `(hl-line-face ((t (:background ,zenburn-bg+1 ))))
      `(hl-line ((t (:background ,zenburn-bg+1 ))))
      ;; Dired stuff
-     ;; `(diredfl-dir-name ((t (:foreground ,zenburn-blue+1 :weight bold))))
-     ;; `(diredfl-dir-name ((t (:background ,nil))))
-     ;; `(diredfl-dir-heading ((t (:foreground ,zenburn-blue-1))))
-     ;; `(diredfl-dir-heading ((t (:background ,nil))))
+     `(diredfl-dir-name ((t (:foreground ,zenburn-red+1 :weight bold))))
+     `(diredfl-dir-heading ((t (:foreground ,zenburn-blue-1))))
      )))
 
 ;;; Startup time
