@@ -30,6 +30,8 @@
 ;; Have a look at Perspective (https://github.com/nex3/perspective-el and https://alhassy.github.io/emacs.d/#Having-a-workspace-manager-in-Emacs)
 ;; Try eglot + flymake as an alternative to lsp-mode + flycheck
 ;; Removed color-rg, could try again if needed
+;; Combobulate (use treesitter to manipulate code) :
+;; https://www.masteringemacs.org/article/combobulate-structured-movement-editing-treesitter
 
 ;; Disabling native-compilation warnings
 (setq native-comp-async-report-warnings-errors nil)
