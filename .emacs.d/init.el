@@ -904,6 +904,14 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
   (flyspell-mode -1)
   (typo-mode -1))
 
+;; Small collection of function and parameters to make the current buffer as fast as possible
+(defun custom-fast-mode ()
+  "Disable stuff and change parameters to be faster"
+  (interactive)
+  (disable-text-analysis-modes)
+  (display-line-numbers-mode -1))
+(bind-key "C-z f" #'custom-fast-mode)
+
 ;;; General programming
 ;; Better Compilation
 (setq-default compilation-always-kill t) ; kill compilation process before starting another
