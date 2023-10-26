@@ -790,7 +790,10 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 (use-package guess-language
   :defer t
   :pin melpa ;; the good version is on melpa, not melpa-stable
-  :init (add-hook 'flycheck-mode-hook #'guess-language-mode)
+  ;; Disabled auto-guess, because it slows down considerably with large org files
+  ;; :init (add-hook 'flycheck-mode-hook #'guess-language-mode)
+  :bind
+  ("C-c g" . flycheck-mode)
   :config
   (setq guess-language-langcodes '((en . ("en_US" "English" "🇺🇸" "English"))
                                    (fr . ("fr_FR"  "French" "🇫🇷" "French")))
@@ -817,7 +820,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
   :custom
   (flyspell-issue-message-flag nil)
   (ispell-program-name "hunspell")
-  (ispell-dictionary "en_US")
+  (ispell-dictionary "fr_FR")
   (ispell-personal-dictionary "~/.hunspell_personal")
   :config
   (use-package flyspell-correct-ivy ; M-o to access actions
