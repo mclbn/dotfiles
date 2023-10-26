@@ -694,11 +694,10 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 (use-package sudo-edit
   :commands (sudo-edit))
 
-;;; Visual configuration
-;; Show line numbers on the left
-(require 'linum)
-(add-hook 'prog-mode-hook 'linum-mode)
-(setq linum-format "%3d \u2502 ")
+(use-package display-line-numbers
+  :ensure nil
+  :defer nil
+  :hook (prog-mode . display-line-numbers-mode))
 
 ;; Highlight current line
 (global-hl-line-mode 1)
