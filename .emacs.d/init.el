@@ -933,15 +933,60 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 (add-hook 'post-command-hook #'smart-electric-indent-mode)
 
 ;; Highlight-indent-guides : show indentation level
-(use-package highlight-indent-guides
-  :diminish
-  ;; Automatically enabled, but there is a bug that might require to disable it:
-  ;; https://github.com/DarthFennec/highlight-indent-guides/issues/76
-  :hook (prog-mode . highlight-indent-guides-mode)
+;; (use-package highlight-indent-guides
+;;   :diminish
+;;   ;; Automatically enabled, but there is a bug that might require to disable it:
+;;   ;; https://github.com/DarthFennec/highlight-indent-guides/issues/76
+;;   :hook (prog-mode . highlight-indent-guides-mode)
+;;   :custom
+;;   (highlight-indent-guides-method 'character)
+;;   (highlight-indent-guides-responsive 'top)
+;;   (highlight-indent-guides-delay 0))
+
+;; Treesit customization
+;; Run M-x treesit-install-language-grammar for each language
+;; Alternatively, eval this command to install all at once :
+;; (mapc #'treesit-install-language-grammar (mapcar #'car treesit-language-source-alist))
+(setq treesit-language-source-alist
+      '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+        (c "https://github.com/tree-sitter/tree-sitter-c")
+        (cmake "https://github.com/uyha/tree-sitter-cmake")
+        (css "https://github.com/tree-sitter/tree-sitter-css")
+        (elisp "https://github.com/Wilfred/tree-sitter-elisp")
+        (go "https://github.com/tree-sitter/tree-sitter-go")
+        (html "https://github.com/tree-sitter/tree-sitter-html")
+        (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
+        (json "https://github.com/tree-sitter/tree-sitter-json")
+        (make "https://github.com/alemuller/tree-sitter-make")
+        (markdown "https://github.com/ikatyang/tree-sitter-markdown")
+        (python "https://github.com/tree-sitter/tree-sitter-python")
+        (toml "https://github.com/tree-sitter/tree-sitter-toml")
+        (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+        (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+        (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
+
+(use-package indent-bars
+  :quelpa (indent-bars :repo "jdtsmith/indent-bars" :fetcher github :commit "main")
   :custom
-  (highlight-indent-guides-method 'character)
-  (highlight-indent-guides-responsive 'top)
-  (highlight-indent-guides-delay 0))
+  ;; Style customization
+  (indent-bars-color '(highlight :face-bg t :blend 0.2))
+  (indent-bars-pattern ".")
+  (indent-bars-width-frac 0.1)
+  (ident-bars-pad-frac 0.1)
+  (ident-bars-zigzag nil)
+  (-bars-color-by-depth '(:regexp "outline-\\([0-9]+\\)" :blend 1)) ; blend=1: blend with BG only
+  (indent-bars-highlight-current-depth '(:blend 0.5)) ; pump up the BG blend on current
+  (indent-bars-display-on-blank-lines nil)
+  ;; Treesitter customization
+  ;; Require treesit-language source configuration and installation
+  (indent-bars-treesit-support t)
+  (indent-bars-no-descend-string t)
+  (indent-bars-treesit-wrap '((python argument_list parameters
+                                      list list_comprehension
+                                      dictionary dictionary_comprehension
+                                      parenthesized_expression subscript)))
+  (indent-bars-treesit-ignore-blank-lines-types '("module"))
+  :hook ((prog-mode) . indent-bars-mode))
 
 ;; Show current function in mode bar
 (add-hook 'prog-mode-hook #'which-function-mode)
