@@ -916,7 +916,8 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
   "Disable stuff and change parameters to be faster"
   (interactive)
   (disable-text-analysis-modes)
-  (display-line-numbers-mode -1))
+  (display-line-numbers-mode -1)
+  (company-mode -1))
 (bind-key "C-z f" #'custom-fast-mode)
 
 ;;; General programming
