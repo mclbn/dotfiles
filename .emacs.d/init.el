@@ -1214,7 +1214,7 @@ respectively."
   ("C-<tab>" . company-other-backend)
   :custom
   (company-idle-delay 0)
-  (company-minimum-prefix-length 1)
+  (company-minimum-prefix-length 2)
   (company-tooltip-limit 10)
   (company-selection-wrap-around t)
   (company-transformers '(company-sort-by-occurrence))
@@ -1223,6 +1223,7 @@ respectively."
   ;; invert the navigation direction if the completion popup-isearch-match
   ;; is displayed on top (happens near the bottom of windows)
   (company-tooltip-flip-when-above t)
+  (company-dabbrev-other-buffers t)
   :hook
   (after-init . global-company-mode)
   (company-mode . company-tng-mode)
