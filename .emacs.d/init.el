@@ -273,6 +273,18 @@
 ;;   :custom
 ;;   (all-the-icons-dired-monochrome nil))
 
+;; Image-mode
+(use-package image-mode
+  :ensure nil
+  :config
+  (bind-keys :map image-mode-map
+             ("<up>" . image-previous-file)
+             ("<down>" . image-next-file)
+             ("<left>" . image-previous-file)
+             ("<right>" . image-next-file)
+             ("C-<left>" . image-backward-hscroll)
+             ("C-<right>" . image-forward-hscroll)))
+
 ;; Shell : Inferior shell mode
 (use-package shell
   :custom
