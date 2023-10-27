@@ -382,12 +382,8 @@
     "A wrapper around `magit-log-buffer-file' with `--follow' argument."
     (interactive)
     (magit-log-buffer-file t))
-  (add-hook 'git-commit-mode-hook
-          '(lambda () (auto-fill-mode 0))
-          ;; append rather than prepend to git-commit-mode-hook, since the
-          ;; thing that turns auto-fill-mode on in the first place is itself
-          ;; another hook on git-commit-mode.
-          t))
+
+  (remove-hook 'git-commit-mode-hook #'auto-fill-mode))
 
 ;; Rg : ripgrep search
 (use-package rg
