@@ -301,6 +301,7 @@
   :defer t
   :bind
   ("C-z t" . treemacs)
+  (:map treemacs-mode-map ([mouse-1] . treemacs-single-click-expand-action))
   :config
   (treemacs-project-follow-mode t)
   :init
