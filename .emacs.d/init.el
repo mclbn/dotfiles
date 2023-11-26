@@ -862,7 +862,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 (add-hook 'flyspell-incorrect-hook #'flyspell-skip-mail-headers)
 
 ;; Flycheck-grammalecte : french syntax checking
-;; May require running grammalecte-download-grammalecte once
+;; May require running M-x grammalecte-download-grammalecte once
 (use-package flycheck-grammalecte
   :ensure t
   :after flycheck
@@ -2252,8 +2252,8 @@ This is a modified version of `mu4e-view-save-attachments'."
     ;; Horizontal Scroll
     (setq hscroll-step 1)
     (setq hscroll-margin 1)
-    ;; Fix highlight-indent-guide visual glitch when started by daemon
-    (highlight-indent-guides-auto-set-faces)
+    ;; Fix highlight-indent-guide visual glitch when started by daemon (not used anymore)
+    ;; (highlight-indent-guides-auto-set-faces)
     ;; Fix which-key settings not applied when started by daemon
     (which-key-setup-side-window-right)
     ;; Fix company-box breaking completion when started by daemon
