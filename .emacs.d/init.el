@@ -292,7 +292,7 @@
              ("<up>" . doc-view-previous-page)
              ("<down>" . doc-view-next-page)
              ("<left>" . doc-view-previous-page)
-             ("<right>" . doc-view-previous-page)))
+             ("<right>" . doc-view-next-page)))
 
 ;; Shell : Inferior shell mode
 (use-package shell
