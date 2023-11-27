@@ -285,6 +285,15 @@
              ("C-<left>" . image-backward-hscroll)
              ("C-<right>" . image-forward-hscroll)))
 
+(use-package doc-view
+:ensure nil
+  :config
+  (bind-keys :map doc-view-mode-map
+             ("<up>" . doc-view-previous-page)
+             ("<down>" . doc-view-next-page)
+             ("<left>" . doc-view-previous-page)
+             ("<right>" . doc-view-previous-page)))
+
 ;; Shell : Inferior shell mode
 (use-package shell
   :custom
