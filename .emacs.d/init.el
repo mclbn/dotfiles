@@ -1331,7 +1331,8 @@ respectively."
   :hook
   (((java-mode python-mode go-mode rust-mode js-mode js2-mode
                typescript-mode web-mode c-mode c++-mode objc-mode php-mode) . lsp-deferred)
-   (lsp-headerline-breadcrumb-mode . (lambda () (flycheck-mode -1)))) ;; Does not work >:( (also should do the same for flyspell)
+   (lsp-headerline-breadcrumb-mode . (lambda () (flycheck-mode -1)))
+   (lsp-headerline-breadcrumb-mode . (lambda () (flyspell-mode -1))))
   :commands (lsp lsp-deferred))
 
 (use-package lsp-ui
