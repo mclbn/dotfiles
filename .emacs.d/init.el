@@ -285,6 +285,15 @@
              ("C-<left>" . image-backward-hscroll)
              ("C-<right>" . image-forward-hscroll)))
 
+(use-package doc-view
+:ensure nil
+  :config
+  (bind-keys :map doc-view-mode-map
+             ("<up>" . doc-view-previous-page)
+             ("<down>" . doc-view-next-page)
+             ("<left>" . doc-view-previous-page)
+             ("<right>" . doc-view-next-page)))
+
 ;; Shell : Inferior shell mode
 (use-package shell
   :custom
@@ -1320,8 +1329,10 @@ respectively."
                                   "-log=error"))
   :bind (:map lsp-mode-map ("C-c C-f" . lsp-format-buffer))
   :hook
-  ((java-mode python-mode go-mode rust-mode js-mode js2-mode
-              typescript-mode web-mode c-mode c++-mode objc-mode php-mode) . lsp-deferred)
+  (((java-mode python-mode go-mode rust-mode js-mode js2-mode
+               typescript-mode web-mode c-mode c++-mode objc-mode php-mode) . lsp-deferred)
+   (lsp-headerline-breadcrumb-mode . (lambda () (flycheck-mode -1)))
+   (lsp-headerline-breadcrumb-mode . (lambda () (flyspell-mode -1))))
   :commands (lsp lsp-deferred))
 
 (use-package lsp-ui
