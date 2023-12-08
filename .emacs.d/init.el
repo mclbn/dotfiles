@@ -628,6 +628,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 
 ;; Ws-butler : smart cleanup of trailing newlines
 (use-package ws-butler
+  :diminish
   :hook (prog-mode . ws-butler-mode))
 
 (defun pt/eol-then-newline ()
@@ -1314,6 +1315,7 @@ respectively."
   (lsp-enable-on-type-formatting nil)
   (lsp-enable-links nil)
   (lsp-headerline-breadcrumb-enable t)
+  (lsp-headerline-breadcrumb-enable-diagnostics nil)
   (lsp-signature-auto-activate nil)
   (lsp-enable-semantic-highlight nil) ;; managed by color-identifiers-mode
   (lsp-completion-provider :none) ;; managed by company-mode
