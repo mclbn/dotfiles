@@ -1957,7 +1957,7 @@ exist after each headings's drawers."
         (mu4e-maildir (expand-file-name "~/.mail"))
         (mu4e-attachment-dir  "~/Downloads/")
         (mu4e-change-filenames-when-moving t) ; work better for mbsync
-        (mu4e-get-mail-command "mbsync protonmail gmail")
+        (mu4e-get-mail-command "mbsync protonmail")
         (mu4e-view-show-addresses t)
         (mu4e-compose-dont-reply-to-self t)
         (message-kill-buffer-on-exit t)
