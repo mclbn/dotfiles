@@ -97,7 +97,8 @@
 ;; Diminish : reduces info about modes in bottom bar
 (use-package diminish
   :config
-  (diminish 'visual-line-mode))
+  (diminish 'visual-line-mode)
+  (diminish 'auto-revert-mode))
 
 ;;; Unbinding unneeded keys that will be bound by upcoming packages
 (global-set-key (kbd "M-{") nil)
