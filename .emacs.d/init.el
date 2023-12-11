@@ -89,6 +89,7 @@
 ;;; Early packages
 ;; Use Garbage collector magic hack ASAP
 (use-package gcmh
+  :diminish
   :demand t
   :config
   (gcmh-mode 1))
@@ -735,6 +736,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 
 ;; make characters after column 80 purple
 (use-package whitespace
+  :diminish
   :config
   (setq whitespace-line-column 80)
   (setq whitespace-style
@@ -1206,7 +1208,7 @@ respectively."
 
 ;; Yasnippet : common code templates
 (use-package yasnippet
-  :diminish
+  :diminish (yas-minor-mode)
   :init
   (use-package yasnippet-snippets :after yasnippet)
   :hook ((prog-mode LaTeX-mode org-mode markdown-mode) . yas-minor-mode)
@@ -1750,6 +1752,10 @@ exist after each headings's drawers."
   (epa-file-enable)
   )
 
+(with-eval-after-load 'org-indent
+  (require 'diminish)
+  (diminish 'org-indent-mode))
+
 ;; FIXME : should be inside org-mode config block (?)
 (use-package org-sidebar
   :quelpa (org-sidebar :fetcher github :repo "alphapapa/org-sidebar")
@@ -1909,6 +1915,7 @@ exist after each headings's drawers."
 
 ;; FIXME : should be inside org-mode config block (?)
 (use-package org-edna
+  :diminish
   :config
   (require 'org-edna)
   (org-edna-load))
