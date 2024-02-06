@@ -1780,6 +1780,9 @@ exist after each headings's drawers."
         (concat org-directory "/tasks.org")
       (concat org-directory "/perso.org")))
 
+  (defun perso/org-capture-junior-file ()
+    (concat org-directory "/junior.org"))
+
   (setq org-default-notes-file (perso/org-capture-notes-file))
   (setq org-capture-templates
         `(
