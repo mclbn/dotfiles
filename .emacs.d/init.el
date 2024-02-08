@@ -1823,6 +1823,13 @@ exist after each headings's drawers."
 
           ("c" "add task with context"
            entry (file+headline ,(perso/org-capture-tasks-file) "Tâches rapides")
+           "* TODO %?\n%a"
+           :immediate-finish nil
+           :empty-lines 1
+           :prepend nil)
+
+          ("j" "add simple Junior task"
+           entry (file+headline ,(perso/org-capture-junior-file) "Divers")
            "* TODO %?"
            :immediate-finish nil
            :empty-lines 1
