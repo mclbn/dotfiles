@@ -89,6 +89,7 @@
 ;;; Early packages
 ;; Use Garbage collector magic hack ASAP
 (use-package gcmh
+  :diminish
   :demand t
   :config
   (gcmh-mode 1))
@@ -96,7 +97,8 @@
 ;; Diminish : reduces info about modes in bottom bar
 (use-package diminish
   :config
-  (diminish 'visual-line-mode))
+  (diminish 'visual-line-mode)
+  (diminish 'auto-revert-mode))
 
 ;;; Unbinding unneeded keys that will be bound by upcoming packages
 (global-set-key (kbd "M-{") nil)
@@ -284,6 +286,15 @@
              ("<right>" . image-next-file)
              ("C-<left>" . image-backward-hscroll)
              ("C-<right>" . image-forward-hscroll)))
+
+(use-package doc-view
+:ensure nil
+  :config
+  (bind-keys :map doc-view-mode-map
+             ("<up>" . doc-view-previous-page)
+             ("<down>" . doc-view-next-page)
+             ("<left>" . doc-view-previous-page)
+             ("<right>" . doc-view-next-page)))
 
 ;; Shell : Inferior shell mode
 (use-package shell
@@ -619,6 +630,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 
 ;; Ws-butler : smart cleanup of trailing newlines
 (use-package ws-butler
+  :diminish
   :hook (prog-mode . ws-butler-mode))
 
 (defun pt/eol-then-newline ()
@@ -725,6 +737,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 
 ;; make characters after column 80 purple
 (use-package whitespace
+  :diminish
   :config
   (setq whitespace-line-column 80)
   (setq whitespace-style
@@ -863,7 +876,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 (add-hook 'flyspell-incorrect-hook #'flyspell-skip-mail-headers)
 
 ;; Flycheck-grammalecte : french syntax checking
-;; May require running grammalecte-download-grammalecte once
+;; May require running M-x grammalecte-download-grammalecte once
 (use-package flycheck-grammalecte
   :ensure t
   :after flycheck
@@ -1196,7 +1209,7 @@ respectively."
 
 ;; Yasnippet : common code templates
 (use-package yasnippet
-  :diminish
+  :diminish (yas-minor-mode)
   :init
   (use-package yasnippet-snippets :after yasnippet)
   :hook ((prog-mode LaTeX-mode org-mode markdown-mode) . yas-minor-mode)
@@ -1305,6 +1318,7 @@ respectively."
   (lsp-enable-on-type-formatting nil)
   (lsp-enable-links nil)
   (lsp-headerline-breadcrumb-enable t)
+  (lsp-headerline-breadcrumb-enable-diagnostics nil)
   (lsp-signature-auto-activate nil)
   (lsp-enable-semantic-highlight nil) ;; managed by color-identifiers-mode
   (lsp-completion-provider :none) ;; managed by company-mode
@@ -1320,8 +1334,10 @@ respectively."
                                   "-log=error"))
   :bind (:map lsp-mode-map ("C-c C-f" . lsp-format-buffer))
   :hook
-  ((java-mode python-mode go-mode rust-mode js-mode js2-mode
-              typescript-mode web-mode c-mode c++-mode objc-mode php-mode) . lsp-deferred)
+  (((java-mode python-mode go-mode rust-mode js-mode js2-mode
+               typescript-mode web-mode c-mode c++-mode objc-mode php-mode) . lsp-deferred)
+   (lsp-headerline-breadcrumb-mode . (lambda () (flycheck-mode -1)))
+   (lsp-headerline-breadcrumb-mode . (lambda () (flyspell-mode -1))))
   :commands (lsp lsp-deferred))
 
 (use-package lsp-ui
@@ -1737,6 +1753,10 @@ exist after each headings's drawers."
   (epa-file-enable)
   )
 
+(with-eval-after-load 'org-indent
+  (require 'diminish)
+  (diminish 'org-indent-mode))
+
 ;; FIXME : should be inside org-mode config block (?)
 (use-package org-sidebar
   :quelpa (org-sidebar :fetcher github :repo "alphapapa/org-sidebar")
@@ -1759,6 +1779,9 @@ exist after each headings's drawers."
     (if (string= (getenv "EMACS_WORK") "Y")
         (concat org-directory "/tasks.org")
       (concat org-directory "/perso.org")))
+
+  (defun perso/org-capture-junior-file ()
+    (concat org-directory "/junior.org"))
 
   (setq org-default-notes-file (perso/org-capture-notes-file))
   (setq org-capture-templates
@@ -1896,6 +1919,7 @@ exist after each headings's drawers."
 
 ;; FIXME : should be inside org-mode config block (?)
 (use-package org-edna
+  :diminish
   :config
   (require 'org-edna)
   (org-edna-load))
@@ -1944,7 +1968,7 @@ exist after each headings's drawers."
         (mu4e-maildir (expand-file-name "~/.mail"))
         (mu4e-attachment-dir  "~/Downloads/")
         (mu4e-change-filenames-when-moving t) ; work better for mbsync
-        (mu4e-get-mail-command "mbsync protonmail gmail")
+        (mu4e-get-mail-command "mbsync protonmail")
         (mu4e-view-show-addresses t)
         (mu4e-compose-dont-reply-to-self t)
         (message-kill-buffer-on-exit t)
@@ -2253,8 +2277,8 @@ This is a modified version of `mu4e-view-save-attachments'."
     ;; Horizontal Scroll
     (setq hscroll-step 1)
     (setq hscroll-margin 1)
-    ;; Fix highlight-indent-guide visual glitch when started by daemon
-    (highlight-indent-guides-auto-set-faces)
+    ;; Fix highlight-indent-guide visual glitch when started by daemon (not used anymore)
+    ;; (highlight-indent-guides-auto-set-faces)
     ;; Fix which-key settings not applied when started by daemon
     (which-key-setup-side-window-right)
     ;; Fix company-box breaking completion when started by daemon
