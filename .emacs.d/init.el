@@ -1033,6 +1033,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 ;; Hideshow : hide (wrap) parts of the code
 (use-package hideshow
   :diminish
+  :defer t
   :hook (prog-mode . hs-minor-mode)
   :bind (("C-z <tab>" . toggle-fold)
          ("C-z h a" . hs-hide-all))
