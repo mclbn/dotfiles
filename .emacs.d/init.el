@@ -1025,6 +1025,17 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 ;; Show current function in mode bar
 (add-hook 'prog-mode-hook #'which-function-mode)
 
+;; Hideshow : hide (wrap) parts of the code
+(use-package hideshow
+  :hook (prog-mode . hs-minor-mode)
+  :bind ("C-z <tab>" . toggle-fold)
+  :init
+  (defun toggle-fold ()
+    (interactive)
+    (save-excursion
+      (end-of-line)
+      (hs-toggle-hiding))))
+
 ;; Doom-modeline : rich modeline from doom-emacs
 (use-package doom-modeline
   :ensure t
