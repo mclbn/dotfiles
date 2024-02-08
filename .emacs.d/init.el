@@ -535,6 +535,11 @@
 (keyboard-translate ?\C-h ?\C-?)
 (global-set-key "\C-h" 'delete-backward-char)
 
+;; DWIM when available
+(global-set-key (kbd "M-u") 'upcase-dwim)
+(global-set-key (kbd "M-l") 'downcase-dwim)
+(global-set-key (kbd "M-c") 'capitalize-dwim)
+
 ;; Also M-DEL should kill last word
 (defun delete-word (arg)
   "Delete characters forward until encountering the end of a word.
