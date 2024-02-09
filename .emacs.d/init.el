@@ -1672,6 +1672,7 @@ respectively."
   :bind
   ("C-z a" . org-agenda)
   ("C-c l" . org-store-link)
+  ("C-z o l" . org-toggle-link-display)
   :config
   (if (string= (getenv "EMACS_WORK") "Y")
       (progn
@@ -2237,6 +2238,34 @@ This is a modified version of `mu4e-view-save-attachments'."
       (require 'mu4e)
       (setq mail-user-agent 'mu4e-user-agent)
       ))
+
+;;; RSS reading
+;; Elfeed : rss reader
+(use-package elfeed
+  :defer t
+  :config
+  (setq elfeed-log-level 'info)
+  ;; (setq elfeed-search-filter "@1-month-ago +unread")
+  (setq elfeed-search-filter "+unread -large +daily")
+  (elfeed-set-timeout 36000)
+  (defun perso/elfeed-save-db-and-bury ()
+    "Wrapper to save the elfeed db to disk before burying buffer"
+    (interactive)
+    (elfeed-db-save)
+    (quit-window))
+  :bind
+  (:map elfeed-search-mode-map
+        ("q" . perso/elfeed-save-db-and-bury))
+  :custom
+  (elfeed-use-curl t))
+
+;; Elfeed-org : org-mode feed file support
+(use-package elfeed-org
+  :ensure t
+  :after elfeed
+  :config
+  (elfeed-org)
+  (setq rmh-elfeed-org-files (list "~/org/rss.org")))
 
 ;;; File/mode associations
 ;; Script-shell-mode on zsh
