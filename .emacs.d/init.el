@@ -2241,27 +2241,52 @@ This is a modified version of `mu4e-view-save-attachments'."
       ))
 
 ;;; RSS reading
+
+;; Couple function s to handle sync
+;; mainly ripped off from https://pragmaticemacs.wordpress.com/2016/08/17/read-your-rss-feeds-in-emacs-with-elfeed/
+(defun perso/elfeed-load-db-and-run ()
+  "Wrapper to load the elfeed db from disk on startup"
+  (interactive)
+  (elfeed)
+  (elfeed-db-load)
+  (elfeed-search-update--force))
+
+(defun perso/elfeed-load-db-and-update ()
+  "Wrapper to load the elfeed db from disk before updating search view"
+  (interactive)
+  (elfeed-db-load)
+  (elfeed-search-update--force))
+
+(defun perso/elfeed-load-db-and-update-feeds ()
+  "Wrapper to load the elfeed db from disk before updating feeds"
+  (interactive)
+  (elfeed-db-load)
+  (elfeed-search-update--force)
+  (elfeed-update))
+
+(defun perso/elfeed-save-db-and-bury ()
+  "Wrapper to save the elfeed db to disk before burying buffer"
+  (interactive)
+  (elfeed-db-save)
+  (quit-window))
+
 ;; Elfeed : rss reader
 (use-package elfeed
-  :defer t
   :config
   (setq elfeed-log-level 'info)
   (setq elfeed-search-filter "@1-month-ago +unread -large +daily")
   (elfeed-set-timeout 36000)
-  (defun perso/elfeed-save-db-and-bury ()
-    "Wrapper to save the elfeed db to disk before burying buffer"
-    (interactive)
-    (elfeed-db-save)
-    (quit-window))
   :bind
   (:map elfeed-search-mode-map
+        ("g" . perso/elfeed-load-db-and-update)
+        ("G" . perso/elfeed-load-db-and-update-feeds)
+        ("w" . (lambda () (interactive) (elfeed-db-save)))
         ("q" . perso/elfeed-save-db-and-bury))
   :custom
   (elfeed-use-curl t))
 
 ;; Elfeed-org : org-mode feed file support
 (use-package elfeed-org
-  :ensure t
   :after elfeed
   :config
   (elfeed-org)
