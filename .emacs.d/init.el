@@ -806,6 +806,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
   (after-init . global-flycheck-mode)
   :custom
   (flycheck-checker-error-threshold nil)
+  (flycheck-global-modes '(not . (elfeed-search-mode)))
   :config
   (use-package flycheck-pos-tip
     :config
