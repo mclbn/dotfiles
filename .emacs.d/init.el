@@ -2246,8 +2246,7 @@ This is a modified version of `mu4e-view-save-attachments'."
   :defer t
   :config
   (setq elfeed-log-level 'info)
-  ;; (setq elfeed-search-filter "@1-month-ago +unread")
-  (setq elfeed-search-filter "+unread -large +daily")
+  (setq elfeed-search-filter "@1-month-ago +unread -large +daily")
   (elfeed-set-timeout 36000)
   (defun perso/elfeed-save-db-and-bury ()
     "Wrapper to save the elfeed db to disk before burying buffer"
