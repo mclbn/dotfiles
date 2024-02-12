@@ -2287,6 +2287,7 @@ This is a modified version of `mu4e-view-save-attachments'."
         ("g" . perso/elfeed-load-db-and-update)
         ("G" . perso/elfeed-load-db-and-update-feeds)
         ("w" . (lambda () (interactive) (elfeed-db-save)))
+        ("R" . perso/elfeed-mark-all-as-read)
         ("q" . perso/elfeed-save-db-and-bury))
   :custom
   (elfeed-use-curl t))
