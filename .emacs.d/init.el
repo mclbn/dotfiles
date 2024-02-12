@@ -376,7 +376,12 @@
   (ivy-on-del-error-function nil)
   (ivy-magic-slash-non-match-action 'ivy-magic-slash-non-match-create)
   (ivy-count-format "[%d/%d] ")
-  (ivy-wrap t))
+  (ivy-wrap t)
+  (ivy-use-selectable-prompt t)
+  (ivy-initial-inputs-alist nil)
+  :config
+  (setq ivy-re-builders-alist
+        '((t . ivy--regex-ignore-order))))
 
 ;; Ivy-prescient : prescient for ivy (must be loaded after counsel)
 (use-package ivy-prescient
