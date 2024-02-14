@@ -2279,7 +2279,8 @@ This is a modified version of `mu4e-view-save-attachments'."
   "Mark all result in elfeed search buffer as read"
   (interactive)
   (mark-whole-buffer)
-  (elfeed-search-untag-all-unread))
+  (elfeed-search-untag-all-unread)
+  (elfeed-db-save))
 
 ;; Elfeed : rss reader
 (use-package elfeed
