@@ -1630,6 +1630,7 @@ respectively."
   (org-startup-truncated nil)
   (org-startup-folded 'overview)
   (org-refile-use-outline-path 'file)
+  (org-goto-interface 'outline-path-completion)
   (org-outline-path-complete-in-steps nil)
   (org-refile-allow-creating-parent-nodes 'confirm)
   (org-todo-keywords
