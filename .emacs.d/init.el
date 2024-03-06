@@ -2267,7 +2267,8 @@ This is a modified version of `mu4e-view-save-attachments'."
   (interactive)
   (elfeed-db-load)
   (elfeed-search-update--force)
-  (elfeed-update))
+  (elfeed-update)
+  (elfeed-db-save))
 
 (defun perso/elfeed-save-db-and-bury ()
   "Wrapper to save the elfeed db to disk before burying buffer"
@@ -2279,7 +2280,8 @@ This is a modified version of `mu4e-view-save-attachments'."
   "Mark all result in elfeed search buffer as read"
   (interactive)
   (mark-whole-buffer)
-  (elfeed-search-untag-all-unread))
+  (elfeed-search-untag-all-unread)
+  (elfeed-db-save))
 
 ;; Elfeed : rss reader
 (use-package elfeed
