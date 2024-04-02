@@ -1357,7 +1357,8 @@ respectively."
                                   "--pch-storage=memory"
                                   "-background-index"
                                   "-log=error"))
-  :bind (:map lsp-mode-map ("C-c C-f" . lsp-format-buffer))
+  :bind (:map lsp-mode-map
+              ("C-c C-f" . lsp-format-buffer))
   :hook
   (((java-mode python-mode go-mode rust-mode js-mode js2-mode
                typescript-mode web-mode c-mode c++-mode objc-mode php-mode) . lsp-deferred)
@@ -1390,6 +1391,7 @@ respectively."
   (:map lsp-ui-mode-map
         ([remap xref-find-definitions] . lsp-ui-peek-find-definitions) ; M-.
         ([remap xref-find-references] . lsp-ui-peek-find-references) ; M-?
+        ("C-x l g r" . lsp-ui-peek-find-references) ; always peek
         ("C-z i" . lsp-ui-doc-glance)
         ("C-z z i" . lsp-ui-doc-focus-frame))
   :commands
