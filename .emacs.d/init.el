@@ -374,7 +374,7 @@
   (ivy-use-virtual-buffers t)
   (ivy-height 10)
   (ivy-on-del-error-function nil)
-  (ivy-magic-slash-non-match-action 'ivy-magic-slash-non-match-create)
+  (ivy-magic-slash-non-match-action 'ivy-magic-slash-non-match-cd-selected)
   (ivy-count-format "[%d/%d] ")
   (ivy-wrap t)
   (ivy-use-selectable-prompt t)
