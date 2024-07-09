@@ -1613,6 +1613,9 @@ respectively."
 (use-package vmd-mode
   :defer t)
 
+;; HCL-mode : Hashicorp Configuration Language
+(use-package hcl-mode)
+
 ;;; Org-mode
 ;; Main package and settings
 (use-package org
