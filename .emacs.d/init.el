@@ -2261,7 +2261,7 @@ This is a modified version of `mu4e-view-save-attachments'."
 
 ;;; RSS reading
 
-;; Couple function s to handle sync
+;; Couple functions to handle sync
 ;; mainly ripped off from https://pragmaticemacs.wordpress.com/2016/08/17/read-your-rss-feeds-in-emacs-with-elfeed/
 (defun perso/elfeed-load-db-and-run ()
   "Wrapper to load the elfeed db from disk on startup"
