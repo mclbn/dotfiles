@@ -1769,6 +1769,14 @@ exist after each headings's drawers."
                            nil
                          'tree)))
 
+  ;; Org-babel stuff here
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((python    . t)
+     (shell     . t)
+     (calc      . t)
+     (org       . t)))
+
   (add-hook 'org-mode-hook  #'which-function-mode)
   )
 ;; ;; company compatibility (https://github.com/company-mode/company-mode/issues/50)
