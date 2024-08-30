@@ -4,7 +4,7 @@ alias grep='grep'
 alias ln='ln'
 
 alias setenv="export"
-alias ll='ls -l'
+alias ll='ls -lrt'
 alias l='ll'
 alias lh='ls -lh'
 alias c='cd'
