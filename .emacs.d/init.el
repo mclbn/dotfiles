@@ -1772,10 +1772,12 @@ exist after each headings's drawers."
   ;; Org-babel stuff here
   (org-babel-do-load-languages
    'org-babel-load-languages
-   '((python    . t)
-     (shell     . t)
-     (calc      . t)
-     (org       . t)))
+   '((C . t)
+     (python . t)
+     (shell . t)
+     (calc . t)
+     (org . t)))
+  (add-to-list 'org-latex-packages-alist '("" "listingsutf8"))
 
   (add-hook 'org-mode-hook  #'which-function-mode)
   )
