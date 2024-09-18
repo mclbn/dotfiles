@@ -406,13 +406,15 @@
   (("C-x g" . magit-status)
    (:map magit-status-mode-map
          ("M-RET" . magit-diff-visit-file-other-window)))
+  :custom
+  (git-commit-summary-max-length 50)
+  (git-commit-fill-column 72)
   :config
   (defun magit-log-follow-current-file ()
     "A wrapper around `magit-log-buffer-file' with `--follow' argument."
     (interactive)
-    (magit-log-buffer-file t))
+    (magit-log-buffer-file t)))
 
-  (remove-hook 'git-commit-mode-hook #'auto-fill-mode))
 
 ;; Rg : ripgrep search
 (use-package rg
