@@ -5,6 +5,7 @@ alias ln='ln'
 
 alias setenv="export"
 alias ll='ls -lrt'
+alias l1='ls -l1r'
 alias l='ll'
 alias lh='ls -lh'
 alias c='cd'
