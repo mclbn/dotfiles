@@ -1290,7 +1290,7 @@ respectively."
               (setq-local company-backends
                           '((company-capf
                              company-dabbrev
-                             company-ispell
+                             ;; company-ispell
                              :separate)
                             company-files))
               ))
@@ -1299,7 +1299,7 @@ respectively."
               (setq-local company-backends
                           '((company-capf
                              company-dabbrev
-                             company-ispell
+                             ;; company-ispell
                              company-files
                              :separate :with company-yasnippet)
                             company-files))
