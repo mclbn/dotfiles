@@ -2263,6 +2263,9 @@ This is a modified version of `mu4e-view-save-attachments'."
       (setq mail-user-agent 'mu4e-user-agent)
       ))
 
+;; OX-pandoc : export org via pandoc
+(use-package ox-pandoc)
+
 ;;; RSS reading
 
 ;; Couple functions to handle sync
