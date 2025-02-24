@@ -1780,6 +1780,25 @@ exist after each headings's drawers."
      (calc . t)
      (org . t)))
   (add-to-list 'org-latex-packages-alist '("" "listingsutf8"))
+  (setq org-babel-prompt-command "PROMPT_COMMAND=;PS1=\"org_babel_sh_prompt> \";PS2=")
+
+  ;; Following functions from https://kitchingroup.cheme.cmu.edu/blog/2015/03/19/Restarting-org-babel-sessions-in-org-mode-more-effectively/
+  (defun org-babel-kill-session ()
+    "Kill session for current code block."
+    (interactive)
+    (unless (org-in-src-block-p)
+      (error "You must be in a src-block to run this command"))
+    (save-window-excursion
+      (org-babel-switch-to-session)
+      (kill-buffer)))
+
+  (defun org-babel-remove-result-buffer ()
+  "Remove results from every code block in buffer."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (while (re-search-forward org-babel-src-block-regexp nil t)
+      (org-babel-remove-result))))
 
   (add-hook 'org-mode-hook  #'which-function-mode)
   )
