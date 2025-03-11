@@ -226,6 +226,7 @@
   ;; Probe ls for capabilities
   (dired-use-ls-dired 'unspecified)
   (dired-omit-files "^\\...+$\\|\\`[.]?#\\|\\`[.][.]?\\'")
+  (dired-async-mode 1)
   :config
   ;; Reuse same dired buffer, to prevent numerous buffers while navigating in dired
   (put 'dired-find-alternate-file 'disabled nil)
