@@ -1864,6 +1864,9 @@ exist after each headings's drawers."
         (concat org-directory "/tasks.org")
       (concat org-directory "/perso.org")))
 
+  (defun perso/org-capture-bookmarks-file ()
+    (concat org-directory "/bookmarks.org"))
+
   (defun perso/org-capture-junior-file ()
     (concat org-directory "/junior.org"))
 
@@ -1908,6 +1911,13 @@ exist after each headings's drawers."
           ("c" "add task with context"
            entry (file+headline ,(perso/org-capture-tasks-file) "Tâches rapides")
            "* TODO %?\n%a"
+           :immediate-finish nil
+           :empty-lines 1
+           :prepend nil)
+
+          ("b" "add bookmark"
+           entry (file+olp ,(perso/org-capture-bookmarks-file) "Web bookmarks" "Unsorted")
+           "* [[%^{link-url}][%^{link-description}]] %^g"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
