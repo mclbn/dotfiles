@@ -980,6 +980,26 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
         ((eq electric-indent-mode nil) (electric-indent-mode 1))))
 (add-hook 'post-command-hook #'smart-electric-indent-mode)
 
+;; Auto-highlight some keywords
+;; from https://www.jamescherti.com/emacs-highlight-keywords-like-todo-fixme-note/
+;; List available faces with M-x list-faces-display
+(defvar highlight-codetags-keywords
+  '(("\\<\\(TODO\\|FIXME\\|BUG\\)\\>" 1 font-lock-warning-face prepend)
+    ("\\<\\(NOTE\\|HACK\\)\\>" 1 font-lock-doc-face prepend)))
+(define-minor-mode highlight-codetags-local-mode
+  "Highlight codetags like TODO, FIXME..."
+  :global nil
+  (if highlight-codetags-local-mode
+      (font-lock-add-keywords nil highlight-codetags-keywords)
+    (font-lock-remove-keywords nil highlight-codetags-keywords))
+  ;; Fontify the current buffer
+  (when (bound-and-true-p font-lock-mode)
+    (if (fboundp 'font-lock-flush)
+        (font-lock-flush)
+      (with-no-warnings (font-lock-fontify-buffer)))))
+(add-hook 'prog-mode-hook #'highlight-codetags-local-mode)
+(add-hook 'org-mode-hook #'highlight-codetags-local-mode)
+
 ;; Highlight-indent-guides : show indentation level
 ;; (use-package highlight-indent-guides
 ;;   :diminish
