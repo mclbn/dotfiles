@@ -189,11 +189,11 @@
                      ".cache"
                      ".cask"
                      ".elfeed"
-                     "bookmarks"
+                     (expand-file-name (concat user-emacs-directory "bookmarks"))
+                     (expand-file-name (concat user-emacs-directory "recentf"))
                      "cache"
                      "ido.*"
                      "persp-confs"
-                     "recentf"
                      "undo-tree-hist"
                      "url"
                      ;; org archive? (.org_archive)
