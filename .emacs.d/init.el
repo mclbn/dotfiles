@@ -187,15 +187,8 @@
   (recentf-auto-cleanup 'never)
   (recentf-exclude '((expand-file-name package-user-dir)
                      ".cache"
-                     ".cask"
-                     ".elfeed"
                      (expand-file-name (concat user-emacs-directory "bookmarks"))
                      (expand-file-name (concat user-emacs-directory "recentf"))
-                     "cache"
-                     "ido.*"
-                     "persp-confs"
-                     "undo-tree-hist"
-                     "url"
                      ;; org archive? (.org_archive)
                      "COMMIT_EDITMSG\\'"))
   :config
