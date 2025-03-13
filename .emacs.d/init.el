@@ -345,6 +345,11 @@
   :config
   (setq password-cache-expiry 300))
 
+;; Imenu
+(use-package imenu
+  :custom
+  (imenu-auto-rescan t))
+
 ;;; "Main" packages that provide major features
 ;; Prescient : sorting et predicting algorithm
 (use-package prescient
@@ -1704,6 +1709,7 @@ respectively."
   (org-latex-listings t)
   (org-startup-indented t)
   (org-startup-with-inline-images t)
+  (org-imenu-depth 3)
   :bind
   ("C-z a" . org-agenda)
   ("C-c l" . org-store-link)
