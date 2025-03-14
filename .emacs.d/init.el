@@ -1924,6 +1924,13 @@ exist after each headings's drawers."
            :empty-lines 1
            :prepend nil)
 
+          ("f" "add RSS feed"
+           entry (file+olp ,(perso/org-capture-feeds-file) "Feeds" "Unsorted")
+           "* [[%^{link-url}][%^{link-description}]]"
+           :immediate-finish nil
+           :empty-lines 1
+           :prepend nil)
+
           ("j" "add simple Junior task"
            entry (file+headline ,(perso/org-capture-junior-file) "Divers")
            "* TODO %?"
