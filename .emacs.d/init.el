@@ -1722,6 +1722,10 @@ respectively."
       (setq org-agenda-files '("perso.org" "work.org" "notes.org" "cloudcal-perso.org" "cloudcal-work.org"))
       (setq org-refile-targets `((nil :maxlevel . 9)
                                  (("perso.org" "work.org" "notes.org") :maxlevel . 9)))))
+  ;; Auto-save org buffer on refile
+  (advice-add 'org-refile :after
+              (lambda (&rest _)
+                (org-save-all-org-buffers)))
   (require 'org-id)
   (require 'org-capture)
   (defun org-schedule-force-note ()
