@@ -1780,6 +1780,7 @@ exist after each headings's drawers."
      (calc . t)
      (org . t)))
   (add-to-list 'org-latex-packages-alist '("" "listingsutf8"))
+  (setq org-babel-prompt-command "PROMPT_COMMAND=;PS1=\"org_babel_sh_prompt> \";PS2=")
 
   (add-hook 'org-mode-hook  #'which-function-mode)
   )
