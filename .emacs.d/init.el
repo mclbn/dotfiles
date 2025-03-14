@@ -1866,6 +1866,9 @@ exist after each headings's drawers."
   (defun perso/org-capture-bookmarks-file ()
     (concat org-directory "/bookmarks.org"))
 
+  (defun perso/org-capture-feeds-file ()
+    (concat org-directory "/rss.org"))
+
   (defun perso/org-capture-junior-file ()
     (concat org-directory "/junior.org"))
 
