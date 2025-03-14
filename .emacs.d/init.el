@@ -187,15 +187,8 @@
   (recentf-auto-cleanup 'never)
   (recentf-exclude '((expand-file-name package-user-dir)
                      ".cache"
-                     ".cask"
-                     ".elfeed"
-                     "bookmarks"
-                     "cache"
-                     "ido.*"
-                     "persp-confs"
-                     "recentf"
-                     "undo-tree-hist"
-                     "url"
+                     (expand-file-name (concat user-emacs-directory "bookmarks"))
+                     (expand-file-name (concat user-emacs-directory "recentf"))
                      ;; org archive? (.org_archive)
                      "COMMIT_EDITMSG\\'"))
   :config
@@ -226,6 +219,7 @@
   ;; Probe ls for capabilities
   (dired-use-ls-dired 'unspecified)
   (dired-omit-files "^\\...+$\\|\\`[.]?#\\|\\`[.][.]?\\'")
+  (dired-async-mode 1)
   :config
   ;; Reuse same dired buffer, to prevent numerous buffers while navigating in dired
   (put 'dired-find-alternate-file 'disabled nil)
@@ -343,6 +337,11 @@
     )
   :config
   (setq password-cache-expiry 300))
+
+;; Imenu
+(use-package imenu
+  :custom
+  (imenu-auto-rescan t))
 
 ;;; "Main" packages that provide major features
 ;; Prescient : sorting et predicting algorithm
@@ -979,6 +978,26 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
         ((eq electric-indent-mode nil) (electric-indent-mode 1))))
 (add-hook 'post-command-hook #'smart-electric-indent-mode)
 
+;; Auto-highlight some keywords
+;; from https://www.jamescherti.com/emacs-highlight-keywords-like-todo-fixme-note/
+;; List available faces with M-x list-faces-display
+(defvar highlight-codetags-keywords
+  '(("\\<\\(TODO\\|FIXME\\|BUG\\)\\>" 1 font-lock-warning-face prepend)
+    ("\\<\\(NOTE\\|HACK\\)\\>" 1 font-lock-doc-face prepend)))
+(define-minor-mode highlight-codetags-local-mode
+  "Highlight codetags like TODO, FIXME..."
+  :global nil
+  (if highlight-codetags-local-mode
+      (font-lock-add-keywords nil highlight-codetags-keywords)
+    (font-lock-remove-keywords nil highlight-codetags-keywords))
+  ;; Fontify the current buffer
+  (when (bound-and-true-p font-lock-mode)
+    (if (fboundp 'font-lock-flush)
+        (font-lock-flush)
+      (with-no-warnings (font-lock-fontify-buffer)))))
+(add-hook 'prog-mode-hook #'highlight-codetags-local-mode)
+(add-hook 'org-mode-hook #'highlight-codetags-local-mode)
+
 ;; Highlight-indent-guides : show indentation level
 ;; (use-package highlight-indent-guides
 ;;   :diminish
@@ -1290,7 +1309,7 @@ respectively."
               (setq-local company-backends
                           '((company-capf
                              company-dabbrev
-                             company-ispell
+                             ;; company-ispell
                              :separate)
                             company-files))
               ))
@@ -1299,7 +1318,7 @@ respectively."
               (setq-local company-backends
                           '((company-capf
                              company-dabbrev
-                             company-ispell
+                             ;; company-ispell
                              company-files
                              :separate :with company-yasnippet)
                             company-files))
@@ -1683,6 +1702,7 @@ respectively."
   (org-latex-listings t)
   (org-startup-indented t)
   (org-startup-with-inline-images t)
+  (org-imenu-depth 3)
   :bind
   ("C-z a" . org-agenda)
   ("C-c l" . org-store-link)
@@ -1782,6 +1802,24 @@ exist after each headings's drawers."
   (add-to-list 'org-latex-packages-alist '("" "listingsutf8"))
   (setq org-babel-prompt-command "PROMPT_COMMAND=;PS1=\"org_babel_sh_prompt> \";PS2=")
 
+  ;; Following functions from https://kitchingroup.cheme.cmu.edu/blog/2015/03/19/Restarting-org-babel-sessions-in-org-mode-more-effectively/
+  (defun org-babel-kill-session ()
+    "Kill session for current code block."
+    (interactive)
+    (unless (org-in-src-block-p)
+      (error "You must be in a src-block to run this command"))
+    (save-window-excursion
+      (org-babel-switch-to-session)
+      (kill-buffer)))
+
+  (defun org-babel-remove-result-buffer ()
+  "Remove results from every code block in buffer."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (while (re-search-forward org-babel-src-block-regexp nil t)
+      (org-babel-remove-result))))
+
   (add-hook 'org-mode-hook  #'which-function-mode)
   )
 ;; ;; company compatibility (https://github.com/company-mode/company-mode/issues/50)
@@ -1824,6 +1862,9 @@ exist after each headings's drawers."
     (if (string= (getenv "EMACS_WORK") "Y")
         (concat org-directory "/tasks.org")
       (concat org-directory "/perso.org")))
+
+  (defun perso/org-capture-bookmarks-file ()
+    (concat org-directory "/bookmarks.org"))
 
   (defun perso/org-capture-junior-file ()
     (concat org-directory "/junior.org"))
@@ -1869,6 +1910,13 @@ exist after each headings's drawers."
           ("c" "add task with context"
            entry (file+headline ,(perso/org-capture-tasks-file) "Tâches rapides")
            "* TODO %?\n%a"
+           :immediate-finish nil
+           :empty-lines 1
+           :prepend nil)
+
+          ("b" "add bookmark"
+           entry (file+olp ,(perso/org-capture-bookmarks-file) "Web bookmarks" "Unsorted")
+           "* [[%^{link-url}][%^{link-description}]] %^g"
            :immediate-finish nil
            :empty-lines 1
            :prepend nil)
@@ -2263,6 +2311,9 @@ This is a modified version of `mu4e-view-save-attachments'."
       (require 'mu4e)
       (setq mail-user-agent 'mu4e-user-agent)
       ))
+
+;; OX-pandoc : export org via pandoc
+(use-package ox-pandoc)
 
 ;;; RSS reading
 
