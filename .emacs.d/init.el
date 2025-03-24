@@ -1460,6 +1460,12 @@ respectively."
 ;;   (setq dap-python-debugger 'debugpy)
 )
 
+;;; Cmake specifics
+;; Cmake-mode
+(use-package cmake-mode
+  :mode (("CMakeLists.txt$" . cmake-mode)
+         ("\\.cmake$" . cmake-mode)))
+
 ;;; Elisp modes and settings
 ;; Highlight-defined for colored Elisp symbols
 (use-package highlight-defined
