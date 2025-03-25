@@ -1549,7 +1549,19 @@ respectively."
 ;; Emacs-ccls, compiled from source (https://github.com/MaskRay/ccls)
 (use-package ccls
   :config
-  (setq ccls-executable (expand-file-name "~/src/ccls/Release/ccls"))
+  ;; (setq ccls-executable (expand-file-name "~/src/ccls/Release/ccls"))
+  (defun lsp-switch-to-ccls-esp ()
+    "Switch current lsp workspace to ccls with Espressif llvm"
+    (interactive)
+    (setq ccls-executable (expand-file-name "~/src/ccls/Release/ccls"))
+    (lsp-restart-workspace))
+
+  (defun lsp-switch-to-ccls-native ()
+    "Switch current lsp workspace to system-native ccls"
+    (interactive)
+    (setq ccls-executable "ccls")
+    (lsp-restart-workspace))
+
   (setq ccls-args '("--log-file=/tmp/ccls.log"))
   :hook ((c-mode c++-mode objc-mode cuda-mode) .
          (lambda () (require 'ccls) (lsp))))
