@@ -2460,7 +2460,7 @@ This is a modified version of `mu4e-view-save-attachments'."
       (pixel-scroll-precision-mode t))
     ;; Vertical Scroll
     (setq scroll-step 1)
-    (setq scroll-margin 1)
+    (setq scroll-margin 0)
     (setq scroll-conservatively 101)
     (setq scroll-up-aggressively 0.01)
     (setq scroll-down-aggressively 0.01)
