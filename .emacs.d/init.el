@@ -2485,6 +2485,9 @@ This is a modified version of `mu4e-view-save-attachments'."
     (apply-gui-stuff))
 (add-hook 'server-after-make-frame-hook #'apply-gui-stuff)
 
+;; from https://emacs.stackexchange.com/a/19047
+(add-hook 'replace-update-post-hook 'recenter)
+
 ;;; Color themes
 ;;; Zenburn color theme
 (use-package zenburn-theme
