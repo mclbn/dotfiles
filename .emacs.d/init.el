@@ -1223,10 +1223,8 @@ respectively."
 (use-package electric-operator
   :diminish
   :config
-  ;; I like my pointers like this: char * var;
   (electric-operator-add-rules-for-mode 'c-mode
-                                        (cons "{" " {")
-                                        (cons "*" " * "))
+                                        (cons "{" " {"))
   :hook ((c-mode c++-mode python-mode rust-mode java-mode php-mode) . electric-operator-mode))
 
 ;; Quickrun : compile and run quickly
@@ -1537,8 +1535,9 @@ respectively."
 (defconst my-c-style
   '((c-enable-xemacs-performance-kludge-p . t) ; speed up indentation in XEmacs
     (indent-tabs-mode . nil)
-    (c-basic-offset . 2)
-    (c-comment-only-line-offset . 0))
+    (c-basic-offset . 4)
+    (c-comment-only-line-offset . 0)
+    (comment-style . extra-line))
   "My C Programming Style")
 (c-add-style "perso" my-c-style)
 
