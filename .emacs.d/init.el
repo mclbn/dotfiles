@@ -1537,7 +1537,16 @@ respectively."
     (indent-tabs-mode . nil)
     (c-basic-offset . 4)
     (c-comment-only-line-offset . 0)
-    (comment-style . extra-line))
+    (comment-style . extra-line)
+    (c-offsets-alist
+     (substatement-open . 0)
+     (block-open . 0)
+     (case-label . +)
+     (inline-open . 0)
+     (block-open . 0)
+     (statement-cont . +)
+     (inextern-lang . 0)
+     (innamespace . 0)))
   "My C Programming Style")
 (c-add-style "perso" my-c-style)
 
