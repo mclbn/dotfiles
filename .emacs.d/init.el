@@ -1116,13 +1116,13 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
               (sp-end-of-sexp) (forward-char))))
   :custom
   (sp-escape-quotes-after-insert nil)
-  :config
+  ;; :config
   ;; Auto newline in some pairs
-  (let ((c-like-modes-list '(c-mode c++-mode java-mode perl-mode)))
-    (sp-local-pair c-like-modes-list "(" nil
-                   :post-handlers '(:add add-paren-dwim))
-    (sp-local-pair c-like-modes-list "{" nil
-                   :post-handlers '(:add open-block-dwim)))
+  ;; (let ((c-like-modes-list '(c-mode c++-mode java-mode perl-mode)))
+  ;;   (sp-local-pair c-like-modes-list "(" nil
+  ;;                  :post-handlers '(:add add-paren-dwim)))
+    ;; (sp-local-pair c-like-modes-list "{" nil
+                   ;; :post-handlers '(:add open-block-dwim)))
 
   ;; Some of the following is derived from
   ;; https://www.omarpolo.com/dots/emacs.html
@@ -1540,7 +1540,6 @@ respectively."
     (comment-style . extra-line)
     (c-offsets-alist
      (substatement-open . 0)
-     (block-open . 0)
      (case-label . +)
      (inline-open . 0)
      (block-open . 0)
