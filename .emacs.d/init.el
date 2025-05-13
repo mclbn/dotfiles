@@ -1116,7 +1116,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
               (sp-end-of-sexp) (forward-char))))
   :custom
   (sp-escape-quotes-after-insert nil)
-  ;; :config
+  :config
   ;; Auto newline in some pairs
   ;; (let ((c-like-modes-list '(c-mode c++-mode java-mode perl-mode)))
   ;;   (sp-local-pair c-like-modes-list "(" nil
