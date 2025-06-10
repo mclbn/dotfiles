@@ -1724,7 +1724,7 @@ respectively."
   (org-use-property-inheritance nil) ; for performance
   (org-cycle-separator-lines 2)
   (org-id-link-to-org-use-id t)
-  (org-latex-listings t)
+  (org-latex-src-block-backend 'listings)
   (org-startup-indented t)
   (org-startup-with-inline-images t)
   (org-imenu-depth 3)
@@ -1733,6 +1733,15 @@ respectively."
   ("C-c l" . org-store-link)
   ("C-z o l" . org-toggle-link-display)
   :config
+  ;; Sub-package setup
+  ;;; LaTeX exports
+  (use-package ox-latex
+    :ensure nil
+    :defer t
+    :after org
+    :config
+    (setq org-latex-src-block-backend 'listings))
+  ;; other config stuff
   (if (string= (getenv "EMACS_WORK") "Y")
       (progn
         (defun perso/org-work-files ()
@@ -2463,8 +2472,8 @@ This is a modified version of `mu4e-view-save-attachments'."
     ;; X11 Alt is Meta
     (setq x-alt-keysym 'meta)
     ;; Smooth scrolling (Emacs <= 29.1)
-    (when (fboundp 'pixel-scroll-precision-mode)
-      (pixel-scroll-precision-mode t))
+    ;; (when (fboundp 'pixel-scroll-precision-mode)
+      ;; (pixel-scroll-precision-mode t))
     ;; Vertical Scroll
     (setq scroll-step 1)
     (setq scroll-margin 0)
@@ -2494,6 +2503,17 @@ This is a modified version of `mu4e-view-save-attachments'."
 
 ;; from https://emacs.stackexchange.com/a/19047
 (add-hook 'replace-update-post-hook 'recenter)
+
+;; Ultra-scroll
+;; Supposedly faster scroll
+(use-package ultra-scroll
+  ;:load-path "~/code/emacs/ultra-scroll" ; if you git cloned
+  :vc (:url "https://github.com/jdtsmith/ultra-scroll") ; For Emacs>=30
+  :init
+  (setq scroll-conservatively 101 ; or whatever value you prefer, since v0.4
+        scroll-margin 0)        ; important: scroll-margin>0 not yet supported
+  :config
+  (ultra-scroll-mode 1))
 
 ;;; Color themes
 ;;; Zenburn color theme
