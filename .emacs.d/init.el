@@ -13,7 +13,6 @@
 ;;   :config
 ;;   (auto-package-update-maybe))
 ;; show parentheses out of reach (https://with-emacs.com/posts/ui-hacks/show-matching-lines-when-parentheses-go-off-screen/)
-;; Check out random stuff : tramp, crux
 ;; Maybe something to automatically add headers
 ;; Bindings to learn :
 ;; - treemacs
