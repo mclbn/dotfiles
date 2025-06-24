@@ -151,6 +151,18 @@
   (setq mouse-sel-mode t)
   )
 
+;; Crux : custom functions
+(use-package crux
+  :bind
+  (("C-z d" . crux-delete-file-and-buffer)
+   ("C-z n" . crux-rename-file-and-buffer)
+   ("C-c ." . crux-duplicate-current-line-or-region)
+   ("C-c C-M-." . crux-duplicate-and-comment-current-line-or-region)
+   ("C-k" . crux-smart-kill-line)
+   ("C-c k" . crux-kill-whole-line)
+   ("C-g" . crux-keyboard-quit-dwim)
+   ))
+
 ;;; Backups & history
 ;; Backup files location and versioning
 (defvar --backup-directory (concat user-emacs-directory "backups"))
