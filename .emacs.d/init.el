@@ -329,14 +329,17 @@
 ;; TRAMP
 (use-package tramp
   :custom
+  (tramp-verbose 3)
   (tramp-default-method "ssh")
+  (tramp-use-scp-direct-remote-copying t)
+  (tramp-copy-size-limit (* 1024 1024))
   :init
   (use-package ibuffer-tramp
     :hook
     (ibuffer-mode . ibuffer-tramp-set-filter-groups-by-tramp-connection)
     )
   :config
-  (setq password-cache-expiry 300))
+  (setq password-cache-expiry 600))
 
 ;; Imenu
 (use-package imenu
