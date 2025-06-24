@@ -544,6 +544,9 @@
 (keyboard-translate ?\C-h ?\C-?)
 (global-set-key "\C-h" 'delete-backward-char)
 
+;; Simple bindings to useful functions
+(global-set-key (kbd "C-z x") 'read-only-mode)
+
 ;; DWIM when available
 (global-set-key (kbd "M-u") 'upcase-dwim)
 (global-set-key (kbd "M-l") 'downcase-dwim)
