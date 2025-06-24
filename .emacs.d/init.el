@@ -77,7 +77,7 @@
   (require 'use-package)
   (require 'bind-key))
 
-(use-package  quelpa
+(use-package quelpa
   :ensure t
   :init
   (setq quelpa-update-melpa-p nil) ; no auto update (faster startup)
