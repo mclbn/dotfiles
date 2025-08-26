@@ -269,6 +269,7 @@
                   (local-set-key (kbd "<mouse-2>") #'dired-find-file)
                   (local-set-key (kbd "RET") #'dired-find-file)
                   (local-set-key (kbd "M-RET") #'dired-find-alternate-file)
+                  (local-set-key (kbd "M-SPC") #'dired-view-file)
                   (local-set-key (kbd "M-<up>")
                                  (lambda () (interactive) (find-alternate-file ".."))))))
 
