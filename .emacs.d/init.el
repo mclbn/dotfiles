@@ -151,6 +151,7 @@
 
 ;; Crux : custom functions
 (use-package crux
+  :pin melpa ;; the good version is on melpa, not melpa-stable
   :bind
   (("C-z d" . crux-delete-file-and-buffer)
    ("C-z n" . crux-rename-file-and-buffer)
