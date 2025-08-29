@@ -1270,7 +1270,7 @@ FACE defaults to inheriting from default and highlight."
   :config
   (doom-modeline-def-modeline 'main
     '(bar workspace-name window-number matches follow buffer-info remote-host buffer-position word-count selection-info)
-    '(objed-state misc-info persp-name grip debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process vcs checker " "))
+    '(objed-state misc-info persp-name grip debug repl lsp minor-modes indent-info buffer-encoding major-mode process vcs checker " "))
   )
 
 ;; Smartparens : auto parenthesis,  etc.
