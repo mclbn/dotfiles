@@ -1834,6 +1834,7 @@ respectively."
   (setq markdown-fontify-code-blocks-natively t)
   )
 ;; Vmd-mode : alternative markdown live preview
+;; Maybe the future is grip-mode here...
 (use-package vmd-mode
   :defer t)
 
