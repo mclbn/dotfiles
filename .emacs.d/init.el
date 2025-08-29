@@ -346,10 +346,7 @@
   (tramp-use-scp-direct-remote-copying t)
   (tramp-copy-size-limit (* 1024 1024))
   :init
-  (use-package ibuffer-tramp
-    :hook
-    (ibuffer-mode . ibuffer-tramp-set-filter-groups-by-tramp-connection)
-    )
+  (use-package ibuffer-tramp)
   :config
   (setq password-cache-expiry 600))
 
@@ -488,14 +485,23 @@
 ;; Ibuffer : buffer management and sorting
 (use-package ibuffer
   :ensure nil
-  :bind ("C-x C-b" . ibuffer)
   :init
   ;; Ibuffer-vc : allows grouping by project
   (use-package ibuffer-vc
-    :commands (ibuffer-vc-set-filter-groups-by-vc-root)
+    ;; :commands (ibuffer-vc-set-filter-groups-by-vc-root)
     :custom
     (ibuffer-vc-skip-if-remote 'nil))
+  (use-package ibuffer-projectile)
+  :bind
+  (("C-x C-b" . ibuffer))
   :custom
+  (ibuffer-display-summary t)
+  (ibuffer-use-other-window nil)
+  (ibuffer-default-shrink-to-minimum-size nil)
+  (ibuffer-default-sorting-mode 'filename/process)
+  (ibuffer-title-face 'font-lock-doc-face)
+  (ibuffer-use-header-line t)
+  (ibuffer-show-empty-filter-groups nil)
   (ibuffer-formats
    '((mark modified read-only locked " "
            (name 35 35 :left :elide)
@@ -507,6 +513,109 @@
      (mark " "
            (name 16 -1)
            " " filename)))
+  ;; Much is taken from there:
+  ;; https://olddeuteronomy.github.io/post/emacs-ibuffer-config/
+  (ibuffer-saved-filter-groups
+   '(("Main"
+      ("Apps" (or
+               ;; FIXME mu4e
+               (mode . diary-mode)
+               (mode . elfeed-search-mode)
+               (mode . elfeed-show-mode)))
+      ("Directories" (mode . dired-mode))
+      ("Org" (mode . org-mode))
+      ("Config" (or
+                 (mode . conf-mode)
+                 (mode . conf-toml-mode)
+                 (mode . toml-ts-mode)
+                 (mode . conf-windows-mode)
+                 (name . "^\\.clangd$")
+                 (name . "^\\.gitignore$")
+                 (name . "^Doxyfile$")
+                 (name . "^config\\.toml$")
+                 (mode . yaml-mode)
+                 (mode . i3wm-config-mode)))
+      ("C++" (or
+              (mode . c++-mode)
+              (mode . c++-ts-mode)
+              (mode . c-mode)
+              (mode . c-ts-mode)
+              (mode . c-or-c++-ts-mode)
+              (mode . platformio-mode)))
+      ("Python" (or
+                 (mode . python-ts-mode)
+                 (mode . c-mode)
+                 (mode . python-mode)))
+      ("Rust" (or
+               (mode . rust-mode)))
+      ("Assembly" (or
+                   (mode . asm-mode)))
+      ("Java" (or
+               (mode . java-mode)))
+      ("Web" (or
+              (mode . mhtml-mode)
+              (mode . html-mode)
+              (mode . web-mode)
+              (mode . nxml-mode)
+              (mode . css-mode)
+              (mode . sass-mode)
+              (mode . js-mode)
+              (mode . js2-mode)
+              (mode . rjsx-mode)
+              (mode . php-mode)))
+      ("Android" (or
+                  (mode . smali-mode)))
+      ("Scripts" (or
+                  (mode . shell-script-mode)
+                  (mode . shell-mode)
+                  (mode . sh-mode)
+                  (mode . lua-mode)
+                  (mode . bat-mode)
+                  (mode . powershell-mode)
+                  (mode . dockerfile-mode)))
+      ("Markup" (or
+                 (mode . markdown-mode)
+                 (mode . adoc-mode)))
+      ("LaTeX" (mode . latex-mode))
+      ("CSV" (mode . csv-mode))
+      ("Text" (or
+               (mode . text-mode)))
+      ("Hex" (or
+              (mode . hexl-mode)
+              (mode . nhexl-mode)))
+      ("Other" (or
+                (mode . fundamental-mode)
+                (mode . special-mode)))
+      ("Magit" (or
+                (mode . magit-blame-mode)
+                (mode . magit-cherry-mode)
+                (mode . magit-diff-mode)
+                (mode . magit-log-mode)
+                (mode . magit-process-mode)
+                (mode . magit-status-mode)))
+      ("Build" (or
+                (mode . make-mode)
+                (mode . makefile-gmake-mode)
+                (mode . cmake-mode)
+                (name . "^Makefile$")
+                (mode . change-log-mode)))
+      ("Emacs" (or
+                (mode . emacs-lisp-mode)
+                (name . "^\\*Help\\*$")
+                (name . "^\\*Custom.*")
+                (name . "^\\*Org Agenda\\*$")
+                (name . "^\\*info\\*$")
+                (name . "^\\*scratch\\*$")
+                (name . "^\\*Backtrace\\*$")
+                (name . "^\\*Messages\\*$"))))))
+  :hook
+  (ibuffer-mode . (lambda ()
+                    (ibuffer-switch-to-saved-filter-groups "Main")
+                    (local-set-key (kbd ";") '(lambda () (interactive)
+                                                (ibuffer-switch-to-saved-filter-groups "Main")))
+                    ;; Could be either :
+                    ;; ibuffer-vc-set-filter-groups-by-vc-root or ibuffer-projectile-set-filter-groups
+                    (local-set-key (kbd ":") #'ibuffer-projectile-set-filter-groups)))
   :config
   ;; From https://emacs.stackexchange.com/a/2179
   ;; Allow nice auto-refresh without post-command-hook
@@ -521,6 +630,11 @@
     (set (make-local-variable 'auto-revert-verbose) nil)
     (auto-revert-mode 1))
   (add-hook 'ibuffer-mode-hook 'my-ibuffer-auto-revert-setup))
+
+;; All-the-icons-ibuffer : icons for ibuffer
+(use-package all-the-icons-ibuffer
+  :after all-the-icons
+  :hook (ibuffer-mode . all-the-icons-ibuffer-mode))
 
 ;;; Help
 ;; Helpful: help menu replacement
