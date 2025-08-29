@@ -274,12 +274,9 @@
                   (local-set-key (kbd "M-<up>")
                                  (lambda () (interactive) (find-alternate-file ".."))))))
 
-;; Seems broken ATM, maybe related to dired-omit-mode oO
-;; (use-package all-the-icons-dired
-;;   :after all-the-icons
-;;   :hook (dired-mode . all-the-icons-dired-mode)
-;;   :custom
-;;   (all-the-icons-dired-monochrome nil))
+(use-package nerd-icons-dired
+  :hook
+  (dired-mode . nerd-icons-dired-mode))
 
 ;; Image-mode
 (use-package image-mode
