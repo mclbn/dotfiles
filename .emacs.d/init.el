@@ -294,7 +294,7 @@
              ("C-<right>" . image-forward-hscroll)))
 
 (use-package doc-view
-:ensure nil
+  :ensure nil
   :config
   (bind-keys :map doc-view-mode-map
              ("<up>" . doc-view-previous-page)
@@ -896,33 +896,33 @@ FACE defaults to inheriting from default and highlight."
   (advice-add
    #'show-paren-function
    :after
-    (defun show-paren--off-screen+ (&rest _args)
-      "Display matching line for off-screen paren."
-      (when (overlayp ov)
-        (delete-overlay ov))
-      ;; check if it's appropriate to show match info,
-      ;; see `blink-paren-post-self-insert-function'
-      (when (and (overlay-buffer show-paren--overlay)
-                 (not (or cursor-in-echo-area
-                          executing-kbd-macro
-                          noninteractive
-                          (minibufferp)
-                          this-command))
-                 (and (not (bobp))
-                      (memq (char-syntax (char-before)) '(?\) ?\$)))
-                 (= 1 (logand 1 (- (point)
-                                   (save-excursion
-                                     (forward-char -1)
-                                     (skip-syntax-backward "/\\")
-                                     (point))))))
-        ;; rebind `minibuffer-message' called by
-        ;; `blink-matching-open' to handle the overlay display
-        (cl-letf (((symbol-function #'minibuffer-message)
-                   (lambda (msg &rest args)
-                     (let ((msg (apply #'format-message msg args)))
-                       (setq ov (display-line-overlay+
-                                 (window-start) msg ))))))
-          (blink-matching-open))))))
+   (defun show-paren--off-screen+ (&rest _args)
+     "Display matching line for off-screen paren."
+     (when (overlayp ov)
+       (delete-overlay ov))
+     ;; check if it's appropriate to show match info,
+     ;; see `blink-paren-post-self-insert-function'
+     (when (and (overlay-buffer show-paren--overlay)
+                (not (or cursor-in-echo-area
+                         executing-kbd-macro
+                         noninteractive
+                         (minibufferp)
+                         this-command))
+                (and (not (bobp))
+                     (memq (char-syntax (char-before)) '(?\) ?\$)))
+                (= 1 (logand 1 (- (point)
+                                  (save-excursion
+                                    (forward-char -1)
+                                    (skip-syntax-backward "/\\")
+                                    (point))))))
+       ;; rebind `minibuffer-message' called by
+       ;; `blink-matching-open' to handle the overlay display
+       (cl-letf (((symbol-function #'minibuffer-message)
+                  (lambda (msg &rest args)
+                    (let ((msg (apply #'format-message msg args)))
+                      (setq ov (display-line-overlay+
+                                (window-start) msg ))))))
+         (blink-matching-open))))))
 
 ;; make characters after column 80 purple
 (use-package whitespace
@@ -1299,8 +1299,8 @@ FACE defaults to inheriting from default and highlight."
   ;; (let ((c-like-modes-list '(c-mode c++-mode java-mode perl-mode)))
   ;;   (sp-local-pair c-like-modes-list "(" nil
   ;;                  :post-handlers '(:add add-paren-dwim)))
-    ;; (sp-local-pair c-like-modes-list "{" nil
-                   ;; :post-handlers '(:add open-block-dwim)))
+  ;; (sp-local-pair c-like-modes-list "{" nil
+  ;; :post-handlers '(:add open-block-dwim)))
 
   ;; Some of the following is derived from
   ;; https://www.omarpolo.com/dots/emacs.html
@@ -1623,18 +1623,18 @@ respectively."
   (setq dap-python-debugger 'debugpy)
   (add-hook 'dap-stopped-hook
             (lambda (arg) (call-interactively #'dap-hydra)))
-;;   :config
-;;   ;; Could not manage to make any of the following work...
-;;   ;; (require 'dap-firefox)
-;;   ;; (require 'dap-edge)
-;;   ;; (require 'dap-chrome)
-;;   ;; (require 'dap-node)
-;;   (require 'dap-python)
-;;   (require 'dap-lldb)
-;;   (require 'dap-php)
-;;   (setq dap-lldb-debug-program '("/usr/bin/lldb-vscode"))
-;;   (setq dap-python-debugger 'debugpy)
-)
+  ;;   :config
+  ;;   ;; Could not manage to make any of the following work...
+  ;;   ;; (require 'dap-firefox)
+  ;;   ;; (require 'dap-edge)
+  ;;   ;; (require 'dap-chrome)
+  ;;   ;; (require 'dap-node)
+  ;;   (require 'dap-python)
+  ;;   (require 'dap-lldb)
+  ;;   (require 'dap-php)
+  ;;   (setq dap-lldb-debug-program '("/usr/bin/lldb-vscode"))
+  ;;   (setq dap-python-debugger 'debugpy)
+  )
 
 ;;; Cmake specifics
 ;; Cmake-mode
@@ -2029,12 +2029,12 @@ exist after each headings's drawers."
       (kill-buffer)))
 
   (defun org-babel-remove-result-buffer ()
-  "Remove results from every code block in buffer."
-  (interactive)
-  (save-excursion
-    (goto-char (point-min))
-    (while (re-search-forward org-babel-src-block-regexp nil t)
-      (org-babel-remove-result))))
+    "Remove results from every code block in buffer."
+    (interactive)
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward org-babel-src-block-regexp nil t)
+        (org-babel-remove-result))))
 
   (add-hook 'org-mode-hook  #'which-function-mode)
   )
@@ -2185,33 +2185,33 @@ exist after each headings's drawers."
 (if (not (string= (getenv "EMACS_WORK") "Y"))
     (progn
       (use-package org-caldav
-		   :init
-		   (setq org-caldav-url cloud-caldav-url)
-		   (setq org-caldav-calendars
-			 '((:calendar-id "org-perso"
-					 :sync-direction twoway
-					 :files ("~/org/perso.org")
-					 :inbox "~/org/cloudcal-perso.org")
-			   (:calendar-id "org-work"
-					 :sync-direction twoway
-					 :files ("~/org/work.org")
-					 :inbox "~/org/cloudcal-work.org")))
-		   :config
-		   ;; Need this to avoid breaking on tel: links
-		   (setq org-export-with-broken-links t)
-		   (setq org-icalendar-timezone "Europe/Paris")
-		   (setq org-icalendar-alarm-time 1)
-		   ;; This makes sure to-do items as a category can show up on the calendar
-		   (setq org-icalendar-include-todo t)
-           (setq org-caldav-todo-percent-states
-                 '((0 "TODO") (1 "SOMEDAY") (5 "NEXT") (10 "STARTED") (30 "WAITING") (100 "DONE")))
-		   ;; Deadline disabled because it creates duplicates entry when used also schedueled
-		   ;; See: https://github.com/dengste/org-caldav/issues/121
-		   ;; This ensures all org "deadlines" show up, and show up as due dates
-		   ;; (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo todo-due))
-		   (setq org-icalendar-use-deadline '(nil))
-		   ;; This ensures "scheduled" org items show up, and show up as start times
-		   (setq org-icalendar-use-scheduled '(todo-start event-if-todo event-if-not-todo)))))
+		:init
+		(setq org-caldav-url cloud-caldav-url)
+		(setq org-caldav-calendars
+			  '((:calendar-id "org-perso"
+					          :sync-direction twoway
+					          :files ("~/org/perso.org")
+					          :inbox "~/org/cloudcal-perso.org")
+			    (:calendar-id "org-work"
+					          :sync-direction twoway
+					          :files ("~/org/work.org")
+					          :inbox "~/org/cloudcal-work.org")))
+		:config
+		;; Need this to avoid breaking on tel: links
+		(setq org-export-with-broken-links t)
+		(setq org-icalendar-timezone "Europe/Paris")
+		(setq org-icalendar-alarm-time 1)
+		;; This makes sure to-do items as a category can show up on the calendar
+		(setq org-icalendar-include-todo t)
+        (setq org-caldav-todo-percent-states
+              '((0 "TODO") (1 "SOMEDAY") (5 "NEXT") (10 "STARTED") (30 "WAITING") (100 "DONE")))
+		;; Deadline disabled because it creates duplicates entry when used also schedueled
+		;; See: https://github.com/dengste/org-caldav/issues/121
+		;; This ensures all org "deadlines" show up, and show up as due dates
+		;; (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo todo-due))
+		(setq org-icalendar-use-deadline '(nil))
+		;; This ensures "scheduled" org items show up, and show up as start times
+		(setq org-icalendar-use-scheduled '(todo-start event-if-todo event-if-not-todo)))))
 
 ;; Org-superstar : beautify org-mode
 ;; FIXME : should be inside org-mode config block (?)
@@ -2651,7 +2651,7 @@ This is a modified version of `mu4e-view-save-attachments'."
     (setq x-alt-keysym 'meta)
     ;; Smooth scrolling (Emacs <= 29.1)
     ;; (when (fboundp 'pixel-scroll-precision-mode)
-      ;; (pixel-scroll-precision-mode t))
+    ;; (pixel-scroll-precision-mode t))
     ;; Vertical Scroll
     (setq scroll-step 1)
     (setq scroll-margin 0)
@@ -2685,7 +2685,7 @@ This is a modified version of `mu4e-view-save-attachments'."
 ;; Ultra-scroll
 ;; Supposedly faster scroll
 (use-package ultra-scroll
-  ;:load-path "~/code/emacs/ultra-scroll" ; if you git cloned
+                                        ;:load-path "~/code/emacs/ultra-scroll" ; if you git cloned
   :vc (:url "https://github.com/jdtsmith/ultra-scroll") ; For Emacs>=30
   :init
   (setq scroll-conservatively 101 ; or whatever value you prefer, since v0.4
