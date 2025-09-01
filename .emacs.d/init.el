@@ -1910,6 +1910,11 @@ respectively."
   ("C-c l" . org-store-link)
   ("C-z o l" . org-toggle-link-display)
   :config
+  ;; Unbind keys bound to buffer-move
+  (unbind-key (kbd "<C-S-up>") org-mode-map)
+  (unbind-key (kbd "<C-S-down>") org-mode-map)
+  (unbind-key (kbd "<C-S-left>") org-mode-map)
+  (unbind-key (kbd "<C-S-right>") org-mode-map)
   ;; Sub-package setup
   ;;; LaTeX exports
   (use-package ox-latex
