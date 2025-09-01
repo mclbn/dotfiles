@@ -210,7 +210,7 @@
 (use-package dired
   :ensure nil
   :bind
-  (("C-x C-j" . dired-jump))
+  (("C-x d" . dired-jump))
   :custom
   ;; Always delete and copy recursively
   (dired-listing-switches "-lahp --group-directories-first")
@@ -255,6 +255,8 @@
 
   (use-package diredfl
     :after zenburn-theme
+    :custom-face
+    (diredfl-dir-name ((t (:foreground "#94BFF3" :background "#3F3F3F"))))
     :hook (dired-mode . diredfl-mode))
 
   (use-package dired-git-info
@@ -2705,17 +2707,7 @@ This is a modified version of `mu4e-view-save-attachments'."
 (use-package zenburn-theme
   :ensure t
   :config
-  (load-theme 'zenburn t)
-  (zenburn-with-color-variables
-    (custom-theme-set-faces
-     'zenburn
-     ;; Needed for proper hl-line-mode
-     `(hl-line-face ((t (:background ,zenburn-bg+1 ))))
-     `(hl-line ((t (:background ,zenburn-bg+1 ))))
-     ;; Dired stuff
-     `(diredfl-dir-name ((t (:foreground ,zenburn-red+1 :weight bold))))
-     `(diredfl-dir-heading ((t (:foreground ,zenburn-blue-1))))
-     )))
+  (load-theme 'zenburn t))
 
 ;;; Startup time
 ;; Let's finish loading this file by displaying how much time we took to start
