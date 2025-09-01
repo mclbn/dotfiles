@@ -1821,6 +1821,9 @@ respectively."
 ;;; Docker modes and settings
 (use-package dockerfile-mode :defer t)
 
+;;; Yaml-mode
+(use-package yaml-mode)
+
 ;; CSV modes and settings
 (use-package csv-mode)
 
