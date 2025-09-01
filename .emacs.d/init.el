@@ -256,7 +256,7 @@
   (use-package diredfl
     :after zenburn-theme
     :custom-face
-    (diredfl-dir-name ((t (:foreground "#94BFF3" :background "#3F3F3F"))))
+    (diredfl-dir-name ((t (:foreground "#94BFF3" :background "#3F3F3F" :weight bold))))
     :hook (dired-mode . diredfl-mode))
 
   (use-package dired-git-info
