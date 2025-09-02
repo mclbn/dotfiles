@@ -502,6 +502,7 @@
   (ibuffer-title-face 'font-lock-doc-face)
   (ibuffer-use-header-line t)
   (ibuffer-show-empty-filter-groups nil)
+  ;; Will be overidden by all-the-icons-ibuffer-formats
   (ibuffer-formats
    '((mark modified read-only locked " "
            (name 35 35 :left :elide)
@@ -526,6 +527,8 @@
       ("Org" (mode . org-mode))
       ("Config" (or
                  (mode . conf-mode)
+                 (mode . conf-unix-mode)
+                 (mode . conf-space-mode)
                  (mode . conf-toml-mode)
                  (mode . toml-ts-mode)
                  (mode . conf-windows-mode)
@@ -634,6 +637,25 @@
 ;; All-the-icons-ibuffer : icons for ibuffer
 (use-package all-the-icons-ibuffer
   :after all-the-icons
+  :custom
+  (all-the-icons-ibuffer-formats
+   '((mark modified read-only locked
+           " " (icon 2 2 :left :elide)
+           " " (name 18 18 :left :elide)
+           " " (size-h 9 -1 :right)
+           " " (mode+ 16 16 :left :elide)
+           " " filename-and-process)
+     ;; FIXME : it would be nice to have a hook on ip to
+     ;; call ibuffer-vc-set-filter-groups-by-vc-root
+     ;; when switching to this format
+     (mark modified read-only locked vc-status-mini
+           " " (icon 2 2 :left :elide)
+           " " (name 18 18 :left :elide)
+           " " (size-h 9 -1 :right)
+           " " (mode+ 16 16 :left :elide)
+           " " (vc-status 0 16 :left)
+           " " vc-relative-file)
+     (mark " " (name 16 -1) " " filename)))
   :hook (ibuffer-mode . all-the-icons-ibuffer-mode))
 
 ;;; Help
