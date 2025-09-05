@@ -426,7 +426,6 @@
     (interactive)
     (magit-log-buffer-file t)))
 
-
 ;; Rg : ripgrep search
 (use-package rg
   :if (executable-find "rg")
@@ -661,6 +660,7 @@
 ;;; Help
 ;; Helpful: help menu replacement
 (use-package helpful
+  :after elisp-refs
   :config
   (global-set-key (kbd "C-h f") #'helpful-callable)
   (global-set-key (kbd "C-h v") #'helpful-variable)
@@ -1292,7 +1292,7 @@ FACE defaults to inheriting from default and highlight."
   :config
   (doom-modeline-def-modeline 'main
     '(bar workspace-name window-number matches follow buffer-info remote-host buffer-position word-count selection-info)
-    '(objed-state misc-info persp-name grip debug repl lsp minor-modes indent-info buffer-encoding major-mode process vcs checker " "))
+    '(objed-state misc-info persp-name grip debug repl lsp minor-modes indent-info buffer-encoding major-mode process vcs check " "))
   )
 
 ;; Smartparens : auto parenthesis,  etc.
@@ -2725,7 +2725,7 @@ This is a modified version of `mu4e-view-save-attachments'."
   (ultra-scroll-mode 1))
 
 ;;; Color themes
-;;; Zenburn color theme
+;; Zenburn color theme
 (use-package zenburn-theme
   :ensure t
   :config
