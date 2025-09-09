@@ -537,10 +537,10 @@
                  (name . "^config\\.toml$")
                  (mode . yaml-mode)
                  (mode . i3wm-config-mode)))
-      ("C++" (or
+      ("C / C++" (or
+              (mode . c-mode)
               (mode . c++-mode)
               (mode . c++-ts-mode)
-              (mode . c-mode)
               (mode . c-ts-mode)
               (mode . c-or-c++-ts-mode)
               (mode . platformio-mode)))
@@ -1006,7 +1006,8 @@ FACE defaults to inheriting from default and highlight."
 
 (use-package beacon
   :diminish
-  :config (setq beacon-color "#5F7F5F")
+  :custom
+  (beacon-color "#5F7F5F")
   :hook   ((org-mode text-mode prog-mode) . beacon-mode))
 
 (use-package dimmer
@@ -1676,6 +1677,17 @@ respectively."
   ;;   (setq dap-python-debugger 'debugpy)
   )
 
+;; Compile-mode : view compilation output
+(use-package compile
+  :defer t
+  :hook
+  (compilation-filter . ansi-color-compilation-filter)
+  :custom
+  (compilation-always-kill t)
+  (compilation-scroll-output 'first-error)
+  (compilation-ask-about-save nil)
+  (compilation-max-output-line-length nil))
+
 ;;; Cmake specifics
 ;; Cmake-mode
 (use-package cmake-mode
@@ -1698,6 +1710,15 @@ respectively."
         eldoc-documentation-function #'ignore
         )
   )
+
+;; C-mode settings
+(use-package cc-mode
+  :defer t
+  :bind (:map c-mode-map
+              ("C-c C-c" . (lambda ()
+                             (interactive)
+                             (call-interactively 'projectile-compile-project)
+                             (switch-to-buffer-other-frame "*compilation*")))))
 
 ;; Python-mode settings
 (use-package python-mode
