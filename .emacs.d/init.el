@@ -826,8 +826,26 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
          ("M-o" . #'change-outer)))
 
 (use-package comment-dwim-2
+  :config
+  (defun perso/comment-c-line()
+    (interactive)
+    (setq comment-style 'indent)
+    (call-interactively 'comment-dwim-2))
+
+  (defun perso/comment-c-region()
+    (interactive)
+    (setq comment-style 'extra-line)
+    (call-interactively 'comment-dwim-2))
+
+  (defun perso/comment-line-or-region()
+    (interactive)
+    (if (eq major-mode 'c-mode)
+        (if (region-active-p)
+            (perso/comment-c-region)
+          (perso/comment-c-line))
+      (call-interactively 'comment-dwim-2)))
   :bind
-  ("M-;" . comment-dwim-2))
+  ("M-;" . perso/comment-line-or-region))
 
 (use-package ediff
   :defer
@@ -1737,6 +1755,7 @@ respectively."
     (indent-tabs-mode . nil)
     (c-basic-offset . 4)
     (c-comment-only-line-offset . 0)
+    ; default but we have a custom function : perso/comment-line-or-region
     (comment-style . extra-line)
     (c-offsets-alist
      (substatement-open . 0)
