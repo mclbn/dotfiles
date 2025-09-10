@@ -1982,6 +1982,15 @@ respectively."
   (unbind-key (kbd "<C-S-down>") org-mode-map)
   (unbind-key (kbd "<C-S-left>") org-mode-map)
   (unbind-key (kbd "<C-S-right>") org-mode-map)
+
+  ;; gpg setup
+  (when (executable-find "gpg")
+    (require 'org-crypt)
+    (org-crypt-use-before-save-magic)
+    (setq org-crypt-key "511079E5FEC0BA66B53C9A625D01D510BEBDD2FF")
+    (require 'epa-file)
+    (epa-file-enable))
+
   ;; Sub-package setup
   ;;; LaTeX exports
   (use-package ox-latex
@@ -2114,25 +2123,19 @@ exist after each headings's drawers."
 ;;   (add-hook 'completion-at-point-functions 'pcomplete-completions-at-point nil t))
 ;; (add-hook 'org-mode-hook #'add-pcomplete-to-capf)
 
-;; FIXME : should be inside org-mode config block (?)
-(when (executable-find "gpg")
-  (require 'org-crypt)
-  (org-crypt-use-before-save-magic)
-  (setq org-crypt-key "511079E5FEC0BA66B53C9A625D01D510BEBDD2FF")
-  (require 'epa-file)
-  (epa-file-enable)
-  )
-
 (with-eval-after-load 'org-indent
   (require 'diminish)
   (diminish 'org-indent-mode))
 
 ;; FIXME : should be inside org-mode config block (?)
+;; BETTER FIXME : try org-side-tree instead : https://www.reddit.com/r/emacs/comments/16uirwp/orgsidetree_navigate_org_mode_outlines_in_emacs/
 (use-package org-sidebar
   :quelpa (org-sidebar :fetcher github :repo "alphapapa/org-sidebar")
-  :bind ("C-z o t" . org-sidebar-tree-toggle)
+  :bind ("C-z o t" . (lambda() (interactive)
+                       (if (eq major-mode 'org-mode)
+                           (org-sidebar-tree-toggle))))
   :custom
-  (org-sidebar-tree-side 'right)
+  (org-sidebar-tree-side 'left)
   (org-sidebar-tree-jump-fn 'org-sidebar-tree-jump-source))
 
 ;; FIXME : should be inside org-mode config block (?)
