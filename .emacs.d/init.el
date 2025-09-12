@@ -2128,17 +2128,6 @@ exist after each headings's drawers."
   (diminish 'org-indent-mode))
 
 ;; FIXME : should be inside org-mode config block (?)
-;; BETTER FIXME : try org-side-tree instead : https://www.reddit.com/r/emacs/comments/16uirwp/orgsidetree_navigate_org_mode_outlines_in_emacs/
-(use-package org-sidebar
-  :quelpa (org-sidebar :fetcher github :repo "alphapapa/org-sidebar")
-  :bind ("C-z o t" . (lambda() (interactive)
-                       (if (eq major-mode 'org-mode)
-                           (org-sidebar-tree-toggle))))
-  :custom
-  (org-sidebar-tree-side 'left)
-  (org-sidebar-tree-jump-fn 'org-sidebar-tree-jump-source))
-
-;; FIXME : should be inside org-mode config block (?)
 (use-package org-capture
   ;; No need to get it, comes with emacs/org
   :ensure nil
