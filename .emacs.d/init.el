@@ -2300,30 +2300,6 @@ exist after each headings's drawers."
   )
 
 ;; FIXME : should be inside org-mode config block (?)
-(use-package org-super-links
-  :quelpa (org-super-links :repo "toshism/org-super-links" :fetcher github :commit "develop")
-  :bind (("C-c s s" . sl-link)
-	     ("C-c s l" . sl-store-link)
-	     ("C-c s C-l" . sl-insert-link)))
-
-;; FIXME : should be inside org-mode config block (?)
-(use-package org-edna
-  :diminish
-  :config
-  (require 'org-edna)
-  (org-edna-load))
-
-;; FIXME : should be inside org-mode config block (?)
-(use-package org-linker
-  :quelpa (org-linker :repo "toshism/org-linker" :fetcher github :commit "master"))
-
-;; FIXME : should be inside org-mode config block (?)
-(use-package org-linker-edna
-  :quelpa (org-linker-edna :repo "toshism/org-linker-edna" :fetcher github :commit "master")
-  :bind (("C-c s e" . org-linker-edna)) ;; follows org-super-link binding patterns
-  )
-
-;; FIXME : should be inside org-mode config block (?)
 (use-package org-books
   :custom
   (org-books-file "~/org/books.org")
