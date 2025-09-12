@@ -356,7 +356,7 @@
   (imenu-auto-rescan t))
 
 ;;; "Main" packages that provide major features
-;; Prescient : sorting et predicting algorithm
+;; Prescient : sorting and predicting algorithm
 (use-package prescient
   :demand t
   :custom
