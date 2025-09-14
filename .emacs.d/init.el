@@ -2638,6 +2638,32 @@ This is a modified version of `mu4e-view-save-attachments'."
 ;; Arduino is C++
 (add-to-list 'auto-mode-alist '("\\.ino\\'" . c++-mode))
 
+;;; "AI" stuff
+;; GPTel : chat with LLMs
+(use-package gptel
+  :config
+  (setq gptel-default-mode 'org-mode)
+  (setq
+   gptel-max-tokens 5000
+   gptel-model 'Meta-Llama-3-8B-Instruct.Q4_0.gguf
+   gptel-backend (gptel-make-gpt4all "GPT4All"
+                   :protocol "http"
+                   :host gpt4all-home-instance
+                   :models '(Nous-Hermes-2-Mistral-7B-DPO.Q4_0.gguf
+                             Meta-Llama-3-8B-Instruct.Q4_0.gguf
+                             wizardlm-13b-v1.2.Q4_0.gguf))))
+
+;; A custom function to open a single gptel session
+(defun perso/gptel ()
+  "Wrapper to load gptel"
+  (interactive)
+  (gptel "GPTel")
+  (switch-to-buffer "GPTel")
+  (delete-other-windows))
+
+(use-package gptel-quick
+  :quelpa (gptel-quick :repo "karthink/gptel-quick" :fetcher github :commit "master")
+  )
 
 ;;; Convenience key-binding for common actions
 ;; Quick access to scratch
