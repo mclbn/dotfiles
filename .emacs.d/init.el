@@ -2306,18 +2306,6 @@ exist after each headings's drawers."
   (org-books-file-depth 1)
   )
 
-;; FIXME : should be inside org-mode config block (?)
-(use-package orgmdb
-  :ensure t
-  :diminish
-  :quelpa (orgmdb :fetcher github :repo "isamert/orgmdb.el")
-  :bind
-  (("C-z o m" . orgmdb-fill-movie-properties))
-  :custom
-  (orgmdb-omdb-apikey "ce9ed4b5")
-  (orgmdb-fill-property-list '(title released genre runtime rated director writer actors plot country language imdb metacritic tomatometer imdb-id))
-  )
-
 ;;; Mail management
 (if (not (string= (getenv "EMACS_NOMU") "Y"))
     (progn
