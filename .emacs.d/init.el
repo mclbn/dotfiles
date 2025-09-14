@@ -2665,6 +2665,15 @@ This is a modified version of `mu4e-view-save-attachments'."
   :quelpa (gptel-quick :repo "karthink/gptel-quick" :fetcher github :commit "master")
   )
 
+(use-package gptel-prompts
+  :quelpa (gptel-prompts :repo "jwiegley/gptel-prompts" :fetcher github :commit "main")
+  :after (gptel)
+  :demand t
+  :config
+  (gptel-prompts-update)
+  ;; Ensure prompts are updated if prompt files change
+  (gptel-prompts-add-update-watchers))
+
 ;;; Convenience key-binding for common actions
 ;; Quick access to scratch
 (defun switch-to-scratch-buffer ()
