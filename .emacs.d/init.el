@@ -691,6 +691,10 @@
 ;; Backspace is backspace
 (normal-erase-is-backspace-mode 1)
 
+;; Keybinds to useful unicode characters
+(bind-key "C->" "→")
+(bind-key "C-<" "←")
+
 ;; Simple bindings to useful functions
 (global-set-key (kbd "C-z x") 'read-only-mode)
 
@@ -2640,39 +2644,41 @@ This is a modified version of `mu4e-view-save-attachments'."
 
 ;;; "AI" stuff
 ;; GPTel : chat with LLMs
-(use-package gptel
-  :config
-  (setq gptel-default-mode 'org-mode)
-  (setq
-   gptel-max-tokens 5000
-   gptel-model 'Meta-Llama-3-8B-Instruct.Q4_0.gguf
-   gptel-backend (gptel-make-gpt4all "GPT4All"
-                   :protocol "http"
-                   :host gpt4all-home-instance
-                   :models '(Nous-Hermes-2-Mistral-7B-DPO.Q4_0.gguf
-                             Meta-Llama-3-8B-Instruct.Q4_0.gguf
-                             wizardlm-13b-v1.2.Q4_0.gguf))))
+(when (boundp 'gpt4all-home-instance)
+  (use-package gptel
+    :config
+    (setq gptel-default-mode 'org-mode)
+    (setq
+     gptel-max-tokens 5000
+     gptel-model 'Meta-Llama-3-8B-Instruct.Q4_0.gguf
+     gptel-backend (gptel-make-gpt4all "GPT4All"
+				       :protocol "http"
+				       :host gpt4all-home-instance
+				       :models '(Nous-Hermes-2-Mistral-7B-DPO.Q4_0.gguf
+						 Meta-Llama-3-8B-Instruct.Q4_0.gguf
+						 wizardlm-13b-v1.2.Q4_0.gguf))))
 
-;; A custom function to open a single gptel session
-(defun perso/gptel ()
-  "Wrapper to load gptel"
-  (interactive)
-  (gptel "GPTel")
-  (switch-to-buffer "GPTel")
-  (delete-other-windows))
+  ;; A custom function to open a single gptel session
+  (defun perso/gptel ()
+    "Wrapper to load gptel"
+    (interactive)
+    (gptel "GPTel")
+    (switch-to-buffer "GPTel")
+    (delete-other-windows))
 
-(use-package gptel-quick
-  :quelpa (gptel-quick :repo "karthink/gptel-quick" :fetcher github :commit "master")
-  )
+  (use-package gptel-quick
+    :quelpa (gptel-quick :repo "karthink/gptel-quick" :fetcher github :commit "master")
+    )
 
-(use-package gptel-prompts
-  :quelpa (gptel-prompts :repo "jwiegley/gptel-prompts" :fetcher github :commit "main")
-  :after (gptel)
-  :demand t
-  :config
-  (gptel-prompts-update)
-  ;; Ensure prompts are updated if prompt files change
-  (gptel-prompts-add-update-watchers))
+  (when (file-directory-p "~/.emacs.d/prompts")
+    (use-package gptel-prompts
+      :quelpa (gptel-prompts :repo "jwiegley/gptel-prompts" :fetcher github :commit "main")
+      :after (gptel)
+      :demand t
+      :config
+      (gptel-prompts-update)
+      ;; Ensure prompts are updated if prompt files change
+      (gptel-prompts-add-update-watchers))))
 
 ;;; Convenience key-binding for common actions
 ;; Quick access to scratch
