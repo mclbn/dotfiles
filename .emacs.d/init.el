@@ -2719,7 +2719,7 @@ This is a modified version of `mu4e-view-save-attachments'."
                    :models '(Nous-Hermes-2-Mistral-7B-DPO.Q4_0.gguf
                              Meta-Llama-3-8B-Instruct.Q4_0.gguf
                              Meta-Llama-3.1-8B-Instruct-128k-Q4_0.gguf
-                             wizardlm-13b-v1.2.Q4_0.gguf))))
+                             wizardlm-13b-v1.2.Q4_0.gguf)))
 
   ;; A custom function to open a single gptel session
   (defun perso/gptel ()
