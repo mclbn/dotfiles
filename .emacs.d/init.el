@@ -691,6 +691,10 @@
 ;; Backspace is backspace
 (normal-erase-is-backspace-mode 1)
 
+;; Keybinds to useful unicode characters
+(bind-key "C->" "→")
+(bind-key "C-<" "←")
+
 ;; Simple bindings to useful functions
 (global-set-key (kbd "C-z x") 'read-only-mode)
 
@@ -998,6 +1002,74 @@ FACE defaults to inheriting from default and highlight."
   :diminish
   :init (global-page-break-lines-mode))
 
+;; Custom functions to center text by changing margins
+(defvar center-text-min-space 100
+  "Minimum text space between margins.")
+
+(defvar center-text-max-space 120
+  "Maximum text space between margins.")
+
+(defvar center-text-margin-ratio 6
+  "Window /ratio to try to achieve for each margin.")
+
+(defun center-text (&optional max-size)
+  "Center the text in the middle of the buffer."
+  (interactive)
+  (progn
+    (if max-size
+        (progn
+          (setq-local local-buffer-max-space max-size)
+          (if (< max-size center-text-min-space)
+              (setq-local local-buffer-min-space max-size)
+            (setq-local local-buffer-min-space center-text-min-space))))
+    (if (not (local-variable-p 'local-buffer-max-space))
+        (setq-local local-buffer-max-space center-text-max-space))
+    (if (not (local-variable-p 'local-buffer-min-space))
+        (setq-local local-buffer-min-space center-text-min-space))
+    (set-window-margins (car (get-buffer-window-list (current-buffer) nil t))
+                        nil
+                        nil)
+    (setq-local centered t)
+    (if (>= (window-width) center-text-min-space)
+        (progn
+          (setq-local min-margin (/ (- (window-width) local-buffer-max-space) 2))
+          (setq-local max-margin (/ (- (window-width) local-buffer-min-space) 2))
+          (set-window-margins (car (get-buffer-window-list (current-buffer) nil t))
+                              (min (max (/ (window-width) center-text-margin-ratio) min-margin) max-margin)
+                              (min (max (/ (window-width) center-text-margin-ratio) min-margin) max-margin))))))
+
+(defun center-text-clear ()
+  "Clear any margin settings."
+  (interactive)
+  (if (local-variable-p 'centered)
+      (progn
+        (setq-local centered nil)
+        (setq-local local-buffer-min-space center-text-min-space)
+        (setq-local local-buffer-max-space center-text-max-space)
+        (set-window-margins (car (get-buffer-window-list (current-buffer) nil t))
+                            nil
+                            nil))))
+
+(defun refresh-center-text ()
+  "Refresh margins (should be hooked)."
+  (interactive)
+  (if (local-variable-p 'centered)
+      (if centered
+          (center-text)
+        (center-text-clear))))
+
+(defun toggle-center-text ()
+  "Toggle centered text"
+  (interactive)
+  (if (local-variable-p 'centered)
+      (if centered
+          (center-text-clear)
+        (center-text current-prefix-arg))
+    (center-text current-prefix-arg)))
+
+(add-hook 'window-configuration-change-hook 'refresh-center-text)
+(define-key global-map (kbd "C-z c") 'toggle-center-text)
+
 ;;All-the-icons : unified icon pack
 ;; Requires manually installing the fonts with M-x all-the-icons-install-fonts and M-x nerd-icons-install-fonts
 (use-package all-the-icons
@@ -1016,12 +1088,6 @@ FACE defaults to inheriting from default and highlight."
   (dimmer-fraction 0.2)
   :config
   (dimmer-mode))
-
-(use-package centered-window
-  :bind
-  ("C-z c" . centered-window-mode)
-  :custom
-  (cwm-centered-window-width 120))
 
 ;;; Languages and spell-checking
 ;; Flycheck
@@ -2640,6 +2706,7 @@ This is a modified version of `mu4e-view-save-attachments'."
 
 ;;; "AI" stuff
 ;; GPTel : chat with LLMs
+
 (use-package gptel
   :config
   (setq gptel-default-mode 'org-mode)
@@ -2654,26 +2721,27 @@ This is a modified version of `mu4e-view-save-attachments'."
                              Meta-Llama-3.1-8B-Instruct-128k-Q4_0.gguf
                              wizardlm-13b-v1.2.Q4_0.gguf))))
 
-;; A custom function to open a single gptel session
-(defun perso/gptel ()
-  "Wrapper to load gptel"
-  (interactive)
-  (gptel "GPTel")
-  (switch-to-buffer "GPTel")
-  (delete-other-windows))
+  ;; A custom function to open a single gptel session
+  (defun perso/gptel ()
+    "Wrapper to load gptel"
+    (interactive)
+    (gptel "GPTel")
+    (switch-to-buffer "GPTel")
+    (delete-other-windows))
 
-(use-package gptel-quick
-  :quelpa (gptel-quick :repo "karthink/gptel-quick" :fetcher github :commit "master")
-  )
+  (use-package gptel-quick
+    :quelpa (gptel-quick :repo "karthink/gptel-quick" :fetcher github :commit "master")
+    )
 
-(use-package gptel-prompts
-  :quelpa (gptel-prompts :repo "jwiegley/gptel-prompts" :fetcher github :commit "main")
-  :after (gptel)
-  :demand t
-  :config
-  (gptel-prompts-update)
-  ;; Ensure prompts are updated if prompt files change
-  (gptel-prompts-add-update-watchers))
+  (when (file-directory-p "~/.emacs.d/prompts")
+    (use-package gptel-prompts
+      :quelpa (gptel-prompts :repo "jwiegley/gptel-prompts" :fetcher github :commit "main")
+      :after (gptel)
+      :demand t
+      :config
+      (gptel-prompts-update)
+      ;; Ensure prompts are updated if prompt files change
+      (gptel-prompts-add-update-watchers))))
 
 ;;; Convenience key-binding for common actions
 ;; Quick access to scratch
