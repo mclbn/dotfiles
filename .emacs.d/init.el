@@ -103,6 +103,7 @@
 (global-set-key (kbd "M-}") nil)
 (global-set-key (kbd "C-z") nil)
 (global-set-key (kbd "M-z") nil)
+(global-set-key (kbd "C-t") nil)
 
 ;;; Absolute must-have tweaks and settings
 ;; Disable the welcome message
@@ -232,6 +233,8 @@
   (dired-omit-files "^\\...+$\\|\\`[.]?#\\|\\`[.][.]?\\'")
   (dired-async-mode 1)
   :config
+  ;; We don't use ugly listings
+  (global-set-key (kbd "C-x C-d") nil)
   ;; Reuse same dired buffer, to prevent numerous buffers while navigating in dired
   (put 'dired-find-alternate-file 'disabled nil)
   ;; open with external application
@@ -268,11 +271,11 @@
   :hook
   (dired-mode . auto-revert-mode)
   (dired-mode . dired-omit-mode)
-  (dired-mode . dired-hide-details-mode)
+  ;; (dired-mode . dired-hide-details-mode)
   (dired-mode . (lambda ()
                   (local-set-key (kbd "<mouse-2>") #'dired-find-file)
-                  (local-set-key (kbd "RET") #'dired-find-file)
-                  (local-set-key (kbd "M-RET") #'dired-find-alternate-file)
+                  (local-set-key (kbd "M-RET") #'dired-find-file)
+                  (local-set-key (kbd "RET") #'dired-find-alternate-file)
                   (local-set-key (kbd "M-SPC") #'dired-view-file)
                   (local-set-key (kbd "M-<up>")
                                  (lambda () (interactive) (find-alternate-file ".."))))))
@@ -348,7 +351,16 @@
   :init
   (use-package ibuffer-tramp)
   :config
-  (setq password-cache-expiry 600))
+  (setq password-cache-expiry 600)
+  (connection-local-set-profile-variables
+   'remote-direct-async-process
+   '((tramp-direct-async-process . t)))
+  (connection-local-set-profiles
+   '(:application tramp :protocol "ssh")
+   'remote-direct-async-process)
+  (connection-local-set-profiles
+   '(:application tramp :protocol "scp")
+   'remote-direct-async-process))
 
 ;; Imenu
 (use-package imenu
@@ -371,6 +383,10 @@
   :init
   (use-package amx :defer t)
   (use-package counsel :diminish :config (counsel-mode 1))
+  (use-package counsel-tramp
+    :diminish
+    :bind
+    (("C-t" . counsel-tramp)))
   (use-package swiper :defer t)
   (ivy-mode 1)
   :bind
@@ -435,26 +451,37 @@
   )
 
 ;;; Buffer and window management
-(defun pt/split-window ()
-  "Split a window."
-  (interactive)
-  (split-window-right)
-  (balance-windows))
-(bind-key "C-c 2" #'pt/split-window)
-(bind-key "C-x q" #'delete-window)
-(bind-key "C-x C-q" #'kill-buffer-and-window)
-(bind-key "C-x <up>" #'windmove-up)
-(bind-key "C-x <down>" #'windmove-down)
-(bind-key "C-x <left>" #'windmove-left)
-(bind-key "C-x <right>" #'windmove-right)
+(bind-key "C-c 1" #'delete-other-windows)
 
-(defun pt/split-window-thirds ()
-  "Split a window into thirds."
+(defun perso/2-windows-mode ()
+  "Switch to 2-windows mode and move cursor to the right one."
   (interactive)
+  (delete-other-windows)
   (split-window-right)
+  (balance-windows)
+  (windmove-right))
+(bind-key "C-c 2" #'perso/2-windows-mode)
+
+(defun perso/3-windows-mode ()
+  "Switch to 3-windows mode and move cursor to the middle one."
+  (interactive)
+  (delete-other-windows)
+  (split-window-right)
+  (split-window-right)
+  (balance-windows)
+  (windmove-right))
+(bind-key "C-c 3" #'perso/3-windows-mode)
+
+(defun perso/4-windows-mode ()
+  "Switch to 4-windows mode."
+  (interactive)
+  (delete-other-windows)
+  (split-window-below)
+  (split-window-right)
+  (windmove-down)
   (split-window-right)
   (balance-windows))
-(bind-key "C-c 3" #'pt/split-window-thirds)
+(bind-key "C-c 4" #'perso/4-windows-mode)
 
 ;; move the cursor when a new window is created
 (defun mm/split-window-right-and-follow ()
@@ -462,11 +489,19 @@
   (interactive)
   (select-window (split-window-right)))
 (global-set-key (kbd "C-x 3") 'mm/split-window-right-and-follow)
+
 (defun mm/split-window-below-and-follow ()
   "A function to create a window below and move the cursor to it"
   (interactive)
   (select-window (split-window-below)))
 (global-set-key (kbd "C-x 2") 'mm/split-window-below-and-follow)
+
+(bind-key "C-x <up>" #'windmove-up)
+(bind-key "C-x <down>" #'windmove-down)
+(bind-key "C-x <left>" #'windmove-left)
+(bind-key "C-x <right>" #'windmove-right)
+(bind-key "C-x q" #'delete-window)
+(bind-key "C-x C-q" #'kill-buffer-and-window)
 
 ;; Ace-window : window selection & management
 (use-package ace-window
@@ -1301,6 +1336,7 @@ FACE defaults to inheriting from default and highlight."
 (setq treesit-language-source-alist
       '((bash "https://github.com/tree-sitter/tree-sitter-bash")
         (c "https://github.com/tree-sitter/tree-sitter-c")
+        (cpp "https://github.com/tree-sitter/tree-sitter-cpp")
         (cmake "https://github.com/uyha/tree-sitter-cmake")
         (css "https://github.com/tree-sitter/tree-sitter-css")
         (elisp "https://github.com/Wilfred/tree-sitter-elisp")
@@ -1781,6 +1817,13 @@ respectively."
 (use-package cc-mode
   :defer t
   :bind (:map c-mode-map
+              ("C-c C-c" . (lambda ()
+                             (interactive)
+                             (call-interactively 'projectile-compile-project)
+                             (switch-to-buffer-other-frame "*compilation*")))))
+(use-package c-ts-mode
+  :defer t
+  :bind (:map c-ts-mode-map
               ("C-c C-c" . (lambda ()
                              (interactive)
                              (call-interactively 'projectile-compile-project)
