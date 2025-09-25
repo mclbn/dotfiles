@@ -103,6 +103,7 @@
 (global-set-key (kbd "M-}") nil)
 (global-set-key (kbd "C-z") nil)
 (global-set-key (kbd "M-z") nil)
+(global-set-key (kbd "C-t") nil)
 
 ;;; Absolute must-have tweaks and settings
 ;; Disable the welcome message
@@ -348,7 +349,16 @@
   :init
   (use-package ibuffer-tramp)
   :config
-  (setq password-cache-expiry 600))
+  (setq password-cache-expiry 600)
+  (connection-local-set-profile-variables
+   'remote-direct-async-process
+   '((tramp-direct-async-process . t)))
+  (connection-local-set-profiles
+   '(:application tramp :protocol "ssh")
+   'remote-direct-async-process)
+  (connection-local-set-profiles
+   '(:application tramp :protocol "scp")
+   'remote-direct-async-process))
 
 ;; Imenu
 (use-package imenu
@@ -371,6 +381,10 @@
   :init
   (use-package amx :defer t)
   (use-package counsel :diminish :config (counsel-mode 1))
+  (use-package counsel-tramp
+    :diminish
+    :bind
+    (("C-t" . counsel-tramp)))
   (use-package swiper :defer t)
   (ivy-mode 1)
   :bind
