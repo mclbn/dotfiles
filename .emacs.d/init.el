@@ -233,6 +233,8 @@
   (dired-omit-files "^\\...+$\\|\\`[.]?#\\|\\`[.][.]?\\'")
   (dired-async-mode 1)
   :config
+  ;; We don't use ugly listings
+  (global-set-key (kbd "C-x C-d") nil)
   ;; Reuse same dired buffer, to prevent numerous buffers while navigating in dired
   (put 'dired-find-alternate-file 'disabled nil)
   ;; open with external application
