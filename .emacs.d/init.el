@@ -451,26 +451,37 @@
   )
 
 ;;; Buffer and window management
-(defun pt/split-window ()
-  "Split a window."
-  (interactive)
-  (split-window-right)
-  (balance-windows))
-(bind-key "C-c 2" #'pt/split-window)
-(bind-key "C-x q" #'delete-window)
-(bind-key "C-x C-q" #'kill-buffer-and-window)
-(bind-key "C-x <up>" #'windmove-up)
-(bind-key "C-x <down>" #'windmove-down)
-(bind-key "C-x <left>" #'windmove-left)
-(bind-key "C-x <right>" #'windmove-right)
+(bind-key "C-c 1" #'delete-other-windows)
 
-(defun pt/split-window-thirds ()
-  "Split a window into thirds."
+(defun perso/2-windows-mode ()
+  "Switch to 2-windows mode and move cursor to the right one."
   (interactive)
+  (delete-other-windows)
   (split-window-right)
+  (balance-windows)
+  (windmove-right))
+(bind-key "C-c 2" #'perso/2-windows-mode)
+
+(defun perso/3-windows-mode ()
+  "Switch to 3-windows mode and move cursor to the middle one."
+  (interactive)
+  (delete-other-windows)
+  (split-window-right)
+  (split-window-right)
+  (balance-windows)
+  (windmove-right))
+(bind-key "C-c 3" #'perso/3-windows-mode)
+
+(defun perso/4-windows-mode ()
+  "Switch to 4-windows mode."
+  (interactive)
+  (delete-other-windows)
+  (split-window-below)
+  (split-window-right)
+  (windmove-down)
   (split-window-right)
   (balance-windows))
-(bind-key "C-c 3" #'pt/split-window-thirds)
+(bind-key "C-c 4" #'perso/4-windows-mode)
 
 ;; move the cursor when a new window is created
 (defun mm/split-window-right-and-follow ()
@@ -478,11 +489,19 @@
   (interactive)
   (select-window (split-window-right)))
 (global-set-key (kbd "C-x 3") 'mm/split-window-right-and-follow)
+
 (defun mm/split-window-below-and-follow ()
   "A function to create a window below and move the cursor to it"
   (interactive)
   (select-window (split-window-below)))
 (global-set-key (kbd "C-x 2") 'mm/split-window-below-and-follow)
+
+(bind-key "C-x <up>" #'windmove-up)
+(bind-key "C-x <down>" #'windmove-down)
+(bind-key "C-x <left>" #'windmove-left)
+(bind-key "C-x <right>" #'windmove-right)
+(bind-key "C-x q" #'delete-window)
+(bind-key "C-x C-q" #'kill-buffer-and-window)
 
 ;; Ace-window : window selection & management
 (use-package ace-window
