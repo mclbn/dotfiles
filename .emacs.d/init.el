@@ -1821,6 +1821,13 @@ respectively."
                              (interactive)
                              (call-interactively 'projectile-compile-project)
                              (switch-to-buffer-other-frame "*compilation*")))))
+(use-package c-ts-mode
+  :defer t
+  :bind (:map c-ts-mode-map
+              ("C-c C-c" . (lambda ()
+                             (interactive)
+                             (call-interactively 'projectile-compile-project)
+                             (switch-to-buffer-other-frame "*compilation*")))))
 
 ;; Python-mode settings
 (use-package python-mode
