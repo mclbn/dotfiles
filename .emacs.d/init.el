@@ -456,11 +456,18 @@
   )
 
 ;;; Buffer and window management
-(bind-key "C-c 1" #'delete-other-windows)
+(defun perso/1-window-mode ()
+  "Switch to 1-window en center text."
+  (interactive)
+  (center-text-clear)
+  (delete-other-windows)
+  (center-text))
+(bind-key "C-c 1" #'perso/1-window-mode)
 
 (defun perso/2-windows-mode ()
   "Switch to 2-windows mode and move cursor to the right one."
   (interactive)
+  (center-text-clear)
   (delete-other-windows)
   (split-window-right)
   (balance-windows)
@@ -470,6 +477,7 @@
 (defun perso/3-windows-mode ()
   "Switch to 3-windows mode and move cursor to the middle one."
   (interactive)
+  (center-text-clear)
   (delete-other-windows)
   (split-window-right)
   (split-window-right)
