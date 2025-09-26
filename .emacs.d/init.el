@@ -947,6 +947,16 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
          (clipboard-yank)))
 (global-set-key (kbd "C-z y") 'clipboard-swap) ; Yank with the Shift key to swap instead of paste.
 
+;; Custom funtion to copy full path
+(defun full-path-to-clipboard ()
+  "Copy the current buffer full path to the clipboard."
+  (interactive)
+  (let
+      ((filename (if (equal major-mode 'dired-mode) default-directory (buffer-file-name))))
+    (kill-new filename)
+    (message "Copied buffer file name '%s' to the clipboard." filename)))
+(bind-key "C-z p" #'full-path-to-clipboard)
+
 ;; Undo-tree
 (use-package undo-tree
   :defer t
