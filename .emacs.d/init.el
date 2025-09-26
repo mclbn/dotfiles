@@ -427,6 +427,8 @@
   ("C-c p" . projectile-command-map)
   :custom
   (projectile-completion-system 'ivy)
+  (projectile-indexing-method 'native)
+  (projectile-enable-caching t)
   :config
   (projectile-mode 1)
   (add-to-list 'projectile-globally-ignored-directories "node_modules"))
