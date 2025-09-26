@@ -391,7 +391,7 @@
   (ivy-mode 1)
   :bind
   (("C-s" . swiper-isearch)
-   ("C-z g" . counsel-rg)
+   ;; ("C-z g" . counsel-rg)
    ("C-z r" . counsel-recentf)
    ("C-z b" . counsel-buffer-or-recentf)
    ("C-z C-b" . counsel-ibuffer)
@@ -422,6 +422,8 @@
   ("C-c p" . projectile-command-map)
   :custom
   (projectile-completion-system 'ivy)
+  (projectile-indexing-method 'native)
+  (projectile-enable-caching t)
   :config
   (projectile-mode 1)
   (add-to-list 'projectile-globally-ignored-directories "node_modules"))
@@ -451,11 +453,136 @@
   )
 
 ;;; Buffer and window management
-(bind-key "C-c 1" #'delete-other-windows)
+;; Custom functions to center text by changing margins
+(defvar global-centered-text nil "Global centered text status.")
+
+(defvar center-text-min-space 100
+  "Minimum text space between margins.")
+
+(defvar center-text-max-space 120
+  "Maximum text space between margins.")
+
+(defvar center-text-margin-ratio 6
+  "Window /ratio to try to achieve for each margin.")
+
+(defun center-text (&optional max-size)
+  "Center the text in the middle of the buffer."
+  (interactive)
+  (progn
+    (if max-size
+        (progn
+          (setq-local local-buffer-max-space max-size)
+          (if (< max-size center-text-min-space)
+              (setq-local local-buffer-min-space max-size)
+            (setq-local local-buffer-min-space center-text-min-space))))
+    (if (not (local-variable-p 'local-buffer-max-space))
+        (setq-local local-buffer-max-space center-text-max-space))
+    (if (not (local-variable-p 'local-buffer-min-space))
+        (setq-local local-buffer-min-space center-text-min-space))
+    (set-window-margins (car (get-buffer-window-list (current-buffer) nil t))
+                        nil
+                        nil)
+    (setq-local centered t)
+    (if (>= (window-width) center-text-min-space)
+        (progn
+          (setq-local min-margin (/ (- (window-width) local-buffer-max-space) 2))
+          (setq-local max-margin (/ (- (window-width) local-buffer-min-space) 2))
+          (set-window-margins (car (get-buffer-window-list (current-buffer) nil t))
+                              (min (max (/ (window-width) center-text-margin-ratio) min-margin) max-margin)
+                              (min (max (/ (window-width) center-text-margin-ratio) min-margin) max-margin))))))
+
+(defun center-text-clear ()
+  "Clear any margin settings."
+  (interactive)
+  (if global-centered-text (message "Global centered mode still active."))
+  (if (local-variable-p 'centered)
+      (progn
+        (setq-local centered nil)
+        (setq-local local-buffer-min-space center-text-min-space)
+        (setq-local local-buffer-max-space center-text-max-space)
+        (set-window-margins (car (get-buffer-window-list (current-buffer) nil t))
+                            nil
+                            nil))))
+
+(defun refresh-center-text ()
+  "Refresh margins (should be hooked)."
+  (interactive)
+  (if (local-variable-p 'centered)
+      (if centered
+          (center-text)
+        (center-text-clear))))
+
+(defun toggle-center-text ()
+  "Toggle centered text."
+  (interactive)
+  (if (local-variable-p 'centered)
+      (if centered
+          (center-text-clear)
+        (center-text current-prefix-arg))
+    (center-text current-prefix-arg)))
+
+(defun center-text-all-buffers ()
+  "Center text on all buffers."
+  (interactive)
+  (mapc (lambda (buffer)
+          (with-current-buffer buffer
+            (center-text)))
+        (buffer-list)))
+
+(defun center-text-clear-all-buffers ()
+  "Clear any margins on all buffers."
+  (interactive)
+  (mapc (lambda (buffer)
+          (with-current-buffer buffer
+            (center-text-clear)))
+        (buffer-list)))
+
+(defun enable-center-text-globally ()
+  "Enable centered text mode globally."
+  (interactive)
+  (remove-hook 'window-configuration-change-hook 'center-text-clear)
+  (add-hook 'window-configuration-change-hook 'center-text)
+  (setq global-centered-text t)
+  (center-text-all-buffers))
+
+(defun disable-center-text-globally ()
+  "Disable centered text mode globally."
+  (interactive)
+  (remove-hook 'window-configuration-change-hook 'center-text)
+  (setq global-centered-text nil)
+  (center-text-clear-all-buffers))
+
+(defun toggle-center-text-globally ()
+  "Toggle global centered text mode globally."
+  (interactive)
+  (if global-centered-text
+      (disable-center-text-globally)
+    (enable-center-text-globally)))
+
+(add-hook 'window-configuration-change-hook 'refresh-center-text)
+(define-key global-map (kbd "C-z c") 'toggle-center-text)
+(define-key global-map (kbd "C-z C-c") 'toggle-center-text-globally)
+
+;; Custom function to quickly switch window and text centering setup
+(defun perso/1-window-mode ()
+  "Switch to 1-window mode and disable text centering everywhere."
+  (interactive)
+  (disable-center-text-globally)
+  (delete-other-windows))
+(bind-key "C-c 0" #'perso/1-window-mode)
+
+(defun perso/1-window-centered-mode ()
+  "Switch to 1-window mode and enable text centering everywhere."
+  (interactive)
+  (enable-center-text-globally)
+  (delete-other-windows)
+  (center-text))
+(bind-key "C-c 1" #'perso/1-window-centered-mode)
 
 (defun perso/2-windows-mode ()
-  "Switch to 2-windows mode and move cursor to the right one."
+  "Switch to 2-windows mode, disable centering everywhere and move cursor to the right one."
   (interactive)
+  (disable-center-text-globally)
   (delete-other-windows)
   (split-window-right)
   (balance-windows)
@@ -463,8 +590,9 @@
 (bind-key "C-c 2" #'perso/2-windows-mode)
 
 (defun perso/3-windows-mode ()
-  "Switch to 3-windows mode and move cursor to the middle one."
+  "Switch to 3-windows mode, disable centering everywhere and move cursor to the right one."
   (interactive)
+  (disable-center-text-globally)
   (delete-other-windows)
   (split-window-right)
   (split-window-right)
@@ -473,8 +601,9 @@
 (bind-key "C-c 3" #'perso/3-windows-mode)
 
 (defun perso/4-windows-mode ()
-  "Switch to 4-windows mode."
+  "Switch to 4-windows mode, disable centering everywhere and move cursor to the right one."
   (interactive)
+  (disable-center-text-globally)
   (delete-other-windows)
   (split-window-below)
   (split-window-right)
@@ -500,8 +629,8 @@
 (bind-key "C-x <down>" #'windmove-down)
 (bind-key "C-x <left>" #'windmove-left)
 (bind-key "C-x <right>" #'windmove-right)
-(bind-key "C-x q" #'delete-window)
-(bind-key "C-x C-q" #'kill-buffer-and-window)
+(bind-key "C-c q" #'delete-window)
+(bind-key "C-x q" #'kill-buffer-and-window)
 
 ;; Ace-window : window selection & management
 (use-package ace-window
@@ -846,6 +975,13 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 ;; Insert char by name
 (bind-key "C-z e i" #'insert-char)
 
+;; Insert date
+(defun perso/insert-current-date ()
+  "Insert the current date (Y-m-d) at point."
+  (interactive)
+  (insert (shell-command-to-string "echo -n $(date +%Y-%m-%d)")))
+(bind-key "C-x C-d" #'perso/insert-current-date)
+
 ;; Expand-region : incrementally select region
 (use-package expand-region
   :bind ("C-+" . er/expand-region))
@@ -926,6 +1062,16 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
              (clipboard-kill-region reg-beg reg-end))
          (clipboard-yank)))
 (global-set-key (kbd "C-z y") 'clipboard-swap) ; Yank with the Shift key to swap instead of paste.
+
+;; Custom funtion to copy full path
+(defun full-path-to-clipboard ()
+  "Copy the current buffer full path to the clipboard."
+  (interactive)
+  (let
+      ((filename (if (equal major-mode 'dired-mode) default-directory (buffer-file-name))))
+    (kill-new filename)
+    (message "Copied buffer file name '%s' to the clipboard." filename)))
+(bind-key "C-z p" #'full-path-to-clipboard)
 
 ;; Undo-tree
 (use-package undo-tree
@@ -1036,74 +1182,6 @@ FACE defaults to inheriting from default and highlight."
 (use-package page-break-lines
   :diminish
   :init (global-page-break-lines-mode))
-
-;; Custom functions to center text by changing margins
-(defvar center-text-min-space 100
-  "Minimum text space between margins.")
-
-(defvar center-text-max-space 120
-  "Maximum text space between margins.")
-
-(defvar center-text-margin-ratio 6
-  "Window /ratio to try to achieve for each margin.")
-
-(defun center-text (&optional max-size)
-  "Center the text in the middle of the buffer."
-  (interactive)
-  (progn
-    (if max-size
-        (progn
-          (setq-local local-buffer-max-space max-size)
-          (if (< max-size center-text-min-space)
-              (setq-local local-buffer-min-space max-size)
-            (setq-local local-buffer-min-space center-text-min-space))))
-    (if (not (local-variable-p 'local-buffer-max-space))
-        (setq-local local-buffer-max-space center-text-max-space))
-    (if (not (local-variable-p 'local-buffer-min-space))
-        (setq-local local-buffer-min-space center-text-min-space))
-    (set-window-margins (car (get-buffer-window-list (current-buffer) nil t))
-                        nil
-                        nil)
-    (setq-local centered t)
-    (if (>= (window-width) center-text-min-space)
-        (progn
-          (setq-local min-margin (/ (- (window-width) local-buffer-max-space) 2))
-          (setq-local max-margin (/ (- (window-width) local-buffer-min-space) 2))
-          (set-window-margins (car (get-buffer-window-list (current-buffer) nil t))
-                              (min (max (/ (window-width) center-text-margin-ratio) min-margin) max-margin)
-                              (min (max (/ (window-width) center-text-margin-ratio) min-margin) max-margin))))))
-
-(defun center-text-clear ()
-  "Clear any margin settings."
-  (interactive)
-  (if (local-variable-p 'centered)
-      (progn
-        (setq-local centered nil)
-        (setq-local local-buffer-min-space center-text-min-space)
-        (setq-local local-buffer-max-space center-text-max-space)
-        (set-window-margins (car (get-buffer-window-list (current-buffer) nil t))
-                            nil
-                            nil))))
-
-(defun refresh-center-text ()
-  "Refresh margins (should be hooked)."
-  (interactive)
-  (if (local-variable-p 'centered)
-      (if centered
-          (center-text)
-        (center-text-clear))))
-
-(defun toggle-center-text ()
-  "Toggle centered text"
-  (interactive)
-  (if (local-variable-p 'centered)
-      (if centered
-          (center-text-clear)
-        (center-text current-prefix-arg))
-    (center-text current-prefix-arg)))
-
-(add-hook 'window-configuration-change-hook 'refresh-center-text)
-(define-key global-map (kbd "C-z c") 'toggle-center-text)
 
 ;;All-the-icons : unified icon pack
 ;; Requires manually installing the fonts with M-x all-the-icons-install-fonts and M-x nerd-icons-install-fonts
@@ -2785,6 +2863,13 @@ This is a modified version of `mu4e-view-save-attachments'."
       (gptel-prompts-update)
       ;; Ensure prompts are updated if prompt files change
       (gptel-prompts-add-update-watchers))))
+
+;; Emacs-websearch
+;; looking up stuff on the Internet
+(use-package emacs-websearch
+  :quelpa (emacs-websearch :repo "zhenhua-wang/emacs-websearch" :fetcher github :commit "master")
+  :bind ("C-z g" . emacs-websearch)
+  :config (setq emacs-websearch-engine 'duckduckgo))
 
 ;;; Convenience key-binding for common actions
 ;; Quick access to scratch
