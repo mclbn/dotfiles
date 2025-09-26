@@ -396,7 +396,7 @@
   (ivy-mode 1)
   :bind
   (("C-s" . swiper-isearch)
-   ("C-z g" . counsel-rg)
+   ;; ("C-z g" . counsel-rg)
    ("C-z r" . counsel-recentf)
    ("C-z b" . counsel-buffer-or-recentf)
    ("C-z C-b" . counsel-ibuffer)
@@ -2815,6 +2815,13 @@ This is a modified version of `mu4e-view-save-attachments'."
       (gptel-prompts-update)
       ;; Ensure prompts are updated if prompt files change
       (gptel-prompts-add-update-watchers))))
+
+;; Emacs-websearch
+;; looking up stuff on the Internet
+(use-package emacs-websearch
+  :quelpa (emacs-websearch :repo "zhenhua-wang/emacs-websearch" :fetcher github :commit "master")
+  :bind ("C-z g" . emacs-websearch)
+  :config (setq emacs-websearch-engine 'duckduckgo))
 
 ;;; Convenience key-binding for common actions
 ;; Quick access to scratch
