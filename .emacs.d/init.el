@@ -859,6 +859,13 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 ;; Insert char by name
 (bind-key "C-z e i" #'insert-char)
 
+;; Insert date
+(defun perso/insert-current-date ()
+  "Insert the current date (Y-m-d) at point."
+  (interactive)
+  (insert (shell-command-to-string "echo -n $(date +%Y-%m-%d)")))
+(bind-key "C-x C-d" #'perso/insert-current-date)
+
 ;; Expand-region : incrementally select region
 (use-package expand-region
   :bind ("C-+" . er/expand-region))
