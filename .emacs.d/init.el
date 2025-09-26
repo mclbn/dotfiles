@@ -206,6 +206,11 @@
   :config
   (run-at-time nil (* 5 60) 'recentf-save-list))
 
+(use-package bookmark
+  :ensure nil
+  :config
+  (run-at-time nil (* 5 60) 'bookmark-save))
+
 ;;; File manipulation
 ;; Dired : directory browsing
 (use-package dired
