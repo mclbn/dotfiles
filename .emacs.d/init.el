@@ -211,7 +211,8 @@
 (use-package dired
   :ensure nil
   :bind
-  (("C-x d" . dired-jump))
+  (("C-x C-d" . (lambda () (interactive)(dired "~/")))
+   ("C-x d" . dired-jump))
   :custom
   ;; Always delete and copy recursively
   (dired-listing-switches "-lahp --group-directories-first")
@@ -980,7 +981,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
   "Insert the current date (Y-m-d) at point."
   (interactive)
   (insert (shell-command-to-string "echo -n $(date +%Y-%m-%d)")))
-(bind-key "C-x C-d" #'perso/insert-current-date)
+(bind-key "C-z e d" #'perso/insert-current-date)
 
 ;; Expand-region : incrementally select region
 (use-package expand-region
