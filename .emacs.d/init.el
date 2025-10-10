@@ -2486,6 +2486,33 @@ exist after each headings's drawers."
                                      ))
   )
 
+;; Org-download : paste images to org, we only use it for screenshots
+;; FIXME : should be inside org-mode config block (?)
+(use-package org-download
+  :pin melpa ;; the good version is on melpa, not melpa-stable
+  :custom
+  (org-download-method 'attach)
+  (org-download-display-inline-images 'posframe)
+  :config
+  (if (eq system-type 'windows-nt)
+      (setq org-download-screenshot-method "powershell.exe -Command \"(Get-Clipboard -Format image).Save('$(wslpath -w %s)')\"")
+    (setq org-download-screenshot-method "flameshot gui --raw > %s"))
+  (setq org-download-posframe-show-params
+        '(
+          :timeout 2
+          :internal-border-width 1
+          :internal-border-color "#7F9F7F"
+          :min-width 40
+          :min-height 10
+          :poshandler posframe-poshandler-window-center))
+  :bind
+  (("C-c x" . org-download-screenshot)
+   ;; FIXME : Technically not part of org-download,
+   ;; Maybe move this somewhere else
+   ("C-c y" . yank-media))
+  :hook (dired-mode-hook . org-download-enable))
+
+;; Org-books
 ;; FIXME : should be inside org-mode config block (?)
 (use-package org-books
   :custom
