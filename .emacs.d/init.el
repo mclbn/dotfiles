@@ -2494,7 +2494,12 @@ exist after each headings's drawers."
   :custom
   (org-download-method 'attach)
   (org-download-display-inline-images 'posframe)
+  (org-download-timestamp "%Y-%m-%d_%H-%M-%S")
   :config
+  (defun org-download-file-format-custom (filename)
+    "It's affected by `org-download-timestamp'."
+    (concat (format-time-string org-download-timestamp) "." (file-name-extension filename)))
+  (setq org-download-file-format-function #'org-download-file-format-custom)
   (if (eq system-type 'windows-nt)
       (setq org-download-screenshot-method "powershell.exe -Command \"(Get-Clipboard -Format image).Save('$(wslpath -w %s)')\"")
     (setq org-download-screenshot-method "flameshot gui --raw > %s"))
