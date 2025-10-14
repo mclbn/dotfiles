@@ -269,6 +269,12 @@
     :bind (:map dired-mode-map (":" . dired-git-info-mode))
     )
 
+  (use-package dired-recent
+    :custom
+    (dired-recent-max-directories nil)
+    :config
+    (dired-recent-mode 1))
+
   :hook
   (dired-mode . auto-revert-mode)
   (dired-mode . dired-omit-mode)
@@ -1048,6 +1054,8 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 ;; Pop-up kill ring
 (use-package popup-kill-ring
   :bind ("M-y" . popup-kill-ring))
+
+(global-set-key (kbd "C-c y") 'yank-media)
 
 ;; Custom function to swap clipboard with content
 (defun clipboard-swap () "Swaps the clipboard contents with the highlighted region"
@@ -2113,9 +2121,10 @@ respectively."
   (org-startup-truncated nil)
   (org-startup-folded 'overview)
   (org-refile-use-outline-path 'file)
+  (org-refile-allow-creating-parent-nodes 'confirm)
+  (org-refile-use-cache t)
   (org-goto-interface 'outline-path-completion)
   (org-outline-path-complete-in-steps nil)
-  (org-refile-allow-creating-parent-nodes 'confirm)
   (org-todo-keywords
    '((sequence "TODO(t/!)" "NEXT(n/!)" "STARTED(s/!)" "WAITING(w@/!)" "SOMEDAY(f/!)" "|" "DONE(d/!)" "CANCELED(c/!)")))
   (org-todo-keyword-faces
@@ -2160,6 +2169,7 @@ respectively."
   (org-startup-indented t)
   (org-startup-with-inline-images t)
   (org-imenu-depth 3)
+  (org-attach-method 'cp)
   :bind
   ("C-z a" . org-agenda)
   ("C-c l" . org-store-link)
@@ -2178,6 +2188,12 @@ respectively."
     (setq org-crypt-key "511079E5FEC0BA66B53C9A625D01D510BEBDD2FF")
     (require 'epa-file)
     (epa-file-enable))
+
+  (add-hook 'dired-mode-hook
+            (lambda ()
+              (define-key dired-mode-map
+                          (kbd "C-c o a")
+                          #'org-attach-dired-to-subtree)))
 
   ;; Sub-package setup
   ;;; LaTeX exports
@@ -2220,7 +2236,6 @@ respectively."
     (let ((org-log-redeadline "note"))
       (call-interactively 'org-deadline)))
   (define-key org-mode-map (kbd "C-c C-S-d") 'org-deadline-force-note)
-
   (defun my-skip-unless-deadline ()
     "Skip trees that have no deadline"
     (let ((subtree-end (save-excursion (org-end-of-subtree t))))
@@ -2304,8 +2319,8 @@ exist after each headings's drawers."
       (while (re-search-forward org-babel-src-block-regexp nil t)
         (org-babel-remove-result))))
 
-  (add-hook 'org-mode-hook  #'which-function-mode)
-  )
+  (add-hook 'org-mode-hook  #'which-function-mode))
+
 ;; ;; company compatibility (https://github.com/company-mode/company-mode/issues/50)
 ;; (defun add-pcomplete-to-capf ()
 ;;   (add-hook 'completion-at-point-functions 'pcomplete-completions-at-point nil t))
@@ -2487,6 +2502,39 @@ exist after each headings's drawers."
                                      ))
   )
 
+;; Org-download : paste images to org, we only use it for screenshots
+;; FIXME : should be inside org-mode config block (?)
+(use-package org-download
+  :pin melpa ;; the good version is on melpa, not melpa-stable
+  :custom
+  (org-download-method 'attach)
+  (org-download-display-inline-images 'posframe)
+  (org-download-timestamp "%Y-%m-%d_%H-%M-%S")
+  :config
+  (defun org-download-file-format-custom (filename)
+    "It's affected by `org-download-timestamp'."
+    (concat (format-time-string org-download-timestamp) "." (file-name-extension filename)))
+  (setq org-download-file-format-function #'org-download-file-format-custom)
+  (if (eq system-type 'windows-nt)
+      (setq org-download-screenshot-method "powershell.exe -Command \"(Get-Clipboard -Format image).Save('$(wslpath -w %s)')\"")
+    (setq org-download-screenshot-method "flameshot gui --raw > %s"))
+  (setq org-download-posframe-show-params
+        '(
+          :timeout 2
+          :internal-border-width 1
+          :internal-border-color "#7F9F7F"
+          :min-width 40
+          :min-height 10
+          :poshandler posframe-poshandler-window-center))
+   :hook
+   ((dired-mode-hook . org-download-enable)
+    (org-mode-hook . org-download-enable)
+    (org-mode-hook . (lambda ()
+                       (local-set-key (kbd "C-c x") '(lambda ()
+                                                       (interactive)
+                                                       (org-download-screenshot)))))))
+
+;; Org-books
 ;; FIXME : should be inside org-mode config block (?)
 (use-package org-books
   :custom
