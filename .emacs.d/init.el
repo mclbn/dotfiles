@@ -269,6 +269,12 @@
     :bind (:map dired-mode-map (":" . dired-git-info-mode))
     )
 
+  (use-package dired-recent
+    :custom
+    (dired-recent-max-directories nil)
+    :config
+    (dired-recent-mode 1))
+
   :hook
   (dired-mode . auto-revert-mode)
   (dired-mode . dired-omit-mode)
@@ -2113,9 +2119,10 @@ respectively."
   (org-startup-truncated nil)
   (org-startup-folded 'overview)
   (org-refile-use-outline-path 'file)
+  (org-refile-allow-creating-parent-nodes 'confirm)
+  (org-refile-use-cache t)
   (org-goto-interface 'outline-path-completion)
   (org-outline-path-complete-in-steps nil)
-  (org-refile-allow-creating-parent-nodes 'confirm)
   (org-todo-keywords
    '((sequence "TODO(t/!)" "NEXT(n/!)" "STARTED(s/!)" "WAITING(w@/!)" "SOMEDAY(f/!)" "|" "DONE(d/!)" "CANCELED(c/!)")))
   (org-todo-keyword-faces
@@ -2220,7 +2227,6 @@ respectively."
     (let ((org-log-redeadline "note"))
       (call-interactively 'org-deadline)))
   (define-key org-mode-map (kbd "C-c C-S-d") 'org-deadline-force-note)
-
   (defun my-skip-unless-deadline ()
     "Skip trees that have no deadline"
     (let ((subtree-end (save-excursion (org-end-of-subtree t))))
@@ -2304,8 +2310,8 @@ exist after each headings's drawers."
       (while (re-search-forward org-babel-src-block-regexp nil t)
         (org-babel-remove-result))))
 
-  (add-hook 'org-mode-hook  #'which-function-mode)
-  )
+  (add-hook 'org-mode-hook  #'which-function-mode))
+
 ;; ;; company compatibility (https://github.com/company-mode/company-mode/issues/50)
 ;; (defun add-pcomplete-to-capf ()
 ;;   (add-hook 'completion-at-point-functions 'pcomplete-completions-at-point nil t))
