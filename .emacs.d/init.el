@@ -1055,6 +1055,8 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 (use-package popup-kill-ring
   :bind ("M-y" . popup-kill-ring))
 
+(global-set-key (kbd "C-c y") 'yank-media)
+
 ;; Custom function to swap clipboard with content
 (defun clipboard-swap () "Swaps the clipboard contents with the highlighted region"
        (interactive)
@@ -2167,6 +2169,7 @@ respectively."
   (org-startup-indented t)
   (org-startup-with-inline-images t)
   (org-imenu-depth 3)
+  (org-attach-method 'cp)
   :bind
   ("C-z a" . org-agenda)
   ("C-c l" . org-store-link)
@@ -2185,6 +2188,12 @@ respectively."
     (setq org-crypt-key "511079E5FEC0BA66B53C9A625D01D510BEBDD2FF")
     (require 'epa-file)
     (epa-file-enable))
+
+  (add-hook 'dired-mode-hook
+            (lambda ()
+              (define-key dired-mode-map
+                          (kbd "C-c o a")
+                          #'org-attach-dired-to-subtree)))
 
   ;; Sub-package setup
   ;;; LaTeX exports
@@ -2517,12 +2526,13 @@ exist after each headings's drawers."
           :min-width 40
           :min-height 10
           :poshandler posframe-poshandler-window-center))
-  :bind
-  (("C-c x" . org-download-screenshot)
-   ;; FIXME : Technically not part of org-download,
-   ;; Maybe move this somewhere else
-   ("C-c y" . yank-media))
-  :hook (dired-mode-hook . org-download-enable))
+   :hook
+   ((dired-mode-hook . org-download-enable)
+    (org-mode-hook . org-download-enable)
+    (org-mode-hook . (lambda ()
+                       (local-set-key (kbd "C-c x") '(lambda ()
+                                                       (interactive)
+                                                       (org-download-screenshot)))))))
 
 ;; Org-books
 ;; FIXME : should be inside org-mode config block (?)
