@@ -2514,6 +2514,8 @@ exist after each headings's drawers."
   (defun org-download-file-format-custom (filename)
     "It's affected by `org-download-timestamp'."
     (concat (format-time-string org-download-timestamp) "." (file-name-extension filename)))
+  ;; (setq org-download-annotate-function (lambda (link) (format "#+DOWNLOADED: %s" (format-time-string "%Y-%m-%d %H:%M:%S\n"))))
+  (setq org-download-annotate-function (lambda (link) ""))
   (setq org-download-file-format-function #'org-download-file-format-custom)
   (if (eq system-type 'windows-nt)
       (setq org-download-screenshot-method "powershell.exe -Command \"(Get-Clipboard -Format image).Save('$(wslpath -w %s)')\"")
@@ -2529,6 +2531,11 @@ exist after each headings's drawers."
    :hook
    ((dired-mode-hook . org-download-enable)
     (org-mode-hook . org-download-enable)
+    (org-mode-hook . (lambda ()
+                       (local-set-key (kbd "C-c y") '(lambda ()
+                                                       (interactive)
+                                                       (org-download-clipboard)
+                                                       (org-download-rename-last-file)))))
     (org-mode-hook . (lambda ()
                        (local-set-key (kbd "C-c x") '(lambda ()
                                                        (interactive)
