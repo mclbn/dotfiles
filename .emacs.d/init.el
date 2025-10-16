@@ -104,6 +104,7 @@
 (global-set-key (kbd "C-z") nil)
 (global-set-key (kbd "M-z") nil)
 (global-set-key (kbd "C-t") nil)
+(global-set-key (kbd "C-x l") nil)
 
 ;;; Absolute must-have tweaks and settings
 ;; Disable the welcome message
@@ -401,6 +402,7 @@
    ;; ("C-z g" . counsel-rg)
    ("C-z r" . counsel-recentf)
    ("C-z b" . counsel-buffer-or-recentf)
+   ("C-z l" . counsel-locate)
    ("C-z C-b" . counsel-ibuffer)
    (:map ivy-minibuffer-map
          ("M-RET" . ivy-immediate-done)))
@@ -1169,7 +1171,7 @@ FACE defaults to inheriting from default and highlight."
     "Toggle whitespace line tails highlighting"
     (interactive)
     (whitespace-toggle-options 'lines-tail))
-  (bind-key "C-z l" #'perso/whitespace-lines-tail)
+  (bind-key "C-x l" #'perso/whitespace-lines-tail)
   )
 
 (add-hook 'prog-mode-hook 'whitespace-mode)
