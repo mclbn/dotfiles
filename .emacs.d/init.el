@@ -54,10 +54,10 @@
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 ;; Repositories priority
 (setq package-archive-priorities
-      '(("melpa-stable" . 10)
+      '(("melpa" . 10)
 	    ("nongnu" . 7)
 	    ("elpa" . 5)
-        ("melpa"        . 5)))
+        ("melpa-stable"        . 3)))
 ;; Activating package
 (unless (bound-and-true-p package--initialized)
   (setq package-enable-at-startup nil)          ; To prevent initializing twice
