@@ -1846,7 +1846,7 @@ respectively."
 ;; /!\ FIXME DAP-MODE /!\
 (use-package dap-mode
   :pin melpa ;; the good version is on melpa, not melpa-stable
-  :after (lsp-mode pyenv-mode)
+  :after (lsp-mode mise-mode)
   :commands dap-debug
   :diminish
   :config
@@ -1927,45 +1927,45 @@ respectively."
   (python-indent-offset 4)
   )
 
-;; Pyenv : managing python version/venv with pyenv and pyenv-virtualenv
-;; Had to fork it to make it buffer-local because it has global keybindings
-;; that conflict with org-mode
-(use-package pyenv-mode
-  :ensure nil
-  :quelpa (pyenv-mode :repo "mclbn/pyenv-mode" :fetcher github :commit "master")
-  :diminish
-  :after projectile
-  :config
-  (defun pyenv-detect-env ()
-    "Try to identify pyenv via projectile, then .python-version."
-    (interactive)
-    (if (and (projectile-project-name)(member (projectile-project-name) (pyenv-mode-versions)))
-        (projectile-project-name)
-      (let ((pyenv-file (concat (projectile-project-root) ".python-version")))
-        (if (and (file-exists-p pyenv-file))
-            (let ((pyversion (first (split-string (f-read-text pyenv-file) "\n" t))))
-              (if (member pyversion (pyenv-mode-versions))
-                  (first (split-string (f-read-text pyenv-file) "\n" t))
-                nil))
-          nil))))
-  (defun pyenv-set-env ()
-    "Try to identify and set pyenv."
-    (interactive)
-    (let ((pyenv-name (pyenv-detect-env)))
-      (if pyenv-name
-          (pyenv-mode-set pyenv-name)
-        (pyenv-mode-set "default"))))
-  (add-hook 'python-mode-hook 'pyenv-set-env)
-  ;; We will need this at some point
-  (use-package with-venv)
-  :hook (python-mode . pyenv-mode)
-  :init
-  (let ((pyenv-path (expand-file-name "~/.pyenv/bin")))
-    (setenv "PATH" (concat pyenv-path ":" (getenv "PATH")))
-    (add-to-list 'exec-path pyenv-path))
-  ;; is the following line needed ?
-  (add-to-list 'exec-path "~/.pyenv/shims")
-  (pyenv-mode-set "default"))
+;; ;; Pyenv : managing python version/venv with pyenv and pyenv-virtualenv
+;; ;; Had to fork it to make it buffer-local because it has global keybindings
+;; ;; that conflict with org-mode
+;; (use-package pyenv-mode
+;;   :ensure nil
+;;   :quelpa (pyenv-mode :repo "mclbn/pyenv-mode" :fetcher github :commit "master")
+;;   :diminish
+;;   :after projectile
+;;   :config
+;;   (defun pyenv-detect-env ()
+;;     "Try to identify pyenv via projectile, then .python-version."
+;;     (interactive)
+;;     (if (and (projectile-project-name)(member (projectile-project-name) (pyenv-mode-versions)))
+;;         (projectile-project-name)
+;;       (let ((pyenv-file (concat (projectile-project-root) ".python-version")))
+;;         (if (and (file-exists-p pyenv-file))
+;;             (let ((pyversion (first (split-string (f-read-text pyenv-file) "\n" t))))
+;;               (if (member pyversion (pyenv-mode-versions))
+;;                   (first (split-string (f-read-text pyenv-file) "\n" t))
+;;                 nil))
+;;           nil))))
+;;   (defun pyenv-set-env ()
+;;     "Try to identify and set pyenv."
+;;     (interactive)
+;;     (let ((pyenv-name (pyenv-detect-env)))
+;;       (if pyenv-name
+;;           (pyenv-mode-set pyenv-name)
+;;         (pyenv-mode-set "default"))))
+;;   (add-hook 'python-mode-hook 'pyenv-set-env)
+;;   ;; We will need this at some point
+;;   (use-package with-venv)
+;;   :hook (python-mode . pyenv-mode)
+;;   :init
+;;   (let ((pyenv-path (expand-file-name "~/.pyenv/bin")))
+;;     (setenv "PATH" (concat pyenv-path ":" (getenv "PATH")))
+;;     (add-to-list 'exec-path pyenv-path))
+;;   ;; is the following line needed ?
+;;   (add-to-list 'exec-path "~/.pyenv/shims")
+;;   (pyenv-mode-set "default"))
 
 ;;; C / C++ / Objective-C modes and settings
 ;; Create my personal style.
@@ -2103,6 +2103,12 @@ respectively."
 
 ;; HCL-mode : Hashicorp Configuration Language
 (use-package hcl-mode)
+
+;;; Mise en place
+;; Mise
+(use-package mise
+  :hook
+  (after-init-hook . global-mise-mode))
 
 ;;; Org-mode
 ;; Main package and settings
