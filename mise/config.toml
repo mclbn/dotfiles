@@ -1,0 +1,12 @@
+[settings]
+experimental = true
+
+[settings.python]
+compile = true
+
+[tools]
+python = "3.14.2"
+ruby = "4.0.1"
+
+[env]
+_.python.venv = { path = "{{env.HOME}}/.venv/default", create = true }
