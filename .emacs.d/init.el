@@ -1,4 +1,4 @@
-;;; init.el --- -*- lexical-binding: t -*-
+;;; Init.el --- -*- lexical-binding: t -*-
 ;;; Emacs startup configuration file
 
 ;;; Stuff to explore later
@@ -33,6 +33,20 @@
 
 ;; Disabling native-compilation warnings
 (setq native-comp-async-report-warnings-errors nil)
+
+;; Various performance tweaks
+;;; We don't care about right-to-left typing
+(setq-default bidi-display-reordering 'left-to-right
+              bidi-paragraph-direction 'left-to-right)
+(setq bidi-inhibit-bpa t)
+;;; Wait for end of typing before fontification
+(setq redisplay-skip-fontification-on-input t)
+;;; Increase process output buffer, lsp will benefit from this
+(setq read-process-output-max (* 4 1024 1024))
+;;; We don't want to ping unknown hostnames with find-file-at-point
+(setq ffap-machine-p-local 'accept)
+(setq ffap-machine-p-known 'accept)
+(setq ffap-machine-p-unknown 'reject)
 
 ;;; Personal information is stored in a non-versioned file
 (defvar personal-info (concat user-emacs-directory "perso.el"))
@@ -137,6 +151,10 @@
 (setq visible-bell nil
       ring-bell-function #'ignore)
 
+;; Kill-ring tweaks
+(setq save-interprogram-paste-before-kill t)
+(setq kill-do-not-save-duplicates t)
+
 ;; So Long mitigates slowness due to extremely long lines.
 (when (fboundp 'global-so-long-mode)
   (global-so-long-mode))
@@ -185,10 +203,23 @@
       auto-save-interval 200 ; number of keystrokes between auto-saves (default: 300)
       )
 
-;; When buffer is closed, saves the cursor location
-(save-place-mode 1)
 ;; Set history-length longer
 (setq-default history-length 1000)
+
+;; When buffer is closed, saves the cursor location
+(defun save-place-reposition ()
+  "Force windows to recenter current line (with saved position)."
+  (run-with-timer 0 nil
+                  (lambda (buf)
+                    (when (buffer-live-p buf)
+                      (dolist (win (get-buffer-window-list buf nil t))
+                        (with-selected-window win (recenter)))))
+                  (current-buffer)))
+
+(use-package saveplace
+  :ensure nil
+  :config
+  (add-hook 'find-file-hook 'save-place-reposition t))
 
 ;; Recentf : recent files history
 (use-package recentf
@@ -462,6 +493,13 @@
   )
 
 ;;; Buffer and window management
+;;; Don't render cursors in inactive windows ()
+(setq-default cursor-in-non-selected-windows nil)
+(setq highlight-nonselected-windows nil)
+
+;; Manual split provide balanced layout
+(setq window-combination-resize t)
+
 ;; Custom functions to center text by changing margins
 (defvar global-centered-text nil "Global centered text status.")
 
@@ -831,6 +869,9 @@
   :hook (ibuffer-mode . all-the-icons-ibuffer-mode))
 
 ;;; Help
+;; We want to switch to the help window when opening it
+(setq help-window-select t)
+
 ;; Helpful: help menu replacement
 (use-package helpful
   :after elisp-refs
@@ -1762,7 +1803,6 @@ respectively."
   (lsp-keymap-prefix "C-x l")
   (lsp-enable-file-watchers nil)
   (lsp-enable-folding nil)
-  (read-process-output-max (* 1024 1024))
   (lsp-idle-delay 0.5)
   (lsp-lens-enable nil)
   (lsp-keep-workspace-alive nil)
