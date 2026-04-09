@@ -2589,14 +2589,6 @@ exist after each headings's drawers."
                                                        (interactive)
                                                        (org-download-screenshot)))))))
 
-;; Org-books
-;; FIXME : should be inside org-mode config block (?)
-(use-package org-books
-  :custom
-  (org-books-file "~/org/books.org")
-  (org-books-file-depth 1)
-  )
-
 ;;; Mail management
 (if (not (string= (getenv "EMACS_NOMU") "Y"))
     (progn
