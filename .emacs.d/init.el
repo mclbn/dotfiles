@@ -359,7 +359,7 @@
   :ensure t
   :defer t
   :bind
-  ("C-z t" . treemacs)
+  ("C-z C-t" . treemacs)
   (:map treemacs-mode-map ([mouse-1] . treemacs-single-click-expand-action))
   :config
   (treemacs-project-follow-mode t)
@@ -1390,6 +1390,35 @@ FACE defaults to inheriting from default and highlight."
             "Oxford English Dictionary 2nd Ed. P2"
             ))
     ))
+
+;; Toggle text analysis modes, saving their state before disabling and restoring on second call
+(defvar-local toggle-text-analysis-modes--state nil
+  "Saved state of text analysis modes before disabling. Nil means modes are currently active.")
+
+(defun perso/toggle-text-analysis-modes ()
+  "Toggle flycheck, flyspell and typo modes.
+First call saves each mode's current state and disables all of them.
+Second call restores each mode to its previously saved state."
+  (interactive)
+  (if toggle-text-analysis-modes--state
+      (progn
+        (when (plist-get toggle-text-analysis-modes--state :flycheck)
+          (flycheck-mode 1))
+        (when (plist-get toggle-text-analysis-modes--state :flyspell)
+          (flyspell-mode 1))
+        (when (plist-get toggle-text-analysis-modes--state :typo)
+          (typo-mode 1))
+        (setq toggle-text-analysis-modes--state nil)
+        (message "Text analysis modes restored"))
+    (setq toggle-text-analysis-modes--state
+          (list :flycheck (bound-and-true-p flycheck-mode)
+                :flyspell (bound-and-true-p flyspell-mode)
+                :typo     (bound-and-true-p typo-mode)))
+    (flycheck-mode -1)
+    (flyspell-mode -1)
+    (typo-mode -1)
+    (message "Text analysis modes disabled")))
+(bind-key "C-z t" #'perso/toggle-text-analysis-modes)
 
 ;; Small function to disable all text analysis modes
 (defun disable-text-analysis-modes ()
