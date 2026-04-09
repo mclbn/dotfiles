@@ -320,8 +320,28 @@
                                  (lambda () (interactive) (find-alternate-file ".."))))))
 
 (use-package nerd-icons-dired
+  :init
+  (defun my/dired-subtree-add-nerd-icons ()
+    "Add nerd icons into subtree."
+    (interactive)
+    (revert-buffer))
+
+  (defun my/dired-subtree-toggle-nerd-icons ()
+    (when (require 'dired-subtree nil t)
+      (if nerd-icons-dired-mode
+          (advice-add #'dired-subtree-toggle :after #'my/dired-subtree-add-nerd-icons)
+        (advice-remove #'dired-subtree-toggle #'my/dired-subtree-add-nerd-icons))))
   :hook
-  (dired-mode . nerd-icons-dired-mode))
+  (dired-mode . nerd-icons-dired-mode)
+  (nerd-icons-dired-mode . my/dired-subtree-toggle-nerd-icons))
+
+(use-package dired-subtree
+  :after dired
+  :config
+  (setq dired-subtree-use-backgrounds nil)
+  :bind
+  (:map dired-mode-map
+        ("<tab>" . dired-subtree-toggle)))
 
 ;; Image-mode
 (use-package image-mode
