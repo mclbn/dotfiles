@@ -34,7 +34,7 @@ floating_modifier $mod
 focus_follows_mouse no
 
 # start a terminal
-bindsym $mod+Return exec xterm +hold -e "script -q /home/marc/log/script/$(date +%Y-%m-%d_%H:%M:%S)"
+bindsym $mod+Return exec xterm +hold -e "script -T /home/marc/log/script/$(date +%Y-%m-%d_%H:%M:%S)_timing -q /home/marc/log/script/$(date +%Y-%m-%d_%H:%M:%S)"
 
 # kill focused window
 bindsym $mod+Shift+q kill
