@@ -1411,7 +1411,7 @@ FACE defaults to inheriting from default and highlight."
             ))
     ))
 
-;; Toggle text analysis modes, saving their state before disabling and restoring on second call
+;; Small function to toggle all text analysis modes
 (defvar-local toggle-text-analysis-modes--state nil
   "Saved state of text analysis modes before disabling. Nil means modes are currently active.")
 
