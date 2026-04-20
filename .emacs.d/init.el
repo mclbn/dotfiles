@@ -242,9 +242,6 @@
 ;; Dired : directory browsing
 (use-package dired
   :ensure nil
-  :bind
-  (("C-x C-d" . (lambda () (interactive)(dired "~/")))
-   ("C-x d" . dired-jump))
   :custom
   ;; Always delete and copy recursively
   (dired-listing-switches "-lahp --group-directories-first")
@@ -306,7 +303,9 @@
     (dired-recent-max-directories nil)
     :config
     (dired-recent-mode 1))
-
+  :bind
+  (("C-x C-d" . (lambda () (interactive)(dired "~/")))
+   ("C-x d" . dired-jump))
   :hook
   (dired-mode . auto-revert-mode)
   (dired-mode . dired-omit-mode)
