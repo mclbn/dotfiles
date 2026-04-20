@@ -1121,13 +1121,12 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 (global-set-key (kbd "C-c y") 'yank-media)
 
 ;; Custom function to swap clipboard with content
-(defun clipboard-swap () "Swaps the clipboard contents with the highlighted region"
+(defun clipboard-swap ()
+  "Swaps the clipboard contents with the highlighted region."
        (interactive)
        (if (use-region-p)
-           (progn
-             (setq
-              reg-beg (region-beginning)
-              reg-end (region-end))
+           (let ((reg-beg (region-beginning))
+                 (reg-end (region-end)))
              (deactivate-mark)
              (goto-char reg-end)
              (clipboard-yank)
