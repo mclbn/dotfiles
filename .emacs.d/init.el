@@ -1058,7 +1058,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 (use-package multiple-cursors
   :bind
   (("C-z e m" . #'mc/edit-lines)
-   ("C-z e d" . #'mc/mark-all-dwim)))
+   ("C-z e a" . #'mc/mark-all-dwim)))
 
 ;; Move-text: move text with M-<arrows> a-la org
 (use-package move-text
