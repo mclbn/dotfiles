@@ -1677,7 +1677,6 @@ Second call restores each mode to its previously saved state."
                            (= (char-before) ?\=)))
               (insert " "))
             (forward-char))
-          (message line)
           (if (not (string-match-p "^[[:space:]]*{}[[:space:]]*$" line))
               (progn
                 (newline)
