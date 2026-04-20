@@ -1870,8 +1870,8 @@ respectively."
                                   "--header-insertion=never"
                                   "--header-insertion-decorators=0"
                                   "--pch-storage=memory"
-                                  "-background-index"
-                                  "-log=error"))
+                                  "--background-index"
+                                  "--log=error"))
   :bind (:map lsp-mode-map
               ("C-c C-f" . lsp-format-buffer))
   :hook
