@@ -263,7 +263,6 @@
   ;; Probe ls for capabilities
   (dired-use-ls-dired 'unspecified)
   (dired-omit-files "^\\...+$\\|\\`[.]?#\\|\\`[.][.]?\\'")
-  (dired-async-mode 1)
   :config
   ;; We don't use ugly listings
   (global-set-key (kbd "C-x C-d") nil)
@@ -311,6 +310,7 @@
   :hook
   (dired-mode . auto-revert-mode)
   (dired-mode . dired-omit-mode)
+  (dired-mode . dired-async-mode)
   ;; (dired-mode . dired-hide-details-mode)
   (dired-mode . (lambda ()
                   (local-set-key (kbd "<mouse-2>") #'dired-find-file)
