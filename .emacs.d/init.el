@@ -1358,7 +1358,7 @@ FACE defaults to inheriting from default and highlight."
 (add-hook 'flyspell-incorrect-hook #'flyspell-skip-mail-headers)
 
 ;; Flycheck-grammalecte : french syntax checking
-;; May require running M-x grammalecte-download-grammalecte once
+;; Requires running M-x grammalecte-download-grammalecte once
 (use-package flycheck-grammalecte
   :ensure t
   :after flycheck
@@ -1387,7 +1387,6 @@ FACE defaults to inheriting from default and highlight."
                     "(?im)^[ \t]*#\\+(?:caption|description|keywords|(?:sub)?title):"
                     "(?im)^[ \t]*#\\+(?!caption|description|keywords|(?:sub)?title)\\w+:.*$")
           (message-mode "(?m)^[ \t]*(?:[\\w_.]+>|[]>|]).*")))
-  (grammalecte-download-grammalecte)
   (flycheck-grammalecte-setup))
 
 ;; sdcv : Stardict dictionnary
