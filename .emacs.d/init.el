@@ -218,6 +218,8 @@
 
 (use-package saveplace
   :ensure nil
+  :init
+  (save-place-mode 1)
   :config
   (add-hook 'find-file-hook 'save-place-reposition t))
 
