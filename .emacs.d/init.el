@@ -1538,9 +1538,9 @@ Second call restores each mode to its previously saved state."
   (indent-bars-color '(highlight :face-bg t :blend 0.2))
   (indent-bars-pattern ".")
   (indent-bars-width-frac 0.1)
-  (ident-bars-pad-frac 0.1)
-  (ident-bars-zigzag nil)
-  (-bars-color-by-depth '(:regexp "outline-\\([0-9]+\\)" :blend 1)) ; blend=1: blend with BG only
+  (indent-bars-pad-frac 0.1)
+  (indent-bars-zigzag nil)
+  (indent-bars-color-by-depth '(:regexp "outline-\\([0-9]+\\)" :blend 1)) ; blend=1: blend with BG only
   (indent-bars-highlight-current-depth '(:blend 0.5)) ; pump up the BG blend on current
   (indent-bars-display-on-blank-lines nil)
   ;; Treesitter customization
