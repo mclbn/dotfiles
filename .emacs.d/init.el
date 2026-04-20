@@ -777,7 +777,6 @@
               (mode . platformio-mode)))
       ("Python" (or
                  (mode . python-ts-mode)
-                 (mode . c-mode)
                  (mode . python-mode)))
       ("Rust" (or
                (mode . rust-mode)))
