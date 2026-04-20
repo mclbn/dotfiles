@@ -1969,7 +1969,7 @@ respectively."
 ;;; Cmake specifics
 ;; Cmake-mode
 (use-package cmake-mode
-  :mode (("CMakeLists.txt$" . cmake-mode)
+  :mode (("\\`CMakeLists\\.txt\\'" . cmake-mode)
          ("\\.cmake$" . cmake-mode)))
 
 ;;; Elisp modes and settings
