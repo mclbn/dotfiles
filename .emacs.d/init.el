@@ -2149,7 +2149,7 @@ respectively."
 (use-package smali-mode
   :load-path (lambda () (expand-file-name "Emacs-Smali" user-emacs-directory))
   :config
-  (add-to-list 'auto-mode-alist '(".smali$" . smali-mode)))
+  (add-to-list 'auto-mode-alist '("\\.smali$" . smali-mode)))
 
 ;;; Lua modes and settings
 (use-package lua-mode
@@ -2958,7 +2958,7 @@ This is a modified version of `mu4e-view-save-attachments'."
 
 ;;; File/mode associations
 ;; Script-shell-mode on zsh
-(add-to-list 'auto-mode-alist '(".zsh$" . shell-script-mode))
+(add-to-list 'auto-mode-alist '("\\.zsh$" . shell-script-mode))
 ;; .in and .out are text by default
 (add-to-list 'auto-mode-alist '("\\.in\\'" . text-mode))
 (add-to-list 'auto-mode-alist '("\\.out\\'" . text-mode))
