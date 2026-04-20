@@ -2209,7 +2209,6 @@ respectively."
                  org-protocol)))
   (org-agenda-start-on-weekday 1)
   (org-hide-emphasis-markers t)
-  (org-startup-indented nil)
   (org-adapt-indentation nil)
   (org-startup-truncated nil)
   (org-startup-folded 'overview)
