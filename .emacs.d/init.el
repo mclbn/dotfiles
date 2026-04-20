@@ -2252,7 +2252,7 @@ respectively."
   (org-habit-show-habits-only-for-today t)
   (org-deadline-warning-days 7)
   (org-reverse-note-order nil)
-  (org-blank-before-new-entry (quote ((heading . audo)
+  (org-blank-before-new-entry (quote ((heading . auto)
                                       (plain-list-item . auto))))
   (org-return-follows-link t)
   (org-special-ctrl-a/e t)
