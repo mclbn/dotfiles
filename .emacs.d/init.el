@@ -926,8 +926,8 @@
 (normal-erase-is-backspace-mode 1)
 
 ;; Keybinds to useful unicode characters
-(bind-key "C->" "→")
-(bind-key "C-<" "←")
+(bind-key "C->" (lambda () (interactive) (insert "→")))
+(bind-key "C-<" (lambda () (interactive) (insert "←")))
 
 ;; Simple bindings to useful functions
 (global-set-key (kbd "C-z x") 'read-only-mode)
