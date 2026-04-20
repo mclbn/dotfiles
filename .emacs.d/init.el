@@ -368,7 +368,7 @@
 ;; Shell : Inferior shell mode
 (use-package shell
   :custom
-  (comint-process-echoes 0)
+  (comint-process-echoes nil)
   :config
   (when (executable-find "zsh")
     (setq explicit-shell-file-name (executable-find "zsh"))
