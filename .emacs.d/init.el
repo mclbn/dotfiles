@@ -629,8 +629,8 @@
     (enable-center-text-globally)))
 
 (add-hook 'window-configuration-change-hook 'refresh-center-text)
-(define-key global-map (kbd "C-z c") 'toggle-center-text)
-(define-key global-map (kbd "C-z C-c") 'toggle-center-text-globally)
+(define-key global-map (kbd "C-z C") 'toggle-center-text)
+(define-key global-map (kbd "C-z C-C") 'toggle-center-text-globally)
 
 ;; Custom function to quickly switch window and text centering setup
 (defun perso/1-window-mode ()
