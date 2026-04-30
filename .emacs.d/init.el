@@ -499,6 +499,7 @@
   :custom
   (git-commit-summary-max-length 50)
   (git-commit-fill-column 72)
+  (magit-status-show-untracked-files 'all)
   :config
   (defun magit-log-follow-current-file ()
     "A wrapper around `magit-log-buffer-file' with `--follow' argument."
