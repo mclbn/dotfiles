@@ -516,7 +516,7 @@
 
 ;;; Buffer and window management
 ;;; Don't render cursors in inactive windows ()
-(setq-default cursor-in-non-selected-windows nil)
+(setq-default cursor-in-non-selected-windows t)
 ;;; But keep selected region visible
 (setq highlight-nonselected-windows t)
 
@@ -3006,6 +3006,18 @@ This is a modified version of `mu4e-view-save-attachments'."
       (gptel-prompts-update)
       ;; Ensure prompts are updated if prompt files change
       (gptel-prompts-add-update-watchers))))
+
+;; Claude code integration
+(use-package claude-code-ide
+  :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
+  :bind ("C-z c" . claude-code-ide-menu)
+  :custom
+  (claude-code-ide-window-side 'left)
+  (claude-code-ide-window-width 80)
+  :config
+  (use-package vterm
+    :ensure t)
+  (claude-code-ide-emacs-tools-setup))
 
 ;; Emacs-websearch
 ;; looking up stuff on the Internet
