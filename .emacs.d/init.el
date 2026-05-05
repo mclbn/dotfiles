@@ -456,6 +456,7 @@
    ("C-z b" . counsel-buffer-or-recentf)
    ("C-z l" . counsel-locate)
    ("C-z C-b" . counsel-ibuffer)
+   ("C-z SPC" . counsel-mark-ring)
    (:map ivy-minibuffer-map
          ("M-RET" . ivy-immediate-done)))
   :custom
