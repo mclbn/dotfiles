@@ -518,7 +518,7 @@
     (add-to-list
      'display-buffer-alist
      '("\\*rg\\*" . (nil . ((body-function . select-window))))))
-  (bind-key "C-z C-r" #'perso/rg)
+  (bind-key "C-z C-r" #'perso/rg))
 
 ;;; Buffer and window management
 ;;; Don't render cursors in inactive windows ()
