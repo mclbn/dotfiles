@@ -511,9 +511,14 @@
 (use-package rg
   :if (executable-find "rg")
   :quelpa (rg :repo "dajva/rg.el" :fetcher github :commit "master")
-  :bind
-  (("C-z C-r" . rg-menu))
-  )
+  :config
+  (defun perso/rg ()
+    (interactive)
+    (call-interactively #'rg-menu)
+    (add-to-list
+     'display-buffer-alist
+     '("\\*rg\\*" . (nil . ((body-function . select-window))))))
+  (bind-key "C-z C-r" #'perso/rg)
 
 ;;; Buffer and window management
 ;;; Don't render cursors in inactive windows ()
