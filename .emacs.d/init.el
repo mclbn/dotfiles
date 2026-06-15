@@ -2975,21 +2975,141 @@ This is a modified version of `mu4e-view-save-attachments'."
 (add-to-list 'auto-mode-alist '("\\.ino\\'" . c++-mode))
 
 ;;; "AI" stuff
-;; GPTel : chat with LLMs
+;; MCP
+(use-package mcp
+  :after gptel
+  :custom
+  (mcp-hub-servers
+   `(("searxng" . (:url ,perso/mcp-searxng-url))))
+  :config
+  (require 'mcp-hub)
+  :hook
+  (after-init . mcp-hub-start-all-server))
 
+;; GPTel : chat with LLMs
 (use-package gptel
   :config
-  (setq gptel-default-mode 'org-mode)
+  (require 'gptel-integrations)
+  (require 'gptel-org)
+  (when (executable-find "curl")
+    (setq gptel-use-curl t))
+  ;; Branching
+  ;; General settings
   (setq
-   gptel-max-tokens 5000
-   gptel-model 'Nous-Hermes-2-Mistral-7B-DPO.Q4_0.gguf
-   gptel-backend (gptel-make-gpt4all "GPT4All"
+   gptel-default-mode 'org-mode
+   gptel-use-tools t
+   gptel-confirm-tool-calls t
+   gptel-include-tool-results 'auto
+   gptel-model   'qwen36-35b-quality
+   gptel-backend (gptel-make-openai "llama-cpp"
+                   :stream t
                    :protocol "http"
-                   :host gpt4all-home-instance
-                   :models '(Nous-Hermes-2-Mistral-7B-DPO.Q4_0.gguf
-                             Meta-Llama-3-8B-Instruct.Q4_0.gguf
-                             Meta-Llama-3.1-8B-Instruct-128k-Q4_0.gguf
-                             wizardlm-13b-v1.2.Q4_0.gguf)))
+                   :host perso/gptel-backend-host
+                   :models '(qwen36-35b-quality
+                             qwen36-27b-quality
+                             qwen36-27b-speed
+                             qwen35-9b-quality
+                             qwen35-9b-extra-quality)))
+  (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
+
+  (with-eval-after-load 'gptel-transient
+    (transient-define-infix perso/gptel--infix-branching-context ()
+      "Toggle `gptel-org-branching-context' from the gptel menu."
+      :description "Branching context (Org)"
+      :class 'gptel--switches
+      :variable 'gptel-org-branching-context
+      :set-value #'gptel--set-with-scope
+      :display-if-true  "On"
+      :display-if-false "Off"
+      :key "B")
+    (transient-append-suffix 'gptel-menu "y"
+      '(perso/gptel--infix-branching-context
+        :if (lambda () (derived-mode-p 'org-mode)))))
+
+  ;;; Tools
+  (gptel-make-tool
+   :name "read_file"
+   :function (lambda (path)
+               (let ((full-path (expand-file-name path)))
+                 (cond
+                  ((not (file-exists-p full-path))
+                   (format "Error: file does not exist: %s" full-path))
+                  ((not (file-readable-p full-path))
+                   (format "Error: file is not readable: %s" full-path))
+                  ((> (file-attribute-size (file-attributes full-path)) (* 1024 1024))
+                   (if (yes-or-no-p (format "File %s is large (> 1 MB). Read anyway? " full-path))
+                       (with-temp-buffer
+                         (insert-file-contents full-path)
+                         (buffer-string))
+                     "Aborted by user."))
+                  (t
+                   (with-temp-buffer
+                     (insert-file-contents full-path)
+                     (buffer-string))))))
+   :description "Read and return the contents of a file (read-only)."
+   :args (list '(:name "path" :type "string" :description "Path to the file."))
+   :category "filesystem")
+
+  (gptel-make-tool
+   :name "list_directory"
+   :function (lambda (path)
+               (let ((full-path (expand-file-name path)))
+                 (if (file-directory-p full-path)
+                     (string-join
+                      (directory-files full-path nil nil t)
+                      "\n")
+                   (format "Error: not a directory: %s" full-path))))
+   :description "List the entries in a directory."
+   :args (list '(:name "path" :type "string" :description "Directory path."))
+   :category "filesystem")
+
+  ;;; Presets
+  (gptel-make-preset 'eli5
+  :system "Explain like I am 5 years old.")
+
+  (gptel-make-preset 'websearch
+    :description "Web search"
+    :pre (lambda ()
+           (gptel-mcp-connect '("searxng") 'sync nil))
+    :use-tools t
+    :tools '("web_url_read" "searxng_web_search")
+    :system "Use the provided tools to search the web for up-to-date information.")
+
+  (gptel-make-preset 'creative
+    :description "Quick creative — high temp, no tools"
+    :backend "llama-cpp" :model 'qwen36-35b-quality
+    :temperature 0.8
+    :tools nil :use-tools nil
+    :system "You are an imaginative creative collaborator. Offer vivid, varied ideas.")
+
+  (gptel-make-preset 'research
+    :description "Research — autonomous web search, bounded"
+    :backend "llama-cpp" :model 'qwen36-35b-quality
+    :temperature 0.4
+    :pre (lambda ()
+           (gptel-mcp-connect '("searxng") 'sync nil))
+    :use-tools t :tools '("searxng_web_search" "web_url_read" "searxng_instance_info" "searxng_search_suggestions")
+    :system "You are a research assistant. Plan, then perform AT MOST 10 searches, reading the most relevant results, then synthesise a sourced answer. Stop searching once you can answer. You can use search engine suggestions to find related information.")
+
+  (gptel-make-preset 'architect
+    :description "Architecture/brainstorm — precise, fs-read + web"
+    :backend "llama-cpp" :model 'qwen36-35b-quality
+    :temperature 0.3
+    :pre (lambda ()
+           (gptel-mcp-connect '("searxng") 'sync nil))
+    :use-tools t
+    :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
+    :system "You are a senior software architect. Reason carefully about design tradeoffs. Use file reads and web search to ground claims.")
+
+  (gptel-make-preset 'rag
+    :description "Document RAG — low temp, grounded"
+    :backend "llama-cpp" :model 'qwen36-35b-quality
+    :temperature 0.1
+    :pre (lambda ()
+           (gptel-mcp-connect '("searxng") 'sync nil))
+    :use-tools t
+    :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
+    :system "Answer strictly from retrieved context (corpus or fetched pages). If the sources don't contain the answer, say so. Do not speculate. Only provide information from your context.")
 
   ;; A custom function to open a single gptel session
   (defun perso/gptel ()
@@ -2999,9 +3119,21 @@ This is a modified version of `mu4e-view-save-attachments'."
     (switch-to-buffer "GPTel")
     (delete-other-windows))
 
-  (use-package gptel-quick
-    :quelpa (gptel-quick :repo "karthink/gptel-quick" :fetcher github :commit "master")
-    )
+(use-package gptel-quick
+  :quelpa (gptel-quick :repo "karthink/gptel-quick" :fetcher github :commit "master")
+  :after gptel
+  :bind ("C-z q" . gptel-quick)
+  :config
+  (setq gptel-quick-backend
+      (gptel-make-openai "llama-cpp-quick"
+        :stream t
+        :protocol "http"
+        :host perso/gptel-backend-host
+        :models '(qwen36-35b-quality)
+        :request-params '(:chat_template_kwargs (:enable_thinking :json-false)
+                                                :temperature 0))
+        ;; :request-params '(:chat_template_kwargs (:enable_thinking :json-false)))
+      gptel-quick-model 'qwen36-35b-quality))
 
   (when (file-directory-p "~/.emacs.d/prompts")
     (use-package gptel-prompts
@@ -3011,25 +3143,40 @@ This is a modified version of `mu4e-view-save-attachments'."
       :config
       (gptel-prompts-update)
       ;; Ensure prompts are updated if prompt files change
-      (gptel-prompts-add-update-watchers))))
+      (gptel-prompts-add-update-watchers)))
+  :bind (("C-z g" . gptel-menu)
+         ("C-z C-g" . perso/gptel)))
 
-;; Claude code integration
-(use-package claude-code-ide
-  :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
-  :bind ("C-z c" . claude-code-ide-menu)
-  :custom
-  (claude-code-ide-window-side 'left)
-  (claude-code-ide-window-width 80)
+;; Aider integration
+(use-package aidermacs
+  :defer t
   :config
-  (use-package vterm
-    :ensure t)
-  (claude-code-ide-emacs-tools-setup))
+  (setenv "OPENAI_API_BASE" perso/aider-backend-url)
+  (setenv "OPENAI_API_KEY"  "none")     ; ignored by llama.cpp, required by LiteLLM
+  :custom
+  (aidermacs-default-model "openai/qwen-moe")
+  (aidermacs-auto-commits nil)          ; <-- honour "git is a separate workflow"
+  (aidermacs-use-architect-mode nil)    ; single-model by default (Stage-2 Q4)
+  (aidermacs-default-chat-mode 'code)   ; 'architect only if you do §9.3
+  :bind (("C-z c" . aidermacs-transient-menu)))
+
+;; ;; Claude code integration
+;; (use-package claude-code-ide
+;;   :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
+;;   :bind ("C-z c" . claude-code-ide-menu)
+;;   :custom
+;;   (claude-code-ide-window-side 'left)
+;;   (claude-code-ide-window-width 80)
+;;   :config
+;;   (use-package vterm
+;;     :ensure t)
+;;   (claude-code-ide-emacs-tools-setup))
 
 ;; Emacs-websearch
 ;; looking up stuff on the Internet
 (use-package emacs-websearch
   :quelpa (emacs-websearch :repo "zhenhua-wang/emacs-websearch" :fetcher github :commit "master")
-  :bind ("C-z g" . emacs-websearch)
+  :bind ("C-z C-w" . emacs-websearch)
   :config (setq emacs-websearch-engine 'duckduckgo))
 
 ;;; Convenience key-binding for common actions
