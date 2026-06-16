@@ -2993,23 +2993,42 @@ This is a modified version of `mu4e-view-save-attachments'."
   (require 'gptel-org)
   (when (executable-find "curl")
     (setq gptel-use-curl t))
-  ;; Branching
+  (gptel-make-openai "llama-cpp-main"
+    :stream t
+    :protocol "http"
+    :host perso/gptel-backend-host
+    :models '(qwen36-35b-quality
+              qwen36-27b-quality
+              qwen36-27b-speed
+              qwen35-9b-quality
+              qwen35-9b-extra-quality))
+  (gptel-make-openai "llama-cpp-back"
+    :stream t
+    :protocol "http"
+    :host perso/gptel-backend-host-2
+    :models '(qwen35-4b))
+   (setq gptel-backend (gptel-get-backend "llama-cpp-main")
+         gptel-model 'qwen36-35b-quality)
+
   ;; General settings
   (setq
    gptel-default-mode 'org-mode
    gptel-use-tools t
    gptel-confirm-tool-calls t
-   gptel-include-tool-results 'auto
-   gptel-model   'qwen36-35b-quality
-   gptel-backend (gptel-make-openai "llama-cpp"
-                   :stream t
-                   :protocol "http"
-                   :host perso/gptel-backend-host
-                   :models '(qwen36-35b-quality
-                             qwen36-27b-quality
-                             qwen36-27b-speed
-                             qwen35-9b-quality
-                             qwen35-9b-extra-quality)))
+   gptel-include-tool-results 'auto)
+   ;; gptel-model   'qwen36-35b-quality
+
+
+   ;; (gptel-backend (gptel-make-openai "llama-cpp"
+   ;;                 :stream t
+   ;;                 :protocol "http"
+   ;;                 :host perso/gptel-backend-host
+   ;;                 :models '(qwen36-35b-quality
+   ;;                           qwen36-27b-quality
+   ;;                           qwen36-27b-speed
+   ;;                           qwen35-9b-quality
+  ;;                           qwen35-9b-extra-quality)))
+
   (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
 
   (with-eval-after-load 'gptel-transient
@@ -3147,18 +3166,12 @@ This is a modified version of `mu4e-view-save-attachments'."
   :bind (("C-z g" . gptel-menu)
          ("C-z C-g" . perso/gptel)))
 
-;; Aider integration
-(use-package aidermacs
-  :defer t
-  :config
-  (setenv "OPENAI_API_BASE" perso/aider-backend-url)
-  (setenv "OPENAI_API_KEY"  "none")     ; ignored by llama.cpp, required by LiteLLM
+(use-package eca
   :custom
-  (aidermacs-default-model "openai/qwen-moe")
-  (aidermacs-auto-commits nil)          ; <-- honour "git is a separate workflow"
-  (aidermacs-use-architect-mode nil)    ; single-model by default (Stage-2 Q4)
-  (aidermacs-default-chat-mode 'code)   ; 'architect only if you do §9.3
-  :bind (("C-z c" . aidermacs-transient-menu)))
+  (eca-chat-use-side-window t)
+  (eca-chat-window-side 'left)
+  (eca-chat-window-width 0.35)
+  :vc (:url "https://github.com/editor-code-assistant/eca-emacs" :rev :newest))
 
 ;; ;; Claude code integration
 ;; (use-package claude-code-ide
