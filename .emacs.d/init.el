@@ -2,16 +2,6 @@
 ;;; Emacs startup configuration file
 
 ;;; Stuff to explore later
-;; Auto update package (throws a warning about double package-initialize...)
-;; (use-package auto-package-update
-;;   :if (not (daemonp))
-;;   :custom
-;;   (auto-package-update-interval 7) ;; in days
-;;   (auto-package-update-prompt-before-update t)
-;;   (auto-package-update-delete-old-versions t)
-;;   (auto-package-update-hide-results t)
-;;   :config
-;;   (auto-package-update-maybe))
 ;; Maybe something to automatically add headers
 ;; Bindings to learn :
 ;; - treemacs
@@ -97,6 +87,35 @@
 
 (use-package  quelpa-use-package
   :ensure t)
+
+(defun perso/packages-update ()
+  "Update packages and recompile all of them."
+  (interactive)
+  (let ((buf (get-buffer-create "*Package Update*")))
+    (with-current-buffer buf
+      (let ((buffer-read-only nil))
+        (erase-buffer)
+        (insert "Updating all packages...\n")))
+    (with-current-buffer buf
+      (setq buffer-read-only t))
+    (pop-to-buffer buf)
+    (cl-letf (((symbol-function 'message)
+               (lambda (fmt &rest args)
+                 (when fmt
+                   (let ((text (apply #'format-message fmt args)))
+                     (with-current-buffer buf
+                       (goto-char (point-max))
+                       (let ((buffer-read-only nil))
+                         (insert text "\n"))
+                       (when-let ((win (get-buffer-window buf t)))
+                         (set-window-point win (point-max))))
+                     (redisplay))))))
+      (package-upgrade-all)
+      (package-recompile-all))
+    (with-current-buffer buf
+      (let ((buffer-read-only nil))
+        (goto-char (point-max))
+        (insert "Update finished!\n")))))
 
 ;;; Early packages
 ;; Use Garbage collector magic hack ASAP
@@ -3016,20 +3035,8 @@ This is a modified version of `mu4e-view-save-attachments'."
    gptel-use-tools t
    gptel-confirm-tool-calls t
    gptel-include-tool-results 'auto)
-   ;; gptel-model   'qwen36-35b-quality
 
-
-   ;; (gptel-backend (gptel-make-openai "llama-cpp"
-   ;;                 :stream t
-   ;;                 :protocol "http"
-   ;;                 :host perso/gptel-backend-host
-   ;;                 :models '(qwen36-35b-quality
-   ;;                           qwen36-27b-quality
-   ;;                           qwen36-27b-speed
-   ;;                           qwen35-9b-quality
-  ;;                           qwen35-9b-extra-quality)))
-
-  (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
+  ;; (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
 
   (with-eval-after-load 'gptel-transient
     (transient-define-infix perso/gptel--infix-branching-context ()
