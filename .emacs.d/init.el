@@ -89,33 +89,39 @@
   :ensure t)
 
 (defun perso/packages-update ()
-  "Update packages and recompile all of them."
+  "Update all packages and recompile them, logging progress to a buffer."
   (interactive)
   (let ((buf (get-buffer-create "*Package Update*")))
     (with-current-buffer buf
       (let ((buffer-read-only nil))
         (erase-buffer)
-        (insert "Updating all packages...\n")))
-    (with-current-buffer buf
-      (setq buffer-read-only t))
+        (insert "Starting package update at " (format-time-string "%Y-%m-%d %H:%M:%S") "\n\n")))
     (pop-to-buffer buf)
-    (cl-letf (((symbol-function 'message)
-               (lambda (fmt &rest args)
-                 (when fmt
-                   (let ((text (apply #'format-message fmt args)))
-                     (with-current-buffer buf
-                       (goto-char (point-max))
-                       (let ((buffer-read-only nil))
-                         (insert text "\n"))
-                       (when-let ((win (get-buffer-window buf t)))
-                         (set-window-point win (point-max))))
-                     (redisplay))))))
-      (package-upgrade-all)
-      (package-recompile-all))
-    (with-current-buffer buf
-      (let ((buffer-read-only nil))
-        (goto-char (point-max))
-        (insert "Update finished!\n")))))
+    (let ((log-func (lambda (msg)
+                      (with-current-buffer buf
+                        (let ((buffer-read-only nil))
+                          (goto-char (point-max))
+                          (insert msg "\n")
+                          (when-let ((win (get-buffer-window buf t)))
+                            (set-window-point win (point-max))))
+                        (redisplay)))))
+      (cl-letf (((symbol-function 'message)
+                 (lambda (&rest args)
+                   (when args
+                     (let ((msg (apply #'format-message args)))
+                       (funcall log-func msg))))))
+        (condition-case err
+            (progn
+              (funcall log-func "Upgrading packages...")
+              (package-upgrade-all)
+              (funcall log-func "Recompiling packages...")
+              (package-recompile-all))
+          (error
+           (funcall log-func (format "ERROR: %s" (error-message-string err))))))
+      (with-current-buffer buf
+        (let ((buffer-read-only nil))
+          (goto-char (point-max))
+          (insert "\nUpdate finished at " (format-time-string "%Y-%m-%d %H:%M:%S") "\n"))))))
 
 ;;; Early packages
 ;; Use Garbage collector magic hack ASAP
@@ -3018,6 +3024,7 @@ This is a modified version of `mu4e-view-save-attachments'."
     :host perso/gptel-backend-host
     :models '(qwen36-35b-quality
               qwen36-27b-quality
+              qwen36-27b-balanced
               qwen36-27b-speed
               qwen35-9b-quality
               qwen35-9b-extra-quality))
