@@ -3026,6 +3026,7 @@ This is a modified version of `mu4e-view-save-attachments'."
               qwen36-27b-quality
               qwen36-27b-balanced
               qwen36-27b-speed
+              qwen3-coder-next
               qwen35-9b-quality
               qwen35-9b-extra-quality))
   (gptel-make-openai "llama-cpp-back"
