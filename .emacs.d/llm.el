@@ -4,6 +4,24 @@
 (require 'gptel)
 (require 'transient)
 
+(defun perso/portainer-token (machine port)
+  "Retrieve the secret for MACHINE and PORT from `auth-sources'.
+PORT can be a string or an integer.
+Returns the secret as a string, or signals an error if not found."
+  (let* ((port-str (if (numberp port) (number-to-string port) port))
+         (entry (car (auth-source-search :host machine
+                                         :port port-str
+                                         :require '(:secret)
+                                         :max 1)))
+         (secret (and entry (plist-get entry :secret))))
+    (cond
+     ((null entry)
+      (error "No authinfo entry found for machine=%s port=%s" machine port))
+     ((null secret)
+      (error "Entry found but has no secret for machine=%s port=%s" machine port))
+     ((functionp secret) (funcall secret))   ; unwrap the closure
+     (t secret))))
+
 (defun perso/portainer--curl (host method path &optional data)
   "Minimal Portainer API call.
     HOST is a hostname string (e.g. \"mycomputer.lan.org\").
@@ -14,7 +32,7 @@
   (let* ((url (concat "https://" host ":9443" path))
          (args (append
                 (list "-sk" "-X" method
-                      "-H" (concat "X-API-Key: " (perso/portainer-token host)))
+                      "-H" (concat "X-API-Key: " (perso/portainer-token host 9443)))
                 (when data (list "-H" "Content-Type: application/json" "-d" data))
                 (list url)))
          ;; (_ (message "curl %s" (mapconcat #'shell-quote-argument args " ")))
