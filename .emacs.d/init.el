@@ -3021,21 +3021,25 @@ This is a modified version of `mu4e-view-save-attachments'."
   (gptel-make-openai "llama-cpp-main"
     :stream t
     :protocol "http"
-    :host perso/gptel-backend-host
-    :models '(qwen36-35b-quality
-              qwen36-27b-quality
-              qwen36-27b-balanced
-              qwen36-27b-speed
-              qwen3-coder-next
+    :host (concat perso/llm-host-main
+                  ":" perso/llm-port-main)
+    :models '(qwen36-27b-opti
+              qwen36-27b-opti-large
+              qwen36-35b-quality
               qwen35-9b-quality
-              qwen35-9b-extra-quality))
+              qwen35-9b-extra-quality
+              qwen3-coder-next
+              gemma-12b-quality
+              glm47-flash))
   (gptel-make-openai "llama-cpp-back"
     :stream t
     :protocol "http"
-    :host perso/gptel-backend-host-2
-    :models '(qwen35-4b))
+    :host (concat perso/llm-host-backup
+                  ":" perso/llm-port-backup)
+    :models '(qwen35-4b
+              qwen25-coder-7b))
    (setq gptel-backend (gptel-get-backend "llama-cpp-main")
-         gptel-model 'qwen36-35b-quality)
+         gptel-model 'qwen36-27b-opti)
 
   ;; General settings
   (setq
@@ -3043,8 +3047,6 @@ This is a modified version of `mu4e-view-save-attachments'."
    gptel-use-tools t
    gptel-confirm-tool-calls t
    gptel-include-tool-results 'auto)
-
-  ;; (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
 
   (with-eval-after-load 'gptel-transient
     (transient-define-infix perso/gptel--infix-branching-context ()
@@ -3099,7 +3101,9 @@ This is a modified version of `mu4e-view-save-attachments'."
 
   ;;; Presets
   (gptel-make-preset 'eli5
-  :system "Explain like I am 5 years old.")
+    :system "Explain like I am 5 years old."
+    :use-tools t
+    :tools '("web_url_read" "searxng_web_search"))
 
   (gptel-make-preset 'websearch
     :description "Web search"
@@ -3111,24 +3115,30 @@ This is a modified version of `mu4e-view-save-attachments'."
 
   (gptel-make-preset 'creative
     :description "Quick creative — high temp, no tools"
-    :backend "llama-cpp" :model 'qwen36-35b-quality
-    :temperature 0.8
+    :temperature 1
     :tools nil :use-tools nil
     :system "You are an imaginative creative collaborator. Offer vivid, varied ideas.")
 
   (gptel-make-preset 'research
     :description "Research — autonomous web search, bounded"
-    :backend "llama-cpp" :model 'qwen36-35b-quality
-    :temperature 0.4
+    :temperature 0.6
     :pre (lambda ()
            (gptel-mcp-connect '("searxng") 'sync nil))
     :use-tools t :tools '("searxng_web_search" "web_url_read" "searxng_instance_info" "searxng_search_suggestions")
-    :system "You are a research assistant. Plan, then perform AT MOST 10 searches, reading the most relevant results, then synthesise a sourced answer. Stop searching once you can answer. You can use search engine suggestions to find related information.")
+    :system "You are a research assistant. Plan, then perform AT MOST 10 searches, reading the most relevant results, then synthesize a sourced answer. Stop searching once you can answer. You can use search engine suggestions to find related information.")
+
+  (gptel-make-preset 'programmer
+    :description "Careful senior programmer — precise, fs-read + web"
+    :temperature 0.7
+    :pre (lambda ()
+           (gptel-mcp-connect '("searxng") 'sync nil))
+    :use-tools t
+    :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
+    :system "You are a careful senior programmer. Reason carefully about design tradeoffs. Use file reads and web search to ground claims. Try to provide code and only code as output without any additional text, prompt or note. If you cannot provide only code, be clear and concise.")
 
   (gptel-make-preset 'architect
     :description "Architecture/brainstorm — precise, fs-read + web"
-    :backend "llama-cpp" :model 'qwen36-35b-quality
-    :temperature 0.3
+    :temperature 0.7
     :pre (lambda ()
            (gptel-mcp-connect '("searxng") 'sync nil))
     :use-tools t
@@ -3137,7 +3147,6 @@ This is a modified version of `mu4e-view-save-attachments'."
 
   (gptel-make-preset 'rag
     :description "Document RAG — low temp, grounded"
-    :backend "llama-cpp" :model 'qwen36-35b-quality
     :temperature 0.1
     :pre (lambda ()
            (gptel-mcp-connect '("searxng") 'sync nil))
@@ -3151,6 +3160,7 @@ This is a modified version of `mu4e-view-save-attachments'."
     (interactive)
     (gptel "GPTel")
     (switch-to-buffer "GPTel")
+    (disable-text-analysis-modes)
     (delete-other-windows))
 
 (use-package gptel-quick
@@ -3162,12 +3172,11 @@ This is a modified version of `mu4e-view-save-attachments'."
       (gptel-make-openai "llama-cpp-quick"
         :stream t
         :protocol "http"
-        :host perso/gptel-backend-host
-        :models '(qwen36-35b-quality)
+        :host (concat perso/llm-host-backup ":" perso/llm-port-backup)
+        :models '(qwen35-4b)
         :request-params '(:chat_template_kwargs (:enable_thinking :json-false)
                                                 :temperature 0))
-        ;; :request-params '(:chat_template_kwargs (:enable_thinking :json-false)))
-      gptel-quick-model 'qwen36-35b-quality))
+      gptel-quick-model 'qwen35-4b))
 
   (when (file-directory-p "~/.emacs.d/prompts")
     (use-package gptel-prompts
@@ -3187,6 +3196,10 @@ This is a modified version of `mu4e-view-save-attachments'."
   (eca-chat-window-side 'left)
   (eca-chat-window-width 0.35)
   :vc (:url "https://github.com/editor-code-assistant/eca-emacs" :rev :newest))
+
+;; LLM mgmt is in another dedicated file
+(when (file-exists-p (expand-file-name "llm.el" user-emacs-directory))
+  (load-file (expand-file-name "llm.el" user-emacs-directory)))
 
 ;; ;; Claude code integration
 ;; (use-package claude-code-ide
