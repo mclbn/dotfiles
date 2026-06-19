@@ -3037,7 +3037,8 @@ This is a modified version of `mu4e-view-save-attachments'."
     :host (concat perso/llm-host-backup
                   ":" perso/llm-port-backup)
     :models '(qwen35-4b
-              qwen25-coder-7b))
+              qwen25-coder-7b
+              gemma4-12b))
    (setq gptel-backend (gptel-get-backend "llama-cpp-main")
          gptel-model 'qwen36-27b-opti)
 
@@ -3176,7 +3177,8 @@ This is a modified version of `mu4e-view-save-attachments'."
         :models '(qwen35-4b)
         :request-params '(:chat_template_kwargs (:enable_thinking :json-false)
                                                 :temperature 0))
-      gptel-quick-model 'qwen35-4b))
+      gptel-quick-model 'qwen35-4b
+      gptel-quick-timeout 30))
 
   (when (file-directory-p "~/.emacs.d/prompts")
     (use-package gptel-prompts
