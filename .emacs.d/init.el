@@ -3197,7 +3197,8 @@ This is a modified version of `mu4e-view-save-attachments'."
   (eca-chat-use-side-window t)
   (eca-chat-window-side 'left)
   (eca-chat-window-width 0.35)
-  :vc (:url "https://github.com/editor-code-assistant/eca-emacs" :rev :newest))
+  :vc (:url "https://github.com/editor-code-assistant/eca-emacs" :rev :newest)
+  :hook (eca-chat-mode . disable-text-analysis-modes))
 
 ;; LLM mgmt is in another dedicated file
 (when (file-exists-p (expand-file-name "llm.el" user-emacs-directory))
