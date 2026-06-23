@@ -531,6 +531,12 @@
    :preview-key '(:debounce 0.2 any)
    consult-recent-file :preview-key nil))
 
+(use-package consult-dir
+  :ensure t
+  :bind (("C-z d" . consult-dir)
+         :map vertico-map
+         ("C-z d" . consult-dir)))
+
 (use-package consult-tramp
   :quelpa (consult-tramp :repo "Ladicle/consult-tramp" :fetcher github :commit "main")
   :bind ("C-x C-t" . consult-tramp))
