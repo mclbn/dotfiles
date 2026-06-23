@@ -2667,6 +2667,12 @@ exist after each headings's drawers."
                                                        (interactive)
                                                        (org-download-screenshot)))))))
 
+(use-package org-appear
+  :custom
+  (org-appear-delay 0.2)
+  :hook
+  org-mode)
+
 ;;; Mail management
 (if (not (string= (getenv "EMACS_NOMU") "Y"))
     (progn
