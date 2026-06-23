@@ -30,5 +30,8 @@
 ;; Because undo-tree throws a warning about cl being deprecated
 (setq byte-compile-warnings '(cl-functions))
 
+;; Improve LSP mode parsing performance
+(setenv "LSP_USE_PLISTS" "true")
+
 (provide 'early-init)
 ;;; early-init.el ends here
