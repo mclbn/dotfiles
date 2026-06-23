@@ -518,8 +518,9 @@
   ;; TRAMP: debounce file/buffer preview so moving the selection does
   ;; not eagerly open remote files on every keystroke.
   (consult-customize
-   consult-recent-file consult-buffer consult-project-buffer
-   :preview-key '(:debounce 0.2 any)))
+   consult-buffer consult-project-buffer
+   :preview-key '(:debounce 0.2 any)
+   consult-recent-file :preview-key nil))
 
 (use-package consult-tramp
   :quelpa (consult-tramp :repo "Ladicle/consult-tramp" :fetcher github :commit "main")
@@ -1367,6 +1368,8 @@ FACE defaults to inheriting from default and highlight."
   :diminish
   :hook
   (after-init . global-flycheck-mode)
+  :bind
+  ("C-c g" . flycheck-mode)
   :custom
   (flycheck-checker-error-threshold nil)
   (flycheck-global-modes '(not . (elfeed-search-mode)))
@@ -1382,60 +1385,6 @@ FACE defaults to inheriting from default and highlight."
                  (reusable-frames . visible)
                  (window-height   . 0.33)))
   )
-
-;; Guess-language : automatic language detection
-(use-package guess-language
-  :defer t
-  :pin melpa ;; the good version is on melpa, not melpa-stable
-  ;; Disabled auto-guess, because it slows down considerably with large org files
-  ;; :init (add-hook 'flycheck-mode-hook #'guess-language-mode)
-  :bind
-  ("C-c g" . flycheck-mode)
-  :config
-  (setq guess-language-langcodes '((en . ("en_US" "English" "🇺🇸" "English"))
-                                   (fr . ("fr_FR"  "French" "🇫🇷" "French")))
-        guess-language-languages '(en fr)
-        guess-language-min-paragraph-length 35)
-  :diminish guess-language-mode)
-
-;; Flyspell : on-the-fly spell-checking
-(use-package flyspell
-  :ensure nil
-  :if (executable-find "hunspell")
-  :hook (((text-mode outline-mode latex-mode org-mode markdown-mode) . flyspell-mode)
-	     (prog-mode . flyspell-prog-mode))
-  :bind
-  ("C-c e" . (lambda () (interactive)
-	           (ispell-change-dictionary "en_US") (typo-change-language "English") (flyspell-buffer)))
-  ("C-c f" . (lambda () (interactive)
-	           (ispell-change-dictionary "fr_FR") (typo-change-language "French") (flyspell-buffer)))
-  :init
-  ;; The personal dictionary file has to exist, otherwise hunspell will
-  ;; silently not use it.
-  (unless (file-exists-p ispell-personal-dictionary)
-    (write-region "" nil ispell-personal-dictionary nil 0))
-  :custom
-  (flyspell-issue-message-flag nil)
-  (ispell-program-name "hunspell")
-  (ispell-dictionary "fr_FR")
-  (ispell-personal-dictionary "~/.hunspell_personal"))
-
-;; Small hook so Flyspell skip mail headers in mu4e
-(defun flyspell-skip-mail-headers (begin _end _ignored)
-  "Returns non-nil if BEGIN position is in mail header."
-  (save-excursion
-    (goto-char (point-min))
-    (let ((end-header
-           (re-search-forward "^--text follows this line--[[:space:]]*$" nil t)))
-      (when end-header
-        (< begin end-header)))))
-(add-hook 'flyspell-incorrect-hook #'flyspell-skip-mail-headers)
-
-(use-package flyspell-correct
-  :bind
-  (:map flyspell-mode-map
-        ([remap flyspell-correct-word-before-point] . flyspell-correct-wrapper)
-        ("C-." . flyspell-correct-wrapper)))
 
 ;; Flycheck-grammalecte : french syntax checking
 ;; Requires running M-x grammalecte-download-grammalecte once
@@ -1469,6 +1418,38 @@ FACE defaults to inheriting from default and highlight."
           (message-mode "(?m)^[ \t]*(?:[\\w_.]+>|[]>|]).*")))
   (flycheck-grammalecte-setup))
 
+;; Jinx : fast, multi-language spell-checking via Enchant
+;; First launch compiles jinx-mod.c;
+;; needs installing libenchant-2-dev + a C compiler.
+(defun perso/jinx-set-language (lang typo-lang)
+  "Restrict Jinx spell-checking to LANG and switch Typo to TYPO-LANG, buffer-locally.
+For the interactive multi-language version use C-M-$ (`jinx-languages')."
+  (setq-local jinx-languages lang)
+  (jinx-mode -1)            ; reload dictionaries for the new language
+  (jinx-mode 1)
+  (when (bound-and-true-p typo-mode) (typo-change-language typo-lang)))
+
+(use-package jinx
+  :diminish
+  :hook (emacs-startup . global-jinx-mode)
+  :custom
+  (jinx-languages "en_US fr_FR")
+  :bind
+  (("C-." . jinx-correct)
+   ("M-$" . jinx-correct)
+   ("C-M-$" . jinx-languages)
+   ("C-c e" . (lambda () (interactive) (perso/jinx-set-language "en_US" "English")))
+   ("C-c f" . (lambda () (interactive) (perso/jinx-set-language "fr_FR" "French"))))
+  :config
+  ;; (mu4e): if reply quotes / headers get spell-checked in compose
+  ;; buffers, uncomment to exclude them.
+  ;; (add-to-list 'jinx-exclude-faces
+  ;;              '(message-mode message-header-name message-header-to
+  ;;                message-header-cc message-header-subject message-header-other
+  ;;                message-cited-text-1 message-cited-text-2
+  ;;                message-cited-text-3 message-cited-text-4))
+  )
+
 ;; sdcv : Stardict dictionnary
 (when (executable-find "sdcv")
   (use-package sdcv
@@ -1501,7 +1482,7 @@ FACE defaults to inheriting from default and highlight."
   "Saved state of text analysis modes before disabling. Nil means modes are currently active.")
 
 (defun perso/toggle-text-analysis-modes ()
-  "Toggle flycheck, flyspell and typo modes.
+  "Toggle flycheck, jinx and typo modes.
 First call saves each mode's current state and disables all of them.
 Second call restores each mode to its previously saved state."
   (interactive)
@@ -1509,28 +1490,28 @@ Second call restores each mode to its previously saved state."
       (progn
         (when (plist-get toggle-text-analysis-modes--state :flycheck)
           (flycheck-mode 1))
-        (when (plist-get toggle-text-analysis-modes--state :flyspell)
-          (flyspell-mode 1))
+        (when (plist-get toggle-text-analysis-modes--state :jinx)
+          (jinx-mode 1))
         (when (plist-get toggle-text-analysis-modes--state :typo)
           (typo-mode 1))
         (setq toggle-text-analysis-modes--state nil)
         (message "Text analysis modes restored"))
     (setq toggle-text-analysis-modes--state
           (list :flycheck (bound-and-true-p flycheck-mode)
-                :flyspell (bound-and-true-p flyspell-mode)
+                :jinx (bound-and-true-p jinx-mode)
                 :typo     (bound-and-true-p typo-mode)))
     (flycheck-mode -1)
-    (flyspell-mode -1)
+    (jinx-mode -1)
     (typo-mode -1)
     (message "Text analysis modes disabled")))
 (bind-key "C-z t" #'perso/toggle-text-analysis-modes)
 
 ;; Small function to disable all text analysis modes
 (defun disable-text-analysis-modes ()
-  "Explicitely disable flycheck, flyspell and typo"
+  "Explicitely disable flycheck, jinx and typo"
   (interactive)
   (flycheck-mode -1)
-  (flyspell-mode -1)
+  (jinx-mode -1)
   (typo-mode -1))
 
 ;; Small collection of function and parameters to make the current buffer as fast as possible
@@ -1965,7 +1946,7 @@ respectively."
   (((java-mode python-mode go-mode rust-mode js-mode js2-mode
                typescript-mode web-mode c-mode c++-mode objc-mode php-mode cmake-mode) . lsp-deferred)
    (lsp-headerline-breadcrumb-mode . (lambda () (flycheck-mode -1)))
-   (lsp-headerline-breadcrumb-mode . (lambda () (flyspell-mode -1))))
+   (lsp-headerline-breadcrumb-mode . (lambda () (jinx-mode -1))))
   :commands (lsp lsp-deferred))
 
 ;; LSP-booster
