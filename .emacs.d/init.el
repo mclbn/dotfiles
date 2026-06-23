@@ -208,12 +208,12 @@
 (use-package crux
   :pin melpa ;; the good version is on melpa, not melpa-stable
   :bind
-  (("C-z d" . crux-delete-file-and-buffer)
-   ("C-z n" . crux-rename-file-and-buffer)
-   ("C-c ." . crux-duplicate-current-line-or-region)
+  (("C-z C-d" . crux-delete-file-and-buffer)
+   ("C-z C-n" . crux-rename-file-and-buffer)
+   ("C-c C-." . crux-duplicate-current-line-or-region)
    ("C-c C-M-." . crux-duplicate-and-comment-current-line-or-region)
    ("C-k" . crux-smart-kill-line)
-   ("C-c k" . crux-kill-whole-line)
+   ("C-c C-k" . crux-kill-whole-line)
    ("C-g" . crux-keyboard-quit-dwim)
    ))
 
