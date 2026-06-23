@@ -1933,7 +1933,6 @@ respectively."
               'json-read)
             :around
             #'lsp-booster--advice-json-parse)
-
 (defun lsp-booster--advice-final-command (old-fn cmd &optional test?)
   "Prepend emacs-lsp-booster command to lsp CMD."
   (let ((orig-result (funcall old-fn cmd test?)))
