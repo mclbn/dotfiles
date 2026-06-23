@@ -2403,8 +2403,12 @@ respectively."
   (if (string= (getenv "EMACS_WORK") "Y")
       (progn
         (defun perso/org-work-files ()
-          (seq-filter (lambda(x) (not (string-match "/templates/"(file-name-directory x))))
-                      (directory-files-recursively "~/org-work" "\\.org$")))
+          (seq-filter
+           (lambda (x) (not (string-match "/templates/" (file-name-directory x))))
+           (directory-files-recursively
+            "~/org-work" "\\.org\\'" nil
+            (lambda (subdir) ;  don't descend into dot prefixed dirs
+              (not (string-prefix-p "." (file-name-nondirectory subdir)))))))
         (setq org-directory "~/org-work")
         (setq org-agenda-files
               (mapcar (lambda (f) (expand-file-name f org-directory))
