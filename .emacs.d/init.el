@@ -2425,12 +2425,18 @@ respectively."
           (seq-filter (lambda(x) (not (string-match "/templates/"(file-name-directory x))))
                       (directory-files-recursively "~/org-work" "\\.org$")))
         (setq org-directory "~/org-work")
-        (setq org-agenda-files (perso/org-work-files))
-        (setq org-refile-targets '((nil :maxlevel . 9)
-                                   (org-agenda-files :maxlevel . 9))))
+        (setq org-agenda-files
+              (mapcar (lambda (f) (expand-file-name f org-directory))
+                      '("notes.org" "tasks.org")))
+        (setq org-refile-targets
+              `((nil :maxlevel . 9)
+                (,(perso/org-work-files) :maxlevel . 9))))
     (progn
       (setq org-directory "~/org")
-      (setq org-agenda-files '("perso.org" "work.org" "notes.org" "cloudcal-perso.org" "cloudcal-work.org"))
+      (setq org-agenda-files
+            (mapcar (lambda (f) (expand-file-name f org-directory))
+                    '("perso.org" "work.org" "notes.org"
+                      "cloudcal-perso.org" "cloudcal-work.org")))
       (setq org-refile-targets `((nil :maxlevel . 9)
                                  (("perso.org" "work.org" "notes.org") :maxlevel . 9)))))
   ;; Auto-save org buffer on refile
