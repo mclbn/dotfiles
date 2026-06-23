@@ -143,6 +143,7 @@
 (global-set-key (kbd "C-z") nil)
 (global-set-key (kbd "M-z") nil)
 (global-set-key (kbd "C-t") nil)
+(global-set-key (kbd "C-x C-t") nil)
 (global-set-key (kbd "C-x l") nil)
 
 ;;; Absolute must-have tweaks and settings
@@ -462,45 +463,96 @@
   (prescient-persist-mode +1)
   )
 
-;; Ivy, counsel and swiper : completion and search
-(use-package ivy
-  :diminish
-  :init
-  (use-package amx :defer t)
-  (use-package counsel :diminish :config (counsel-mode 1))
-  (use-package counsel-tramp
-    :diminish
-    :bind
-    (("C-t" . counsel-tramp)))
-  (use-package swiper :defer t)
-  (ivy-mode 1)
-  :bind
-  (("C-s" . swiper-isearch)
-   ;; ("C-z g" . counsel-rg)
-   ("C-z r" . counsel-recentf)
-   ("C-z b" . counsel-buffer-or-recentf)
-   ("C-z l" . counsel-locate)
-   ("C-z C-b" . counsel-ibuffer)
-   ("C-z SPC" . counsel-mark-ring)
-   (:map ivy-minibuffer-map
-         ("M-RET" . ivy-immediate-done)))
-  :custom
-  (ivy-use-virtual-buffers t)
-  (ivy-height 10)
-  (ivy-on-del-error-function nil)
-  (ivy-magic-slash-non-match-action 'ivy-magic-slash-non-match-cd-selected)
-  (ivy-count-format "[%d/%d] ")
-  (ivy-wrap t)
-  (ivy-use-selectable-prompt t)
-  (ivy-initial-inputs-alist nil)
-  :config
-  (setq ivy-re-builders-alist
-        '((t . ivy--regex-ignore-order))))
+;; Savehist : minibuffer history
+(use-package savehist
+  :ensure nil
+  :init (savehist-mode 1))
 
-;; Ivy-prescient : prescient for ivy (must be loaded after counsel)
-(use-package ivy-prescient
-  :after prescient
-  :hook (ivy-mode . ivy-prescient-mode))
+;; Vertico : vertical completion UI built on the native completing-read
+(use-package vertico
+  :demand t
+  :custom
+  (vertico-count 10)
+  (vertico-cycle t)
+  :init
+  (vertico-mode 1))
+
+;; Orderless : space-separated, any-order matching
+(use-package orderless
+  :demand t
+  :custom
+  (completion-styles '(orderless basic))
+  ;;  `basic' must come first for the `file' category, or remote (/ssh:)
+  ;; host/user completion and dynamic tables break under orderless.
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+
+;; Vertico-prescient : keep Prescient frecency sorting, let Orderless filter
+(use-package vertico-prescient
+  :after (vertico prescient)
+  :demand t
+  :custom
+  (vertico-prescient-enable-filtering nil) ; keep Orderless as the filter
+  (vertico-prescient-enable-sorting t)
+  :config
+  (vertico-prescient-mode 1))
+
+;; Hide commands irrelevant to the current mode from M-x
+(setq read-extended-command-predicate #'command-completion-default-include-p)
+
+;; Consult : search/navigation commands (replaces Swiper + the counsel-* commands)
+(use-package consult
+  :bind
+  (("C-s"     . consult-line)
+   ("C-z r"   . consult-recent-file)
+   ("C-z b"   . consult-buffer)
+   ("C-z C-b" . consult-project-buffer)
+   ("C-z l"   . consult-locate)
+   ("C-z SPC" . consult-mark)
+   ("C-z i"   . consult-imenu)
+   ([remap goto-line] . consult-goto-line))
+  :config
+  ;; Use Projectile to define "the project" for consult-project-* commands
+  (setq consult-project-function
+        (lambda (_) (when (fboundp 'projectile-project-root)
+                      (projectile-project-root))))
+  ;; TRAMP: debounce file/buffer preview so moving the selection does
+  ;; not eagerly open remote files on every keystroke.
+  (consult-customize
+   consult-recent-file consult-buffer consult-project-buffer
+   :preview-key '(:debounce 0.2 any)))
+
+(use-package consult-tramp
+  :quelpa (consult-tramp :repo "Ladicle/consult-tramp" :fetcher github :commit "main")
+  :bind ("C-x C-t" . consult-tramp))
+
+;; Embark : act on the thing at point or the current completion candidate
+(use-package embark
+  :bind
+  (("C-z ." . embark-act)
+   ("C-z /" . embark-dwim)
+   ("C-h B" . embark-bindings))
+  :init
+  ;; routes prefix help through which-key
+  (setq prefix-help-command #'embark-prefix-help-command))
+
+;; Embark-Consult : export to grep/dired/ibuffer, preview in collect buffers
+(use-package embark-consult
+  :after (embark consult)
+  :hook (embark-collect-mode . consult-preview-at-point-mode))
+
+;; Marginalia : rich annotations (docs, file info, sizes) beside candidates
+(use-package marginalia
+  :after vertico
+  :demand t
+  :bind (:map minibuffer-local-map ("M-A" . marginalia-cycle))
+  :init (marginalia-mode 1))
+
+;; Nerd icons for completion & marginalia
+(use-package nerd-icons-completion
+  :after marginalia
+  :config
+  (nerd-icons-completion-mode 1)
+  (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
 ;; Projectile : project management
 (use-package projectile
@@ -508,7 +560,7 @@
   :bind
   ("C-c p" . projectile-command-map)
   :custom
-  (projectile-completion-system 'ivy)
+  (projectile-completion-system 'default)
   (projectile-indexing-method 'native)
   (projectile-enable-caching t)
   :config
@@ -544,6 +596,12 @@
      'display-buffer-alist
      '("\\*rg\\*" . (nil . ((body-function . select-window))))))
   (bind-key "C-z C-r" #'perso/rg))
+
+;; Wgrep : write modified files in grep buffers
+(use-package wgrep
+  :custom
+  (wgrep-auto-save-buffer t)
+  (wgrep-change-readonly-file t))
 
 ;;; Buffer and window management
 ;;; Don't render cursors in inactive windows ()
@@ -934,10 +992,7 @@
   (global-set-key (kbd "C-h k") #'helpful-key)
   (global-set-key (kbd "C-c C-d") #'helpful-at-point)
   (global-set-key (kbd "C-h F") #'helpful-function)
-  (global-set-key (kbd "C-h C") #'helpful-command)
-  (setq counsel-describe-function-function #'helpful-callable)
-  (setq counsel-describe-variable-function #'helpful-variable)
-  )
+  (global-set-key (kbd "C-h C") #'helpful-command))
 
 ;; Which-key : displays next possible keys
 (use-package which-key
@@ -1363,20 +1418,7 @@ FACE defaults to inheriting from default and highlight."
   (flyspell-issue-message-flag nil)
   (ispell-program-name "hunspell")
   (ispell-dictionary "fr_FR")
-  (ispell-personal-dictionary "~/.hunspell_personal")
-  :config
-  (use-package flyspell-correct-ivy ; M-o to access actions
-    :after ivy
-    :bind
-    (:map flyspell-mode-map
-          ([remap flyspell-correct-word-before-point] . flyspell-correct-wrapper)
-          ("C-." . flyspell-correct-wrapper))
-    :custom (flyspell-correct-interface #'flyspell-correct-ivy))
-  ;; Typo: auto-replace typographically useful unicode characters
-  (use-package typo
-    :diminish
-    :hook
-    ((org-mode text-mode) . typo-mode)))
+  (ispell-personal-dictionary "~/.hunspell_personal"))
 
 ;; Small hook so Flyspell skip mail headers in mu4e
 (defun flyspell-skip-mail-headers (begin _end _ignored)
@@ -1388,6 +1430,12 @@ FACE defaults to inheriting from default and highlight."
       (when end-header
         (< begin end-header)))))
 (add-hook 'flyspell-incorrect-hook #'flyspell-skip-mail-headers)
+
+(use-package flyspell-correct
+  :bind
+  (:map flyspell-mode-map
+        ([remap flyspell-correct-word-before-point] . flyspell-correct-wrapper)
+        ("C-." . flyspell-correct-wrapper)))
 
 ;; Flycheck-grammalecte : french syntax checking
 ;; Requires running M-x grammalecte-download-grammalecte once
@@ -1441,6 +1489,12 @@ FACE defaults to inheriting from default and highlight."
             "Oxford English Dictionary 2nd Ed. P2"
             ))
     ))
+
+;; Typo: auto-replace typographically useful unicode characters
+(use-package typo
+  :diminish
+  :hook
+  ((org-mode text-mode) . typo-mode))
 
 ;; Small function to toggle all text analysis modes
 (defvar-local toggle-text-analysis-modes--state nil
@@ -1798,10 +1852,10 @@ respectively."
 ;; Dumb-jump : simple "jump to definition" tool
 (use-package dumb-jump
   :bind
-  ("C-c C-j" . dumb-jump-go)
+  ("C-z C-j" . dumb-jump-go)
   :custom
   (dumb-jump-prefer-searcher 'rg)
-  (dumb-jump-selector 'ivy)
+  (dumb-jump-selector 'completing-read)
   :init
   (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 
@@ -1975,7 +2029,7 @@ respectively."
         ([remap xref-find-definitions] . lsp-ui-peek-find-definitions) ; M-.
         ([remap xref-find-references] . lsp-ui-peek-find-references) ; M-?
         ("C-x l g r" . lsp-ui-peek-find-references) ; always peek
-        ("C-z i" . lsp-ui-doc-glance)
+        ;; ("C-z i" . lsp-ui-doc-glance)
         ("C-z z i" . lsp-ui-doc-focus-frame))
   :commands
   lsp-ui-mode)
@@ -2752,8 +2806,7 @@ exist after each headings's drawers."
         (mu4e-decryption-policy 'ask)
         (mu4e-context-policy 'pick-first)
         (mu4e-hide-index-messages t)
-        ;; Since we are using Ivy:
-        (mu4e-completing-read-function 'ivy-completing-read)
+        (mu4e-completing-read-function 'completing-read)
         :config
         (setq mu4e-maildir-shortcuts
               '((:maildir "/protonmail/inbox"     :key  ?i)
