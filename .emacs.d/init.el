@@ -1242,18 +1242,14 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
     (message "Copied buffer file name '%s' to the clipboard." filename)))
 (bind-key "C-z p" #'full-path-to-clipboard)
 
-;; Undo-tree
-(use-package undo-tree
-  :defer t
-  :diminish undo-tree-mode
-  :init (global-undo-tree-mode)
-  :custom
-  (undo-tree-visualizer-diff t)
-  ;; Undos are stored on disk in a subdirectory of the user directory
-  (undo-tree-history-directory-alist `(("." . ,(expand-file-name "undos" user-emacs-directory))))
-  (undo-tree-visualizer-timestamps t)
+(use-package vundo
   :bind
-  ("C-z u" . undo-tree-visualize))
+  ("C-z u" . vundo))
+
+(use-package undo-fu-session
+  :config
+  (setq undo-fu-session-incompatible-files '("/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'"))
+  (undo-fu-session-global-mode))
 
 ;; Sudo-edit : simple commands for privileged editing
 (use-package sudo-edit
