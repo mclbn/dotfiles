@@ -1374,6 +1374,41 @@ FACE defaults to inheriting from default and highlight."
   (dimmer-mode))
 
 ;;; Languages and spell-checking
+;; Quick set of functions to handle language switches
+(defvar-local perso/buffer-is-french nil
+  "Non-nil when Grammalecte should grammar-check the current buffer.")
+
+(defun perso/grammalecte-predicate ()
+  "Flycheck predicate: run Grammalecte only in French buffers."
+  perso/buffer-is-french)
+
+(defun perso/set-checkers-language (lang typo-lang)
+  "Restrict Jinx to LANG, switch Typo to TYPO-LANG, toggle Grammalecte.
+French grammar checking follows the chosen language."
+  (setq-local jinx-languages lang)
+  (jinx-mode -1)
+  (jinx-mode 1)
+  (when (bound-and-true-p typo-mode) (typo-change-language typo-lang))
+  ;; Grammalecte follows the chosen language:
+  (setq perso/buffer-is-french
+        (and (string-match-p "fr" lang) (not (string-match-p "en" lang))))
+  (when (bound-and-true-p flycheck-mode)
+    (flycheck-clear)     ; drop any stale French overlays when leaving French
+    (flycheck-buffer)))  ; re-run; grammalecte runs only if now French
+
+(defun perso/set-language-french ()
+  "Switch all text checkers in this buffer to French."
+  (interactive)
+  (perso/set-checkers-language "fr_FR" "French"))
+
+(defun perso/set-language-english ()
+  "Switch all text checkers in this buffer to English."
+  (interactive)
+  (perso/set-checkers-language "en_US" "English"))
+
+(bind-key "C-c f" #'perso/set-language-french)
+(bind-key "C-c e" #'perso/set-language-english)
+
 ;; Flycheck
 (use-package flycheck
   :diminish
@@ -1429,19 +1464,12 @@ FACE defaults to inheriting from default and highlight."
           (message-mode "(?m)^[ \t]*(?:[\\w_.]+>|[]>|]).*")))
   (setq grammalecte-python-package-directory
         (expand-file-name "grammalecte" user-emacs-directory))
+  (setq flycheck-grammalecte-predicate #'perso/grammalecte-predicate)
   (flycheck-grammalecte-setup))
 
 ;; Jinx : fast, multi-language spell-checking via Enchant
 ;; First launch compiles jinx-mod.c;
 ;; needs installing libenchant-2-dev + a C compiler.
-(defun perso/jinx-set-language (lang typo-lang)
-  "Restrict Jinx spell-checking to LANG and switch Typo to TYPO-LANG, buffer-locally.
-For the interactive multi-language version use C-M-$ (`jinx-languages')."
-  (setq-local jinx-languages lang)
-  (jinx-mode -1)            ; reload dictionaries for the new language
-  (jinx-mode 1)
-  (when (bound-and-true-p typo-mode) (typo-change-language typo-lang)))
-
 (use-package jinx
   :diminish
   :hook (emacs-startup . global-jinx-mode)
@@ -1450,9 +1478,7 @@ For the interactive multi-language version use C-M-$ (`jinx-languages')."
   :bind
   (("C-." . jinx-correct)
    ("M-$" . jinx-correct)
-   ("C-M-$" . jinx-languages)
-   ("C-c e" . (lambda () (interactive) (perso/jinx-set-language "en_US" "English")))
-   ("C-c f" . (lambda () (interactive) (perso/jinx-set-language "fr_FR" "French"))))
+   ("C-M-$" . jinx-languages))
   :config
   ;; (mu4e): if reply quotes / headers get spell-checked in compose
   ;; buffers, uncomment to exclude them.
