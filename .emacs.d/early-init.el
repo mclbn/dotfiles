@@ -10,6 +10,9 @@
 ;; early!
 (setq package-enable-at-startup nil)
 
+;; AOT-compile packages on install (no first-use JIT jank)
+(setq package-native-compile t)
+
 ;; Every file opened and loaded by Emacs will run through this list to check for
 ;; a proper handler for the file, but during startup, it won’t need any of them.
 (defvar file-name-handler-alist-original file-name-handler-alist)
