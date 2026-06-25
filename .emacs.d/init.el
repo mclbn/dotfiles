@@ -1559,7 +1559,7 @@ Second call restores each mode to its previously saved state."
   (interactive)
   (disable-text-analysis-modes)
   (display-line-numbers-mode -1)
-  (company-mode -1))
+  (corfu-mode -1))
 (bind-key "C-z f" #'custom-fast-mode)
 
 ;;; General programming
@@ -1879,72 +1879,101 @@ respectively."
   :init
   (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 
-;; Company : completion anywhere
-(use-package company
-  :pin melpa ;; the good version is on melpa, not melpa-stable
-  :diminish
-  :bind
-  ("<backtab>" . company-complete)
-  ("C-<tab>" . company-other-backend)
+;;; In-buffer completion : Corfu + Cape (replaces Company)
+;; Corfu uses the native completion-at-point-functions, so LSP/Elisp/etc. work
+;; with no per-backend glue. Your lsp-completion-provider :none is already correct.
+(use-package corfu
+  :demand t
   :custom
-  (company-idle-delay 0)
-  (company-minimum-prefix-length 2)
-  (company-tooltip-limit 10)
-  (company-selection-wrap-around t)
-  (company-transformers '(company-sort-by-occurrence))
-  (company-show-numbers t)
-  (company-dabbrev-downcase nil)
-  ;; invert the navigation direction if the completion popup-isearch-match
-  ;; is displayed on top (happens near the bottom of windows)
-  (company-tooltip-flip-when-above t)
-  (company-dabbrev-other-buffers t)
-  :hook
-  (after-init . global-company-mode)
-  (company-mode . company-tng-mode)
+  (corfu-auto t)
+  (corfu-auto-delay 0.2)
+  (corfu-auto-prefix 2)
+  (corfu-count 10)
+  (corfu-cycle t)
+  (corfu-preselect 'prompt)
+  (corfu-preview-current 'insert)
+  (corfu-quit-at-boundary 'nil)
+  (corfu-quit-no-match 'separator)
+  :bind
+  (("C-<tab>" . completion-at-point)
+   :map corfu-map
+   ("TAB"     . corfu-next)
+   ([tab]     . corfu-next)
+   ("S-TAB"   . corfu-previous)
+   ([backtab] . corfu-previous)
+   ("RET"     . corfu-complete))
+  :init
+  (global-corfu-mode 1)
   :config
-  (setq company-backends
-        '((company-capf company-dabbrev :separate :with company-yasnippet)
-          company-files
-          ))
-  (add-hook 'text-mode-hook
-            (lambda ()
-              (setq-local company-backends
-                          '((company-capf
-                             company-dabbrev
-                             ;; company-ispell
-                             :separate)
-                            company-files))
-              ))
+  (corfu-indexed-mode 1)
+  (corfu-popupinfo-mode 1)
+  (setq corfu-popupinfo-delay '(0.5 . 0.2)))
+
+;; Corfu popup in the terminal (-nw),
+;; where child frames are unavailable
+(use-package corfu-terminal
+  :after corfu
+  :config (corfu-terminal-mode 1))
+
+;; Prescient sorting for Corfu (Orderless still filters)
+(use-package corfu-prescient
+  :after (corfu prescient)
+  :demand t
+  :custom
+  (corfu-prescient-enable-filtering nil) ; let Orderless filter
+  (corfu-prescient-enable-sorting t)
+  :config (corfu-prescient-mode 1))
+
+;; Cape : capf sources + per-mode "backends"
+(use-package cape
+  :after corfu
+  :bind ("C-z c" . cape-prefix-map)
+  :custom
+  (cape-dabbrev-check-other-buffers t)
+  :init
+  ;; Baseline for buffers the per-mode hooks below don't touch (conf, special…)
+  (add-hook 'completion-at-point-functions #'cape-dabbrev)
+  (add-hook 'completion-at-point-functions #'cape-file)
+  :config
+  ;; Reproduce your grouped company-backends:
+  ;;   ((company-capf company-dabbrev :with company-yasnippet) company-files)
+  ;; -> a super-capf merging the buffer's own capf + dabbrev (main sources) with
+  ;;    yasnippet (auxiliary), and cape-file as a fallback.
+  (defun perso/capf (mains &optional leading)
+    "Buffer-local capf: optional LEADING capfs, then MAINS + dabbrev merged with
+yasnippet, then file. MAINS/LEADING are lists of capf functions."
+    (setq-local completion-at-point-functions
+                (append leading
+                        (list (apply #'cape-capf-super
+                                     `(,@mains cape-dabbrev :with yasnippet-capf))
+                              #'cape-file))))
+
+  ;; Generic case: capture the capf the mode already set (Elisp, Lua, sh, markdown,
+  ;; plain text…) and merge the extras onto it.
+  (defun perso/capf-here ()
+    (perso/capf (remq t completion-at-point-functions)))
+  (add-hook 'prog-mode-hook #'perso/capf-here)
+  (add-hook 'text-mode-hook #'perso/capf-here)
+
+  ;; Org: pcomplete as the primary (overrides the text-mode catch-all, runs after it)
   (add-hook 'org-mode-hook
-            (lambda ()
-              (setq-local company-backends
-                          '((company-capf
-                             company-dabbrev
-                             ;; company-ispell
-                             company-files
-                             :separate :with company-yasnippet)
-                            company-files))
-              ))
-  )
+            (lambda () (perso/capf (list #'pcomplete-completions-at-point))))
 
-;; Company-prescient
-(use-package company-prescient
-  :after prescient
-  :hook (company-mode . company-prescient-mode))
+  ;; LSP: fires once the server is connected, so lsp-completion-at-point exists.
+  ;; THIS is what keeps dabbrev/yasnippet merged *with* LSP instead of a fallback.
+  (defun perso/capf-lsp ()
+    (perso/capf
+     (list #'lsp-completion-at-point)
+     ;; #include completion in C modes — clangd already does this. To use
+     ;; company-c-headers instead, keep `company'+`company-c-headers' and uncomment:
+     ;; (when (derived-mode-p 'c-mode 'c++-mode 'c-ts-mode 'c++-ts-mode 'objc-mode)
+     ;;   (list (cape-company-to-capf #'company-c-headers)))
+     ))
+  (add-hook 'lsp-completion-mode-hook #'perso/capf-lsp))
 
-(use-package company-c-headers
-  :after (company)
-  :config
-  (add-hook 'c-mode-hook
-            (lambda ()
-              (add-to-list 'company-backends 'company-c-headers)))
-  (add-hook 'c++-mode-hook
-            (lambda ()
-              (add-to-list 'company-backends 'company-c-headers)))
-  (add-hook 'objc-mode-hook
-            (lambda ()
-              (add-to-list 'company-backends 'company-c-headers)))
-  )
+;; Snippets as a capf, so they appear in Corfu
+(use-package yasnippet-capf
+  :after (cape yasnippet))
 
 ;;; IDE-like features
 
@@ -1968,7 +1997,7 @@ respectively."
   (lsp-headerline-breadcrumb-enable-diagnostics nil)
   (lsp-signature-auto-activate nil)
   (lsp-enable-semantic-highlight nil) ;; managed by color-identifiers-mode
-  (lsp-completion-provider :none) ;; managed by company-mode
+  (lsp-completion-provider :none) ;; managed by corfu
   :config
   (use-package lsp-treemacs
     :pin melpa) ;; the good version is on melpa, not melpa-stable
