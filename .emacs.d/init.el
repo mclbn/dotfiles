@@ -300,7 +300,7 @@
   ;; Load the newest version of a file
   (load-prefer-newer t)
   ;; Detect external file changes and auto refresh file
-  (auto-revert-use-notify nil)
+  (auto-revert-use-notify t)
   (auto-revert-interval 3) ; Auto revert every 3 sec
   ;; Probe ls for capabilities
   (dired-use-ls-dired 'unspecified)
