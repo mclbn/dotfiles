@@ -73,7 +73,8 @@
 (eval-and-compile
   (setq use-package-always-ensure t)
   (setq use-package-expand-minimally t)
-  (setq use-package-compute-statistics t)
+  ;; flip to t to run M-x use-package-report
+  (setq use-package-compute-statistics nil)
   (setq use-package-enable-imenu-support t))
 (eval-when-compile
   (require 'use-package)
