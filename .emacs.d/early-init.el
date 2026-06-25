@@ -14,6 +14,12 @@
 ;; a proper handler for the file, but during startup, it won’t need any of them.
 (defvar file-name-handler-alist-original file-name-handler-alist)
 (setq file-name-handler-alist nil)
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (setq file-name-handler-alist
+                  (delete-dups (append file-name-handler-alist
+                                       file-name-handler-alist-original))))
+          100)
 
 ;; Disabling site-start.el loading (not used)
 (setq site-run-file nil)
