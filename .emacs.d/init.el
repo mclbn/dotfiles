@@ -145,7 +145,7 @@
 (defun my/diminish-hideshow ()
   (interactive)
   (diminish 'hs-minor-mode ""))
-(add-hook 'auto-revert-mode-hook 'my/diminish-hideshow)
+(add-hook 'hs-minor-mode-hook 'my/diminish-hideshow)
 
 ;;; Unbinding unneeded keys that will be bound by upcoming packages
 (global-set-key (kbd "M-{") nil)
