@@ -266,11 +266,17 @@
   (recentf-max-menu-items 20480)
   (recentf-max-saved-items 20480)
   (recentf-auto-cleanup 'never)
-  (recentf-exclude '((expand-file-name package-user-dir)
+  ;; (recentf-exclude '((expand-file-name package-user-dir)
+  ;;                    ".cache"
+  ;;                    (expand-file-name (concat user-emacs-directory "bookmarks"))
+  ;;                    (expand-file-name (concat user-emacs-directory "recentf"))
+  ;;                    ;; org archive? (.org_archive)
+  ;;                    "COMMIT_EDITMSG\\'"))
+
+  (recentf-exclude `(,(expand-file-name package-user-dir)
                      ".cache"
-                     (expand-file-name (concat user-emacs-directory "bookmarks"))
-                     (expand-file-name (concat user-emacs-directory "recentf"))
-                     ;; org archive? (.org_archive)
+                     ,(expand-file-name "bookmarks" user-emacs-directory)
+                     ,(expand-file-name "recentf" user-emacs-directory)
                      "COMMIT_EDITMSG\\'"))
   :config
   (run-at-time nil (* 5 60) 'recentf-save-list))
