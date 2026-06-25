@@ -147,6 +147,4 @@ MODEL is a gptel model symbol (e.g. \\='qwen36-27b-opti)."
    ["Eca"
     ("e" "Start eca" eca)]])
 
-(global-set-key (kbd "C-z @") #'perso/llm-menu)
-
 ;;; llm.el ends here

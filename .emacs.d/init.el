@@ -3399,7 +3399,8 @@ This is a modified version of `mu4e-view-save-attachments'."
 
 ;; LLM mgmt is in another dedicated file
 (when (file-exists-p (expand-file-name "llm.el" user-emacs-directory))
-  (load-file (expand-file-name "llm.el" user-emacs-directory)))
+  (autoload 'perso/llm-menu (expand-file-name "llm.el" user-emacs-directory) nil t)
+  (global-set-key (kbd "C-z @") #'perso/llm-menu))
 
 ;; ;; Claude code integration
 ;; (use-package claude-code-ide
