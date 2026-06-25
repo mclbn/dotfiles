@@ -1574,13 +1574,9 @@ Second call restores each mode to its previously saved state."
 (setq-default c-basic-offset 4)
 (setq-default js-switch-indent-offset 4)
 
-(defun smart-electric-indent-mode ()
-  "Disable 'electric-indent-mode in certain buffers and enable otherwise."
-  (cond ((and (eq electric-indent-mode t)
-              (member major-mode '(erc-mode text-mode)))
-         (electric-indent-mode 0))
-        ((eq electric-indent-mode nil) (electric-indent-mode 1))))
-(add-hook 'post-command-hook #'smart-electric-indent-mode)
+;; electric-indent is globally on by default; disable it only where unwanted,
+(dolist (hook '(text-mode-hook erc-mode-hook))
+  (add-hook hook (lambda () (electric-indent-local-mode -1))))
 
 ;; Auto-highlight some keywords
 ;; from https://www.jamescherti.com/emacs-highlight-keywords-like-todo-fixme-note/
