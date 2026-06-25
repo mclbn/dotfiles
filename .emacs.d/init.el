@@ -3206,11 +3206,7 @@ This is a modified version of `mu4e-view-save-attachments'."
   :after gptel
   :custom
   (mcp-hub-servers
-   `(("searxng" . (:url ,perso/mcp-searxng-url))))
-  :config
-  (require 'mcp-hub)
-  :hook
-  (after-init . mcp-hub-start-all-server))
+   `(("searxng" . (:url ,perso/mcp-searxng-url)))))
 
 ;; GPTel : chat with LLMs
 (use-package gptel
