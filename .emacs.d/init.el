@@ -627,9 +627,7 @@
   (wgrep-change-readonly-file t))
 
 ;;; Buffer and window management
-;;; Don't render cursors in inactive windows ()
 (setq-default cursor-in-non-selected-windows t)
-;;; But keep selected region visible
 (setq highlight-nonselected-windows t)
 
 ;; Manual split provide balanced layout
