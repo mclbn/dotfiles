@@ -1384,6 +1384,7 @@ FACE defaults to inheriting from default and highlight."
   :custom
   (flycheck-checker-error-threshold nil)
   (flycheck-global-modes '(not . (elfeed-search-mode)))
+  (flycheck-disabled-checkers '(org-lint))
   :config
   (use-package flycheck-pos-tip
     :config
@@ -1394,8 +1395,7 @@ FACE defaults to inheriting from default and highlight."
                   display-buffer-in-side-window)
                  (side            . bottom)
                  (reusable-frames . visible)
-                 (window-height   . 0.33)))
-  )
+                 (window-height   . 0.33))))
 
 ;; Flycheck-grammalecte : french syntax checking
 ;; Requires running M-x grammalecte-download-grammalecte once
