@@ -1427,6 +1427,8 @@ FACE defaults to inheriting from default and highlight."
                     "(?im)^[ \t]*#\\+(?:caption|description|keywords|(?:sub)?title):"
                     "(?im)^[ \t]*#\\+(?!caption|description|keywords|(?:sub)?title)\\w+:.*$")
           (message-mode "(?m)^[ \t]*(?:[\\w_.]+>|[]>|]).*")))
+  (setq grammalecte-python-package-directory
+        (expand-file-name "grammalecte" user-emacs-directory))
   (flycheck-grammalecte-setup))
 
 ;; Jinx : fast, multi-language spell-checking via Enchant
