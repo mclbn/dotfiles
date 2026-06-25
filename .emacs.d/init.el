@@ -3123,7 +3123,6 @@ This is a modified version of `mu4e-view-save-attachments'."
         )
 
       ;; Default mail agent for emacs
-      (require 'mu4e)
       (setq mail-user-agent 'mu4e-user-agent)
       ))
 
