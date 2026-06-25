@@ -1996,7 +1996,7 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   (lsp-headerline-breadcrumb-enable t)
   (lsp-headerline-breadcrumb-enable-diagnostics nil)
   (lsp-signature-auto-activate nil)
-  (lsp-enable-semantic-highlight nil) ;; managed by color-identifiers-mode
+  (lsp-semantic-tokens-enable nil) ;; managed by color-identifiers-mode
   (lsp-completion-provider :none) ;; managed by corfu
   :config
   (use-package lsp-treemacs
