@@ -1344,8 +1344,8 @@ FACE defaults to inheriting from default and highlight."
 ;; also display column number
 (setq column-number-mode t)
 
-;; whitespace-mode to view all whitespace characters
-(setq show-trailing-whitespace t)
+;; Show trailing whitespace only in code buffers (not minibuffer/special).
+(add-hook 'prog-mode-hook (lambda () (setq-local show-trailing-whitespace t)))
 
 ;; Shortcut to clean whitespaces
 (global-set-key (kbd "C-z w") 'whitespace-cleanup)
