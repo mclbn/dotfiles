@@ -2536,6 +2536,58 @@ exist after each headings's drawers."
       (while (re-search-forward org-babel-src-block-regexp nil t)
         (org-babel-remove-result))))
 
+  ;; Set of function to get auto-preview of Org inline images
+  ;; shortly after a link is typed or pasted
+  (defun my/org-image--preview-region (beg end)
+    "Add missing inline image/link previews between BEG and END."
+    (if (fboundp 'org-link-preview-region)            ; Org 9.8+
+        (org-link-preview-region nil nil beg end)
+      (org-display-inline-images nil nil beg end)))    ; Org <= 9.7
+
+  (defun my/org-image--enabled-p ()
+    "Non-nil when image/link previews are currently shown in this buffer."
+    (if (boundp 'org-link-preview-overlays)            ; Org 9.8+
+        org-link-preview-overlays
+      (bound-and-true-p org-inline-image-overlays)))    ; Org <= 9.7
+
+  ;; debounced refresh
+  (defvar-local my/org-image--timer nil)
+
+  (defun my/org-image--refresh (buffer)
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (when (my/org-image--enabled-p)                ; do nothing if previews are off
+          (with-demoted-errors "Org image auto-preview: %S"
+            (my/org-image--preview-region (point-min) (point-max)))))))
+
+  (defun my/org-image--schedule ()
+    (when (timerp my/org-image--timer)
+      (cancel-timer my/org-image--timer))
+    (setq my/org-image--timer
+          (run-with-idle-timer 1 nil #'my/org-image--refresh (current-buffer))))
+
+  ;; trigger: after closing "]]", a yank, or an org link-insert command
+  ;; If you paste with Evil or CUA rather than C-y, add your paste command
+  ;; (e.g. evil-paste-after, evil-paste-before, cua-paste) to the memq list.
+  ;; And if you insert links via electric-pair or a snippet that drops in
+  ;; the ]] for you, the typed-]] branch won't fire (no ] is self-inserted),
+  ;; but org-insert-link and the yank path still cover the common cases.
+  (defun my/org-image--maybe-schedule ()
+    (when (or (memq this-command
+                    '(yank yank-pop org-yank
+                           mouse-yank-primary mouse-yank-at-click
+                           org-insert-link org-insert-all-links
+                           org-insert-last-stored-link))
+              (and (memq this-command '(self-insert-command org-self-insert-command))
+                   (> (point) 2)
+                   (eq last-command-event ?\])
+                   (eq (char-before (1- (point))) ?\])))   ; just typed the 2nd ]
+      (my/org-image--schedule)))
+
+  (defun my/org-image-auto-preview-setup ()
+    (add-hook 'post-command-hook #'my/org-image--maybe-schedule nil t))
+  (add-hook 'org-mode-hook #'my/org-image-auto-preview-setup)
+
   (add-hook 'org-mode-hook  #'which-function-mode))
 
 ;; ;; company compatibility (https://github.com/company-mode/company-mode/issues/50)
