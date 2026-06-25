@@ -2367,7 +2367,7 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
 ;; Mise
 (use-package mise
   :hook
-  (after-init-hook . global-mise-mode))
+  (prog-mode . global-mise-mode))
 
 ;;; Org-mode
 ;; Main package and settings
