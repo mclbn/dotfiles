@@ -1222,12 +1222,11 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
   ("M-;" . perso/comment-line-or-region))
 
 (use-package ediff
-  :defer
-  :config
-  (setq ediff-split-window-function 'split-window-horizontally)
-  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
-  (setq ediff-diff-options "-w")
-  )
+  :defer t
+    :custom
+  (ediff-split-window-function 'split-window-horizontally)
+  (ediff-window-setup-function 'ediff-setup-windows-plain)
+  (ediff-diff-options "-w"))
 
 ;; Nhexl-mode : better hex editor
 (use-package nhexl-mode)
