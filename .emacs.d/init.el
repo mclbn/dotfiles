@@ -1958,16 +1958,21 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   (add-hook 'org-mode-hook
             (lambda () (perso/capf (list #'pcomplete-completions-at-point))))
 
-  ;; LSP: fires once the server is connected, so lsp-completion-at-point exists.
-  ;; THIS is what keeps dabbrev/yasnippet merged *with* LSP instead of a fallback.
-  (defun perso/capf-lsp ()
-    (perso/capf
-     (list #'lsp-completion-at-point)
-     ;; #include completion in C modes — clangd already does this. To use
-     ;; company-c-headers instead, keep `company'+`company-c-headers' and uncomment:
-     ;; (when (derived-mode-p 'c-mode 'c++-mode 'c-ts-mode 'c++-ts-mode 'objc-mode)
-     ;;   (list (cape-company-to-capf #'company-c-headers)))
-     ))
+  ;; ;; LSP: fires once the server is connected, so lsp-completion-at-point exists.
+  ;; ;; THIS is what keeps dabbrev/yasnippet merged *with* LSP instead of a fallback.
+  ;; (defun perso/capf-lsp ()
+  ;;   (perso/capf
+  ;;    (list #'lsp-completion-at-point)
+  ;;    ;; #include completion in C modes — clangd already does this. To use
+  ;;    ;; company-c-headers instead, keep `company'+`company-c-headers' and uncomment:
+  ;;    ;; (when (derived-mode-p 'c-mode 'c++-mode 'c-ts-mode 'c++-ts-mode 'objc-mode)
+  ;;    ;;   (list (cape-company-to-capf #'company-c-headers)))
+  ;;    ))
+
+  (defun perso/capf-eglot ()
+    (perso/capf (list #'eglot-completion-at-point)))
+  (add-hook 'eglot-managed-mode-hook #'perso/capf-eglot)
+
   (add-hook 'lsp-completion-mode-hook #'perso/capf-lsp))
 
 ;; Snippets as a capf, so they appear in Corfu
@@ -1975,154 +1980,284 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   :after (cape yasnippet))
 
 ;;; IDE-like features
-
-;; LSP-mode : main IDE features
-(use-package lsp-mode
-  :pin melpa ;; the good version is on melpa, not melpa-stable
+;; Eglot : IDE features
+(use-package eglot
+  :ensure t
   :defer t
-  :custom
-  (lsp-keymap-prefix "C-x l")
-  (lsp-enable-file-watchers nil)
-  (lsp-enable-folding nil)
-  (lsp-idle-delay 0.5)
-  (lsp-lens-enable nil)
-  (lsp-keep-workspace-alive nil)
-  (lsp-enable-indentation nil)
-  (lsp-modeline-code-actions-enable t)
-  (lsp-modeline-diagnostics-enable t)
-  (lsp-enable-on-type-formatting nil)
-  (lsp-enable-links nil)
-  (lsp-headerline-breadcrumb-enable t)
-  (lsp-headerline-breadcrumb-enable-diagnostics nil)
-  (lsp-signature-auto-activate nil)
-  (lsp-semantic-tokens-enable nil) ;; managed by color-identifiers-mode
-  (lsp-completion-provider :none) ;; managed by corfu
-  :config
-  (use-package lsp-treemacs
-    :pin melpa) ;; the good version is on melpa, not melpa-stable
-
-  (setq lsp-clients-clangd-args '("-j=2"
-                                  "--header-insertion=never"
-                                  "--header-insertion-decorators=0"
-                                  "--pch-storage=memory"
-                                  "--background-index"
-                                  "--log=error"))
-  :bind (:map lsp-mode-map
-              ("C-c C-f" . lsp-format-buffer))
   :hook
-  (((java-mode python-mode go-mode rust-mode js-mode js2-mode
-               typescript-mode web-mode c-mode c++-mode objc-mode php-mode cmake-mode) . lsp-deferred)
-   (lsp-headerline-breadcrumb-mode . (lambda () (flycheck-mode -1)))
-   (lsp-headerline-breadcrumb-mode . (lambda () (jinx-mode -1))))
-  :commands (lsp lsp-deferred))
-
-;; LSP-booster
-;; Improve JSON parsing performance when using lsp-mode
-;; Require both
-;; - compile lsp-mode with plist deserializaton (see https://emacs-lsp.github.io/lsp-mode/page/performance/#use-plists-for-deserialization)
-;; - installing emacs-lsp-booster (see https://github.com/blahgeek/emacs-lsp-booster)
-(defun lsp-booster--advice-json-parse (old-fn &rest args)
-  "Try to parse bytecode instead of json."
-  (or
-   (when (equal (following-char) ?#)
-     (let ((bytecode (read (current-buffer))))
-       (when (byte-code-function-p bytecode)
-         (funcall bytecode))))
-   (apply old-fn args)))
-(advice-add (if (progn (require 'json)
-                       (fboundp 'json-parse-buffer))
-                'json-parse-buffer
-              'json-read)
-            :around
-            #'lsp-booster--advice-json-parse)
-(defun lsp-booster--advice-final-command (old-fn cmd &optional test?)
-  "Prepend emacs-lsp-booster command to lsp CMD."
-  (let ((orig-result (funcall old-fn cmd test?)))
-    (if (and (not test?)                             ;; for check lsp-server-present?
-             (not (file-remote-p default-directory)) ;; see lsp-resolve-final-command, it would add extra shell wrapper
-             lsp-use-plists
-             (not (functionp 'json-rpc-connection))  ;; native json-rpc
-             (executable-find "emacs-lsp-booster"))
-        (progn
-          (when-let ((command-from-exec-path (executable-find (car orig-result))))  ;; resolve command from exec-path (in case not found in $PATH)
-            (setcar orig-result command-from-exec-path))
-          (message "Using emacs-lsp-booster for %s!" orig-result)
-          (cons "emacs-lsp-booster" orig-result))
-      orig-result)))
-(advice-add 'lsp-resolve-final-command :around #'lsp-booster--advice-final-command)
-
-(use-package lsp-ui
-  :defer t
-  :pin melpa ;; the good version is on melpa, not melpa-stable
+  (((python-mode c-mode c++-mode objc-mode rust-mode php-mode
+     js-mode js2-mode typescript-mode web-mode cmake-mode
+     ;; tree-sitter variants now, so the Emacs 31 switch is mostly free:
+     python-ts-mode c-ts-mode c++-ts-mode rust-ts-mode) . eglot-ensure))
   :custom
-  ;; Let's start by enabling/disabling features
-  (lsp-ui-sideline-enable nil)
-  (lsp-ui-peek-enable t)
-  (lsp-ui-imenu-enable nil)
-  (lsp-ui-doc-enable nil)
-  ;; We prefer the less intruding binding to lsp-ui-doc-glance
-  (lsp-ui-doc-show-with-cursor nil)
-  (lsp-ui-doc-use-childframe t)
-  (lsp-ui-doc-use-webkit nil)
-  (lsp-ui-doc-position 'at-point)
-  (lsp-ui-doc-header t)
-  (lsp-ui-doc-include-signature t)
+  (eglot-autoshutdown t)
+  (eglot-send-changes-idle-time 0.5)
+  (eglot-events-buffer-config '(:size 0 :format full)) ; less overhead; raise only to debug
+  (eglot-extend-to-xref t)
   :config
-  ;; WORKAROUND Hide mode-line of the lsp-ui-imenu buffer
-  ;; (https://github.com/emacs-lsp/lsp-ui/issues/243)
-  (defadvice lsp-ui-imenu (after hide-lsp-ui-imenu-mode-line activate)
-    (setq mode-line-format nil))
-  :bind
-  (:map lsp-ui-mode-map
-        ([remap xref-find-definitions] . lsp-ui-peek-find-definitions) ; M-.
-        ([remap xref-find-references] . lsp-ui-peek-find-references) ; M-?
-        ("C-x l g r" . lsp-ui-peek-find-references) ; always peek
-        ;; ("C-z i" . lsp-ui-doc-glance)
-        ("C-z z i" . lsp-ui-doc-focus-frame))
-  :commands
-  lsp-ui-mode)
+  ;; eglot enables inlay hints by default; you did not have these -> off:
+  ;; FIXME → (add-to-list 'eglot-ignored-server-capabilities :inlayHintProvider)
+  ;; If as-you-type signature info is noisy (~ lsp-signature-auto-activate nil):
+  ;; FIXME → (add-to-list 'eglot-ignored-server-capabilities :signatureHelpProvider)
 
-;; Lsp-pyright : lsp-mode integration for Python
-(use-package lsp-pyright
-  :pin melpa ;; the good version is on melpa, not melpa-stable
-  :ensure t)
+  (add-to-list 'eglot-server-programs
+               '((python-mode python-ts-mode) . ("pyright-langserver" "--stdio")))
+  (add-to-list 'eglot-server-programs
+               '((js2-mode typescript-mode) . ("typescript-language-server" "--stdio")))
+  (add-to-list 'eglot-server-programs
+               '((web-mode) . ("vscode-html-language-server" "--stdio")))
+  ;; NOTE: the C/C++/ObjC entry is defined in Phase 7 (the 3-way switcher).
+  )
+  ;; FIXME → do we want any of this ?
+  ;; :bind
+  ;; (:map eglot-mode-map
+  ;;       ("C-c C-f"   . eglot-format-buffer)   ; was lsp-format-buffer
+  ;;       ("C-x l r"   . eglot-rename)
+  ;;       ("C-x l a"   . eglot-code-actions)    ; was the modeline lightbulb
+  ;;       ("C-x l g r" . xref-find-references))) ; keep your peek-references binding
 
-;; Lsp-java : lsp-mode integration for Java
-(use-package lsp-java
-  :pin melpa ;; the good version is on melpa, not melpa-stable
-  :after lsp-mode
-  :if (executable-find "mvn")
-  :init
-  (use-package request :defer t) ; also requires treemacs?
-  :custom
-  (lsp-java-server-install-dir (expand-file-name "~/.emacs.d/eclipse.jdt.ls/server/"))
-  (lsp-java-workspace-dir (expand-file-name "~/.emacs.d/eclipse.jdt.ls/workspace/"))
+;; Eglot-booster: uses emacs-lsp-booster binary
+(use-package eglot-booster
+  :ensure t
+  :quelpa (eglot-booster :repo "jdtsmith/eglot-booster" :fetcher github :commit "main")
+  :after eglot
+  :config (eglot-booster-mode))
+
+;; Docs on demand
+(use-package eldoc-box
+  :ensure t
+  :after eglot
   )
 
-;; /!\ FIXME DAP-MODE /!\
-(use-package dap-mode
-  :pin melpa ;; the good version is on melpa, not melpa-stable
-  :after (lsp-mode mise-mode)
-  :commands dap-debug
-  :diminish
-  :config
-  (require 'dap-java)
-  (require 'dap-python)
-  (setq dap-python-debugger 'debugpy)
-  (add-hook 'dap-stopped-hook
-            (lambda (arg) (call-interactively #'dap-hydra)))
-  ;;   :config
-  ;;   ;; Could not manage to make any of the following work...
-  ;;   ;; (require 'dap-firefox)
-  ;;   ;; (require 'dap-edge)
-  ;;   ;; (require 'dap-chrome)
-  ;;   ;; (require 'dap-node)
-  ;;   (require 'dap-python)
-  ;;   (require 'dap-lldb)
-  ;;   (require 'dap-php)
-  ;;   (setq dap-lldb-debug-program '("/usr/bin/lldb-vscode"))
-  ;;   (setq dap-python-debugger 'debugpy)
+  ;; FIXME again : needed ?
+  ;; :bind (:map eglot-mode-map
+  ;;             ("C-z z i" . eldoc-box-help-at-point)))
+
+;; Header-line breadcrumb
+(use-package breadcrumb
+  :ensure t
+  :hook (prog-mode . breadcrumb-local-mode))
+
+;; Workspace symbols
+(use-package consult-eglot
+  :ensure t
+  :after (consult eglot)
   )
+  ;; FIXME : again, needed ?
+  ;; :bind (:map eglot-mode-map ("C-x l s" . consult-eglot-symbols)))
+
+
+;; FIXME : should be in consult block ?
+(with-eval-after-load 'consult
+  (setq xref-show-xrefs-function       #'consult-xref
+        xref-show-definitions-function #'consult-xref))
+
+;; FIXME : should be in consult block ?
+(with-eval-after-load 'flymake
+  ;; FIXME : adjust as needed
+  (define-key flymake-mode-map (kbd "C-c ! l") #'consult-flymake)        ; error list
+  (define-key flymake-mode-map (kbd "M-n")     #'flymake-goto-next-error)
+  (define-key flymake-mode-map (kbd "M-p")     #'flymake-goto-prev-error))
+
+;; FIXME : i should keep jinx ? but not flycheck-grammalecte ?
+(add-hook 'eglot-managed-mode-hook
+          (lambda ()
+            (when (eglot-managed-p)
+              ;; (a) server is the only flymake diagnostics source here:
+              (setq-local flymake-diagnostic-functions (list #'eglot-flymake-backend))
+              ;; (b) you used to silence jinx in code buffers. Keep this if you do
+              ;;     NOT want spell-check in comments; delete it if you now want it
+              ;;     (jinx natively restricts itself to comments/strings in prog modes):
+              (jinx-mode -1))))
+
+;; C/C++ server switch functions
+(defvar perso/cc-server 'clangd
+  "Active C/C++/ObjC language server: `clangd', `ccls', or `ccls-esp'.")
+
+(defvar perso/clangd-args
+  '("-j=2" "--header-insertion=never" "--header-insertion-decorators=0"
+    "--pch-storage=memory" "--background-index" "--log=error")
+  "Args passed to clangd (your former lsp-clients-clangd-args).")
+
+(defvar perso/ccls-native-path "ccls"
+  "Executable for the system/native ccls build.")
+
+(defvar perso/ccls-esp-path (expand-file-name "~/src/ccls/Release/ccls")
+  "Executable for the Espressif-LLVM ccls build.")
+
+(defun perso/cc-contact (&optional _interactive _project)
+  "Return the eglot server contact for the currently selected C/C++ server.
+Eglot calls this when (re)connecting; it reads `perso/cc-server'."
+  (pcase perso/cc-server
+    ('ccls     (list perso/ccls-native-path "--log-file=/tmp/ccls.log"))
+    ('ccls-esp (list perso/ccls-esp-path    "--log-file=/tmp/ccls-esp.log"))
+    (_         (cons "clangd" perso/clangd-args))))
+
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs
+               `((c-mode c++-mode objc-mode c-ts-mode c++-ts-mode)
+                 . ,#'perso/cc-contact)))
+
+(defun perso/cc-switch-server (server)
+  "Switch the C/C++/ObjC eglot SERVER and restart it in this buffer.
+SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
+  (interactive
+   (list (intern (completing-read
+                  "C/C++ server: " '("clangd" "ccls" "ccls-esp") nil t))))
+  (setq perso/cc-server server)
+  (when-let ((s (and (fboundp 'eglot-current-server) (eglot-current-server))))
+    (eglot-shutdown s))                  ; reconnect won't re-read the choice; restart instead
+  (when (derived-mode-p 'c-mode 'c++-mode 'objc-mode 'c-ts-mode 'c++-ts-mode)
+    (eglot-ensure))
+  (message "C/C++ server -> %s" server))
+
+;; ;; LSP-mode : main IDE features
+;; (use-package lsp-mode
+;;   :pin melpa ;; the good version is on melpa, not melpa-stable
+;;   :defer t
+;;   :custom
+;;   (lsp-keymap-prefix "C-x l")
+;;   (lsp-enable-file-watchers nil)
+;;   (lsp-enable-folding nil)
+;;   (lsp-idle-delay 0.5)
+;;   (lsp-lens-enable nil)
+;;   (lsp-keep-workspace-alive nil)
+;;   (lsp-enable-indentation nil)
+;;   (lsp-modeline-code-actions-enable t)
+;;   (lsp-modeline-diagnostics-enable t)
+;;   (lsp-enable-on-type-formatting nil)
+;;   (lsp-enable-links nil)
+;;   (lsp-headerline-breadcrumb-enable t)
+;;   (lsp-headerline-breadcrumb-enable-diagnostics nil)
+;;   (lsp-signature-auto-activate nil)
+;;   (lsp-semantic-tokens-enable nil) ;; managed by color-identifiers-mode
+;;   (lsp-completion-provider :none) ;; managed by corfu
+;;   :config
+;;   (use-package lsp-treemacs
+;;     :pin melpa) ;; the good version is on melpa, not melpa-stable
+
+;;   (setq lsp-clients-clangd-args '("-j=2"
+;;                                   "--header-insertion=never"
+;;                                   "--header-insertion-decorators=0"
+;;                                   "--pch-storage=memory"
+;;                                   "--background-index"
+;;                                   "--log=error"))
+;;   :bind (:map lsp-mode-map
+;;               ("C-c C-f" . lsp-format-buffer))
+;;   :hook
+;;   (((java-mode python-mode go-mode rust-mode js-mode js2-mode
+;;                typescript-mode web-mode c-mode c++-mode objc-mode php-mode cmake-mode) . lsp-deferred)
+;;    (lsp-headerline-breadcrumb-mode . (lambda () (flycheck-mode -1)))
+;;    (lsp-headerline-breadcrumb-mode . (lambda () (jinx-mode -1))))
+;;   :commands (lsp lsp-deferred))
+
+;; ;; LSP-booster
+;; ;; Improve JSON parsing performance when using lsp-mode
+;; ;; Require both
+;; ;; - compile lsp-mode with plist deserializaton (see https://emacs-lsp.github.io/lsp-mode/page/performance/#use-plists-for-deserialization)
+;; ;; - installing emacs-lsp-booster (see https://github.com/blahgeek/emacs-lsp-booster)
+;; (defun lsp-booster--advice-json-parse (old-fn &rest args)
+;;   "Try to parse bytecode instead of json."
+;;   (or
+;;    (when (equal (following-char) ?#)
+;;      (let ((bytecode (read (current-buffer))))
+;;        (when (byte-code-function-p bytecode)
+;;          (funcall bytecode))))
+;;    (apply old-fn args)))
+;; (advice-add (if (progn (require 'json)
+;;                        (fboundp 'json-parse-buffer))
+;;                 'json-parse-buffer
+;;               'json-read)
+;;             :around
+;;             #'lsp-booster--advice-json-parse)
+;; (defun lsp-booster--advice-final-command (old-fn cmd &optional test?)
+;;   "Prepend emacs-lsp-booster command to lsp CMD."
+;;   (let ((orig-result (funcall old-fn cmd test?)))
+;;     (if (and (not test?)                             ;; for check lsp-server-present?
+;;              (not (file-remote-p default-directory)) ;; see lsp-resolve-final-command, it would add extra shell wrapper
+;;              lsp-use-plists
+;;              (not (functionp 'json-rpc-connection))  ;; native json-rpc
+;;              (executable-find "emacs-lsp-booster"))
+;;         (progn
+;;           (when-let ((command-from-exec-path (executable-find (car orig-result))))  ;; resolve command from exec-path (in case not found in $PATH)
+;;             (setcar orig-result command-from-exec-path))
+;;           (message "Using emacs-lsp-booster for %s!" orig-result)
+;;           (cons "emacs-lsp-booster" orig-result))
+;;       orig-result)))
+;; (advice-add 'lsp-resolve-final-command :around #'lsp-booster--advice-final-command)
+
+;; (use-package lsp-ui
+;;   :defer t
+;;   :pin melpa ;; the good version is on melpa, not melpa-stable
+;;   :custom
+;;   ;; Let's start by enabling/disabling features
+;;   (lsp-ui-sideline-enable nil)
+;;   (lsp-ui-peek-enable t)
+;;   (lsp-ui-imenu-enable nil)
+;;   (lsp-ui-doc-enable nil)
+;;   ;; We prefer the less intruding binding to lsp-ui-doc-glance
+;;   (lsp-ui-doc-show-with-cursor nil)
+;;   (lsp-ui-doc-use-childframe t)
+;;   (lsp-ui-doc-use-webkit nil)
+;;   (lsp-ui-doc-position 'at-point)
+;;   (lsp-ui-doc-header t)
+;;   (lsp-ui-doc-include-signature t)
+;;   :config
+;;   ;; WORKAROUND Hide mode-line of the lsp-ui-imenu buffer
+;;   ;; (https://github.com/emacs-lsp/lsp-ui/issues/243)
+;;   (defadvice lsp-ui-imenu (after hide-lsp-ui-imenu-mode-line activate)
+;;     (setq mode-line-format nil))
+;;   :bind
+;;   (:map lsp-ui-mode-map
+;;         ([remap xref-find-definitions] . lsp-ui-peek-find-definitions) ; M-.
+;;         ([remap xref-find-references] . lsp-ui-peek-find-references) ; M-?
+;;         ("C-x l g r" . lsp-ui-peek-find-references) ; always peek
+;;         ;; ("C-z i" . lsp-ui-doc-glance)
+;;         ("C-z z i" . lsp-ui-doc-focus-frame))
+;;   :commands
+;;   lsp-ui-mode)
+
+;; ;; Lsp-pyright : lsp-mode integration for Python
+;; (use-package lsp-pyright
+;;   :pin melpa ;; the good version is on melpa, not melpa-stable
+;;   :ensure t)
+
+;; ;; Lsp-java : lsp-mode integration for Java
+;; (use-package lsp-java
+;;   :pin melpa ;; the good version is on melpa, not melpa-stable
+;;   :after lsp-mode
+;;   :if (executable-find "mvn")
+;;   :init
+;;   (use-package request :defer t) ; also requires treemacs?
+;;   :custom
+;;   (lsp-java-server-install-dir (expand-file-name "~/.emacs.d/eclipse.jdt.ls/server/"))
+;;   (lsp-java-workspace-dir (expand-file-name "~/.emacs.d/eclipse.jdt.ls/workspace/"))
+;;   )
+
+;; ;; /!\ FIXME DAP-MODE /!\
+;; (use-package dap-mode
+;;   :pin melpa ;; the good version is on melpa, not melpa-stable
+;;   :after (lsp-mode mise-mode)
+;;   :commands dap-debug
+;;   :diminish
+;;   :config
+;;   (require 'dap-java)
+;;   (require 'dap-python)
+;;   (setq dap-python-debugger 'debugpy)
+;;   (add-hook 'dap-stopped-hook
+;;             (lambda (arg) (call-interactively #'dap-hydra)))
+;;   ;;   :config
+;;   ;;   ;; Could not manage to make any of the following work...
+;;   ;;   ;; (require 'dap-firefox)
+;;   ;;   ;; (require 'dap-edge)
+;;   ;;   ;; (require 'dap-chrome)
+;;   ;;   ;; (require 'dap-node)
+;;   ;;   (require 'dap-python)
+;;   ;;   (require 'dap-lldb)
+;;   ;;   (require 'dap-php)
+;;   ;;   (setq dap-lldb-debug-program '("/usr/bin/lldb-vscode"))
+;;   ;;   (setq dap-python-debugger 'debugpy)
+;;   )
 
 ;; Compile-mode : view compilation output
 (use-package compile
@@ -2154,7 +2289,9 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   (setq python-shell-interpreter "ipython"
         python-shell-interpreter-args "--simple-prompt -i --pprint"
         python-indent-offset 4
-        eldoc-documentation-function #'ignore
+        ;; eldoc-documentation-function #'ignore
+        ;; FIXME : useful ?
+        eldoc-echo-area-use-multiline-p nil
         )
   )
 
@@ -2302,11 +2439,12 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   (rust-format-on-save t)
   :bind (:map rust-mode-map ("C-c C-c" . rust-run))
   :config
-  (use-package flycheck-rust
-    :after flycheck
-    :config
-    (with-eval-after-load 'rust-mode
-      (add-hook 'flycheck-mode-hook #'flycheck-rust-setup))))
+  ;; (use-package flycheck-rust
+  ;;   :after flycheck
+  ;;   :config
+  ;;   (with-eval-after-load 'rust-mode
+  ;;     (add-hook 'flycheck-mode-hook #'flycheck-rust-setup)))
+  )
 
 ;;; Assembly modes and settings
 ;; asm-mode settings
