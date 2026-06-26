@@ -536,7 +536,9 @@
   (consult-customize
    consult-buffer consult-project-buffer
    :preview-key '(:debounce 0.2 any)
-   consult-recent-file :preview-key nil))
+   consult-recent-file :preview-key nil)
+  (setq xref-show-xrefs-function #'consult-xref
+        xref-show-definitions-function #'consult-xref))
 
 (use-package consult-dir
   :ensure t
