@@ -16,7 +16,6 @@
 ;; Properly configure Web mode
 ;; Visual-regexp (https://github.com/benma/visual-regexp.el)
 ;; Have a look at Perspective (https://github.com/nex3/perspective-el and https://alhassy.github.io/emacs.d/#Having-a-workspace-manager-in-Emacs)
-;; Try eglot + flymake as an alternative to lsp-mode + flycheck
 ;; Removed color-rg, could try again if needed
 ;; Combobulate (use treesitter to manipulate code) :
 ;; https://www.masteringemacs.org/article/combobulate-structured-movement-editing-treesitter
@@ -525,6 +524,7 @@
    ("C-z l"   . consult-locate)
    ("C-z SPC" . consult-mark)
    ("C-z i"   . consult-imenu)
+   ("M-y" . consult-yank-from-kill-ring)
    ([remap goto-line] . consult-goto-line))
   :config
   ;; Use Projectile to define "the project" for consult-project-* commands
@@ -589,6 +589,14 @@
   :config
   (projectile-mode 1)
   (add-to-list 'projectile-globally-ignored-directories "node_modules"))
+
+;; Project.el : not the main package used for now
+;; So compatibility fix for eglot
+(defun my/project-try-projectile (dir)
+  "Return projectile project root for DIR as a project.el project."
+  (when-let ((root (projectile-project-root dir)))
+    (cons 'transient root)))
+(add-hook 'project-find-functions #'my/project-try-projectile)
 
 ;; Magit : Git interface
 (use-package magit
@@ -882,12 +890,12 @@
                  (mode . yaml-mode)
                  (mode . i3wm-config-mode)))
       ("C / C++" (or
-              (mode . c-mode)
-              (mode . c++-mode)
-              (mode . c++-ts-mode)
-              (mode . c-ts-mode)
-              (mode . c-or-c++-ts-mode)
-              (mode . platformio-mode)))
+                  (mode . c-mode)
+                  (mode . c++-mode)
+                  (mode . c++-ts-mode)
+                  (mode . c-ts-mode)
+                  (mode . c-or-c++-ts-mode)
+                  (mode . platformio-mode)))
       ("Python" (or
                  (mode . python-ts-mode)
                  (mode . python-mode)))
@@ -987,7 +995,7 @@
            " " (size-h 9 -1 :right)
            " " (mode+ 16 16 :left :elide)
            " " filename-and-process)
-     ;; FIXME : it would be nice to have a hook on ip to
+     ;; FIXME : it would be nice to have a hook on ii to
      ;; call ibuffer-vc-set-filter-groups-by-vc-root
      ;; when switching to this format
      (mark modified read-only locked vc-status-mini
@@ -1219,28 +1227,26 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 
 ;; Pos-tip : required by other modules
 ;; at least popup-kill-ring and company-quickhelp
+;; FIXME : check if still true, we may be able to remove it now
 (use-package pos-tip
   :pin melpa ;; the good version is on melpa
   )
 
-;; Pop-up kill ring
-(use-package popup-kill-ring
-  :bind ("M-y" . popup-kill-ring))
-
+;; Yank-media binding
 (global-set-key (kbd "C-c y") 'yank-media)
 
 ;; Custom function to swap clipboard with content
 (defun clipboard-swap ()
   "Swaps the clipboard contents with the highlighted region."
-       (interactive)
-       (if (use-region-p)
-           (let ((reg-beg (region-beginning))
-                 (reg-end (region-end)))
-             (deactivate-mark)
-             (goto-char reg-end)
-             (clipboard-yank)
-             (clipboard-kill-region reg-beg reg-end))
-         (clipboard-yank)))
+  (interactive)
+  (if (use-region-p)
+      (let ((reg-beg (region-beginning))
+            (reg-end (region-end)))
+        (deactivate-mark)
+        (goto-char reg-end)
+        (clipboard-yank)
+        (clipboard-kill-region reg-beg reg-end))
+    (clipboard-yank)))
 (global-set-key (kbd "C-z y") 'clipboard-swap) ; Yank with the Shift key to swap instead of paste.
 
 ;; Custom funtion to copy full path
@@ -1336,7 +1342,7 @@ FACE defaults to inheriting from default and highlight."
     "Toggle whitespace line tails highlighting"
     (interactive)
     (whitespace-toggle-options 'lines-tail))
-  (bind-key "C-x l" #'perso/whitespace-lines-tail)
+  (bind-key "C-z C-l" #'perso/whitespace-lines-tail)
   )
 
 (add-hook 'prog-mode-hook 'whitespace-mode)
@@ -1352,7 +1358,6 @@ FACE defaults to inheriting from default and highlight."
 
 ;; Wrap lines in compilation and flycheck buffers
 (add-hook 'compilation-mode-hook 'visual-line-mode)
-(add-hook 'flycheck-error-list-mode-hook 'visual-line-mode)
 
 ;; Page-break-lines : enable to show ^L as straight horizontal lines
 (use-package page-break-lines
@@ -1383,9 +1388,13 @@ FACE defaults to inheriting from default and highlight."
 (defvar-local perso/buffer-is-french nil
   "Non-nil when Grammalecte should grammar-check the current buffer.")
 
-(defun perso/grammalecte-predicate ()
-  "Flycheck predicate: run Grammalecte only in French buffers."
-  perso/buffer-is-french)
+(defun perso/grammalecte-flymake (report-fn &rest args)
+  "Flymake backend: run Grammalecte, but only in French buffers.
+In non-French buffers it reports no diagnostics, which clears any
+stale French overlays on the next check."
+  (if perso/buffer-is-french
+      (apply (flymake-flycheck-diagnostic-function-for 'grammalecte) report-fn args)
+    (funcall report-fn nil)))
 
 (defun perso/set-checkers-language (lang typo-lang)
   "Restrict Jinx to LANG, switch Typo to TYPO-LANG, toggle Grammalecte.
@@ -1397,51 +1406,47 @@ French grammar checking follows the chosen language."
   ;; Grammalecte follows the chosen language:
   (setq perso/buffer-is-french
         (and (string-match-p "fr" lang) (not (string-match-p "en" lang))))
-  (when (bound-and-true-p flycheck-mode)
-    (flycheck-clear)     ; drop any stale French overlays when leaving French
-    (flycheck-buffer)))  ; re-run; grammalecte runs only if now French
+  (when (bound-and-true-p flymake-mode)
+    (flymake-start nil t)))   ; force re-run: clears French overlays unless now French
 
 (defun perso/set-language-french ()
   "Switch all text checkers in this buffer to French."
   (interactive)
   (perso/set-checkers-language "fr_FR" "French"))
-
 (defun perso/set-language-english ()
   "Switch all text checkers in this buffer to English."
   (interactive)
   (perso/set-checkers-language "en_US" "English"))
-
 (bind-key "C-c f" #'perso/set-language-french)
 (bind-key "C-c e" #'perso/set-language-english)
 
-;; Flycheck
-(use-package flycheck
-  :diminish
-  :hook
-  (after-init . global-flycheck-mode)
-  :bind
-  ("C-c g" . flycheck-mode)
+;; Flymake : on-the-fly error checking
+(use-package flymake
   :custom
-  (flycheck-checker-error-threshold nil)
-  (flycheck-global-modes '(not . (elfeed-search-mode)))
-  (flycheck-disabled-checkers '(org-lint))
-  :config
-  (use-package flycheck-pos-tip
-    :config
-    (with-eval-after-load 'flycheck (flycheck-pos-tip-mode)))
-  (add-to-list 'display-buffer-alist
-               `(,(rx bos "*Flycheck errors*" eos)
-                 (display-buffer-reuse-window
-                  display-buffer-in-side-window)
-                 (side            . bottom)
-                 (reusable-frames . visible)
-                 (window-height   . 0.33))))
+  (flymake-no-changes-timeout 0.5)
+  (flymake-fringe-indicator-position 'right-fringe)
+  :hook (emacs-lisp-mode . flymake-mode))
+
+;; Flymake-collection : linting for non-LSP languages
+;; (json, yaml, shell, dockerfile, ...)
+(use-package flymake-collection
+  :ensure t
+  :hook (after-init . flymake-collection-hook-setup))
+
+(dolist (h '(sh-mode-hook bash-ts-mode-hook
+             yaml-mode-hook yaml-ts-mode-hook
+             json-mode-hook js-json-mode-hook json-ts-mode-hook
+             dockerfile-mode-hook))
+  (add-hook h #'flymake-mode))
+
+;; Flymake-flycheck : to use flycheck
+;; checkers as flymake backends
+(use-package flymake-flycheck :defer t)
 
 ;; Flycheck-grammalecte : french syntax checking
 ;; Requires running M-x grammalecte-download-grammalecte once
 (use-package flycheck-grammalecte
-  :ensure t
-  :after flycheck
+  :defer t
   :init
   (setq flycheck-grammalecte-report-spellcheck nil
         flycheck-grammalecte-report-grammar t
@@ -1469,8 +1474,26 @@ French grammar checking follows the chosen language."
           (message-mode "(?m)^[ \t]*(?:[\\w_.]+>|[]>|]).*")))
   (setq grammalecte-python-package-directory
         (expand-file-name "grammalecte" user-emacs-directory))
-  (setq flycheck-grammalecte-predicate #'perso/grammalecte-predicate)
+  ;; (setq flycheck-grammalecte-predicate #'perso/grammalecte-predicate)
   (flycheck-grammalecte-setup))
+
+;; Prose modes for grammalecte to check.
+;; text-mode also covers Magit commit buffers,
+;; whose default major mode is text-mode.
+(defvar my/grammalecte-modes
+  '(text-mode latex-mode mail-mode markdown-mode
+              message-mode mu4e-compose-mode org-mode)
+  "Major modes in which Grammalecte runs as a Flymake backend.")
+
+(defun my/grammalecte-flymake ()
+  "Enable Flymake with Grammalecte as its only backend, in prose buffers."
+  (when (memq major-mode my/grammalecte-modes)
+    (require 'flycheck-grammalecte)       ; ensure the `grammalecte' checker exists
+    (require 'flymake-flycheck)
+    (add-hook 'flymake-diagnostic-functions #'perso/grammalecte-flymake nil t)
+    (flymake-mode 1)))
+
+(add-hook 'after-change-major-mode-hook #'my/grammalecte-flymake)
 
 ;; Jinx : fast, multi-language spell-checking via Enchant
 ;; First launch compiles jinx-mod.c;
@@ -1808,14 +1831,14 @@ defines the functions WRAP-WITH-PAREN and WRAP-WITH-BRACKET,
 respectively."
     `(progn
        ,@(cl-loop for (key . val) in pairs
-               collect
-               `(defun ,(read (concat
-                               "wrap-with-"
-                               (prin1-to-string key)
-                               "s"))
-                    (&optional arg)
-                  (interactive "p")
-                  (sp-wrap-with-pair ,val)))))
+                  collect
+                  `(defun ,(read (concat
+                                  "wrap-with-"
+                                  (prin1-to-string key)
+                                  "s"))
+                       (&optional arg)
+                     (interactive "p")
+                     (sp-wrap-with-pair ,val)))))
 
   (def-pairs ((paren . "(")
               (bracket . "[")
@@ -1950,7 +1973,11 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   ;; Generic case: capture the capf the mode already set (Elisp, Lua, sh, markdown,
   ;; plain text…) and merge the extras onto it.
   (defun perso/capf-here ()
-    (perso/capf (remq t completion-at-point-functions)))
+    ;; (perso/capf (remq t completion-at-point-functions)))
+    ;; Drop ispell's capf — it errors when no word-list is installed.
+    (perso/capf (seq-remove (lambda (f) (eq f #'ispell-completion-at-point))
+                            (remq t completion-at-point-functions))))
+
   (add-hook 'prog-mode-hook #'perso/capf-here)
   (add-hook 'text-mode-hook #'perso/capf-here)
 
@@ -1968,12 +1995,14 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   ;;    ;; (when (derived-mode-p 'c-mode 'c++-mode 'c-ts-mode 'c++-ts-mode 'objc-mode)
   ;;    ;;   (list (cape-company-to-capf #'company-c-headers)))
   ;;    ))
+  ;;
+  ;; (add-hook 'lsp-completion-mode-hook #'perso/capf-lsp))
 
   (defun perso/capf-eglot ()
-    (perso/capf (list #'eglot-completion-at-point)))
-  (add-hook 'eglot-managed-mode-hook #'perso/capf-eglot)
-
-  (add-hook 'lsp-completion-mode-hook #'perso/capf-lsp))
+    (perso/capf
+     (list (lambda ()
+             (when (eglot-current-server) (eglot-completion-at-point))))))
+  (add-hook 'eglot-managed-mode-hook #'perso/capf-eglot))
 
 ;; Snippets as a capf, so they appear in Corfu
 (use-package yasnippet-capf
@@ -1985,38 +2014,36 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   :ensure t
   :defer t
   :hook
+  ;; FIXME : should i use prog-mode directly ?
   (((python-mode c-mode c++-mode objc-mode rust-mode php-mode
-     js-mode js2-mode typescript-mode web-mode cmake-mode
-     ;; tree-sitter variants now, so the Emacs 31 switch is mostly free:
-     python-ts-mode c-ts-mode c++-ts-mode rust-ts-mode) . eglot-ensure))
+                 js-mode js2-mode typescript-mode web-mode cmake-mode
+                 ;; tree-sitter variants now, so the Emacs 31 switch is mostly free:
+                 python-ts-mode c-ts-mode c++-ts-mode rust-ts-mode) . eglot-ensure))
   :custom
   (eglot-autoshutdown t)
   (eglot-send-changes-idle-time 0.5)
   (eglot-events-buffer-config '(:size 0 :format full)) ; less overhead; raise only to debug
   (eglot-extend-to-xref t)
   :config
-  ;; eglot enables inlay hints by default; you did not have these -> off:
-  ;; FIXME → (add-to-list 'eglot-ignored-server-capabilities :inlayHintProvider)
-  ;; If as-you-type signature info is noisy (~ lsp-signature-auto-activate nil):
-  ;; FIXME → (add-to-list 'eglot-ignored-server-capabilities :signatureHelpProvider)
-
   (add-to-list 'eglot-server-programs
                '((python-mode python-ts-mode) . ("pyright-langserver" "--stdio")))
   (add-to-list 'eglot-server-programs
                '((js2-mode typescript-mode) . ("typescript-language-server" "--stdio")))
   (add-to-list 'eglot-server-programs
                '((web-mode) . ("vscode-html-language-server" "--stdio")))
-  ;; NOTE: the C/C++/ObjC entry is defined in Phase 7 (the 3-way switcher).
-  )
-  ;; FIXME → do we want any of this ?
-  ;; :bind
-  ;; (:map eglot-mode-map
-  ;;       ("C-c C-f"   . eglot-format-buffer)   ; was lsp-format-buffer
-  ;;       ("C-x l r"   . eglot-rename)
-  ;;       ("C-x l a"   . eglot-code-actions)    ; was the modeline lightbulb
-  ;;       ("C-x l g r" . xref-find-references))) ; keep your peek-references binding
+  ;; the C/C++/ObjC entry is defined later
+  :bind
+  (:map eglot-mode-map
+        ("C-x l f"   . eglot-format-buffer)
+        ("C-x l r"   . eglot-rename)
+        ("C-x l a"   . eglot-code-actions)
+        ("C-x l g r" . xref-find-references)))
 
 ;; Eglot-booster: uses emacs-lsp-booster binary
+;; Improve JSON parsing performance when using lsp-mode
+;; Require both
+;; - compile lsp-mode with plist deserializaton (see https://emacs-lsp.github.io/lsp-mode/page/performance/#use-plists-for-deserialization)
+;; - installing emacs-lsp-booster (see https://github.com/blahgeek/emacs-lsp-booster)
 (use-package eglot-booster
   :ensure t
   :quelpa (eglot-booster :repo "jdtsmith/eglot-booster" :fetcher github :commit "main")
@@ -2027,11 +2054,8 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
 (use-package eldoc-box
   :ensure t
   :after eglot
-  )
-
-  ;; FIXME again : needed ?
-  ;; :bind (:map eglot-mode-map
-  ;;             ("C-z z i" . eldoc-box-help-at-point)))
+  :bind
+  (:map eglot-mode-map ("C-x l i" . eldoc-box-help-at-point)))
 
 ;; Header-line breadcrumb
 (use-package breadcrumb
@@ -2042,33 +2066,23 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
 (use-package consult-eglot
   :ensure t
   :after (consult eglot)
-  )
-  ;; FIXME : again, needed ?
-  ;; :bind (:map eglot-mode-map ("C-x l s" . consult-eglot-symbols)))
-
+  :bind (:map eglot-mode-map ("C-x l s" . consult-eglot-symbols)))
 
 ;; FIXME : should be in consult block ?
 (with-eval-after-load 'consult
   (setq xref-show-xrefs-function       #'consult-xref
         xref-show-definitions-function #'consult-xref))
 
-;; FIXME : should be in consult block ?
+;; FIXME : should be in consult / flymake block ?
 (with-eval-after-load 'flymake
-  ;; FIXME : adjust as needed
-  (define-key flymake-mode-map (kbd "C-c ! l") #'consult-flymake)        ; error list
+  (define-key flymake-mode-map (kbd "C-x l !") #'consult-flymake)
   (define-key flymake-mode-map (kbd "M-n")     #'flymake-goto-next-error)
   (define-key flymake-mode-map (kbd "M-p")     #'flymake-goto-prev-error))
 
-;; FIXME : i should keep jinx ? but not flycheck-grammalecte ?
 (add-hook 'eglot-managed-mode-hook
           (lambda ()
             (when (eglot-managed-p)
-              ;; (a) server is the only flymake diagnostics source here:
-              (setq-local flymake-diagnostic-functions (list #'eglot-flymake-backend))
-              ;; (b) you used to silence jinx in code buffers. Keep this if you do
-              ;;     NOT want spell-check in comments; delete it if you now want it
-              ;;     (jinx natively restricts itself to comments/strings in prog modes):
-              (jinx-mode -1))))
+              (setq-local flymake-diagnostic-functions (list #'eglot-flymake-backend)))))
 
 ;; C/C++ server switch functions
 (defvar perso/cc-server 'clangd
@@ -2111,153 +2125,17 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
     (eglot-ensure))
   (message "C/C++ server -> %s" server))
 
-;; ;; LSP-mode : main IDE features
-;; (use-package lsp-mode
-;;   :pin melpa ;; the good version is on melpa, not melpa-stable
-;;   :defer t
-;;   :custom
-;;   (lsp-keymap-prefix "C-x l")
-;;   (lsp-enable-file-watchers nil)
-;;   (lsp-enable-folding nil)
-;;   (lsp-idle-delay 0.5)
-;;   (lsp-lens-enable nil)
-;;   (lsp-keep-workspace-alive nil)
-;;   (lsp-enable-indentation nil)
-;;   (lsp-modeline-code-actions-enable t)
-;;   (lsp-modeline-diagnostics-enable t)
-;;   (lsp-enable-on-type-formatting nil)
-;;   (lsp-enable-links nil)
-;;   (lsp-headerline-breadcrumb-enable t)
-;;   (lsp-headerline-breadcrumb-enable-diagnostics nil)
-;;   (lsp-signature-auto-activate nil)
-;;   (lsp-semantic-tokens-enable nil) ;; managed by color-identifiers-mode
-;;   (lsp-completion-provider :none) ;; managed by corfu
-;;   :config
-;;   (use-package lsp-treemacs
-;;     :pin melpa) ;; the good version is on melpa, not melpa-stable
-
-;;   (setq lsp-clients-clangd-args '("-j=2"
-;;                                   "--header-insertion=never"
-;;                                   "--header-insertion-decorators=0"
-;;                                   "--pch-storage=memory"
-;;                                   "--background-index"
-;;                                   "--log=error"))
-;;   :bind (:map lsp-mode-map
-;;               ("C-c C-f" . lsp-format-buffer))
-;;   :hook
-;;   (((java-mode python-mode go-mode rust-mode js-mode js2-mode
-;;                typescript-mode web-mode c-mode c++-mode objc-mode php-mode cmake-mode) . lsp-deferred)
-;;    (lsp-headerline-breadcrumb-mode . (lambda () (flycheck-mode -1)))
-;;    (lsp-headerline-breadcrumb-mode . (lambda () (jinx-mode -1))))
-;;   :commands (lsp lsp-deferred))
-
-;; ;; LSP-booster
-;; ;; Improve JSON parsing performance when using lsp-mode
-;; ;; Require both
-;; ;; - compile lsp-mode with plist deserializaton (see https://emacs-lsp.github.io/lsp-mode/page/performance/#use-plists-for-deserialization)
-;; ;; - installing emacs-lsp-booster (see https://github.com/blahgeek/emacs-lsp-booster)
-;; (defun lsp-booster--advice-json-parse (old-fn &rest args)
-;;   "Try to parse bytecode instead of json."
-;;   (or
-;;    (when (equal (following-char) ?#)
-;;      (let ((bytecode (read (current-buffer))))
-;;        (when (byte-code-function-p bytecode)
-;;          (funcall bytecode))))
-;;    (apply old-fn args)))
-;; (advice-add (if (progn (require 'json)
-;;                        (fboundp 'json-parse-buffer))
-;;                 'json-parse-buffer
-;;               'json-read)
-;;             :around
-;;             #'lsp-booster--advice-json-parse)
-;; (defun lsp-booster--advice-final-command (old-fn cmd &optional test?)
-;;   "Prepend emacs-lsp-booster command to lsp CMD."
-;;   (let ((orig-result (funcall old-fn cmd test?)))
-;;     (if (and (not test?)                             ;; for check lsp-server-present?
-;;              (not (file-remote-p default-directory)) ;; see lsp-resolve-final-command, it would add extra shell wrapper
-;;              lsp-use-plists
-;;              (not (functionp 'json-rpc-connection))  ;; native json-rpc
-;;              (executable-find "emacs-lsp-booster"))
-;;         (progn
-;;           (when-let ((command-from-exec-path (executable-find (car orig-result))))  ;; resolve command from exec-path (in case not found in $PATH)
-;;             (setcar orig-result command-from-exec-path))
-;;           (message "Using emacs-lsp-booster for %s!" orig-result)
-;;           (cons "emacs-lsp-booster" orig-result))
-;;       orig-result)))
-;; (advice-add 'lsp-resolve-final-command :around #'lsp-booster--advice-final-command)
-
-;; (use-package lsp-ui
-;;   :defer t
-;;   :pin melpa ;; the good version is on melpa, not melpa-stable
-;;   :custom
-;;   ;; Let's start by enabling/disabling features
-;;   (lsp-ui-sideline-enable nil)
-;;   (lsp-ui-peek-enable t)
-;;   (lsp-ui-imenu-enable nil)
-;;   (lsp-ui-doc-enable nil)
-;;   ;; We prefer the less intruding binding to lsp-ui-doc-glance
-;;   (lsp-ui-doc-show-with-cursor nil)
-;;   (lsp-ui-doc-use-childframe t)
-;;   (lsp-ui-doc-use-webkit nil)
-;;   (lsp-ui-doc-position 'at-point)
-;;   (lsp-ui-doc-header t)
-;;   (lsp-ui-doc-include-signature t)
-;;   :config
-;;   ;; WORKAROUND Hide mode-line of the lsp-ui-imenu buffer
-;;   ;; (https://github.com/emacs-lsp/lsp-ui/issues/243)
-;;   (defadvice lsp-ui-imenu (after hide-lsp-ui-imenu-mode-line activate)
-;;     (setq mode-line-format nil))
-;;   :bind
-;;   (:map lsp-ui-mode-map
-;;         ([remap xref-find-definitions] . lsp-ui-peek-find-definitions) ; M-.
-;;         ([remap xref-find-references] . lsp-ui-peek-find-references) ; M-?
-;;         ("C-x l g r" . lsp-ui-peek-find-references) ; always peek
-;;         ;; ("C-z i" . lsp-ui-doc-glance)
-;;         ("C-z z i" . lsp-ui-doc-focus-frame))
-;;   :commands
-;;   lsp-ui-mode)
-
-;; ;; Lsp-pyright : lsp-mode integration for Python
-;; (use-package lsp-pyright
-;;   :pin melpa ;; the good version is on melpa, not melpa-stable
-;;   :ensure t)
-
-;; ;; Lsp-java : lsp-mode integration for Java
-;; (use-package lsp-java
-;;   :pin melpa ;; the good version is on melpa, not melpa-stable
-;;   :after lsp-mode
-;;   :if (executable-find "mvn")
-;;   :init
-;;   (use-package request :defer t) ; also requires treemacs?
-;;   :custom
-;;   (lsp-java-server-install-dir (expand-file-name "~/.emacs.d/eclipse.jdt.ls/server/"))
-;;   (lsp-java-workspace-dir (expand-file-name "~/.emacs.d/eclipse.jdt.ls/workspace/"))
-;;   )
-
-;; ;; /!\ FIXME DAP-MODE /!\
-;; (use-package dap-mode
-;;   :pin melpa ;; the good version is on melpa, not melpa-stable
-;;   :after (lsp-mode mise-mode)
-;;   :commands dap-debug
-;;   :diminish
-;;   :config
-;;   (require 'dap-java)
-;;   (require 'dap-python)
-;;   (setq dap-python-debugger 'debugpy)
-;;   (add-hook 'dap-stopped-hook
-;;             (lambda (arg) (call-interactively #'dap-hydra)))
-;;   ;;   :config
-;;   ;;   ;; Could not manage to make any of the following work...
-;;   ;;   ;; (require 'dap-firefox)
-;;   ;;   ;; (require 'dap-edge)
-;;   ;;   ;; (require 'dap-chrome)
-;;   ;;   ;; (require 'dap-node)
-;;   ;;   (require 'dap-python)
-;;   ;;   (require 'dap-lldb)
-;;   ;;   (require 'dap-php)
-;;   ;;   (setq dap-lldb-debug-program '("/usr/bin/lldb-vscode"))
-;;   ;;   (setq dap-python-debugger 'debugpy)
-;;   )
+;; DAPE : debugging mode
+(use-package dape
+  :ensure t
+  :commands dape
+  :custom
+  (dape-buffer-window-arrangement 'right)
+  (dape-cwd-function #'projectile-project-root) ; FIXME : change if switching to project.el
+  :config
+  ;; Optional niceties:
+  ;; (dape-breakpoint-global-mode 1)               ; set breakpoints with the mouse
+  )
 
 ;; Compile-mode : view compilation output
 (use-package compile
@@ -2289,9 +2167,6 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
   (setq python-shell-interpreter "ipython"
         python-shell-interpreter-args "--simple-prompt -i --pprint"
         python-indent-offset 4
-        ;; eldoc-documentation-function #'ignore
-        ;; FIXME : useful ?
-        eldoc-echo-area-use-multiline-p nil
         )
   )
 
@@ -2314,11 +2189,9 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
 ;; Python-mode settings
 (use-package python-mode
   :ensure nil
-  :after flycheck
   :mode "\\.py\\'"
   :custom
-  (python-indent-offset 4)
-  )
+  (python-indent-offset 4))
 
 ;; ;; Pyenv : managing python version/venv with pyenv and pyenv-virtualenv
 ;; ;; Had to fork it to make it buffer-local because it has global keybindings
@@ -2367,7 +2240,7 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
     (indent-tabs-mode . nil)
     (c-basic-offset . 4)
     (c-comment-only-line-offset . 0)
-    ; default but we have a custom function : perso/comment-line-or-region
+                                        ; default but we have a custom function : perso/comment-line-or-region
     (comment-style . extra-line)
     (c-offsets-alist
      (substatement-open . 0)
@@ -2400,16 +2273,16 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
     (setq ccls-executable "ccls")
     (lsp-restart-workspace))
 
-  (setq ccls-args '("--log-file=/tmp/ccls.log"))
-  :hook ((c-mode c++-mode objc-mode cuda-mode) .
-         (lambda () (require 'ccls) (lsp))))
+  (setq ccls-args '("--log-file=/tmp/ccls.log")))
+;; :hook ((c-mode c++-mode objc-mode cuda-mode) .
+;;        (lambda () (require 'ccls) (lsp))))
 
 ;; Arduino / Teensy specific C / C++ code
 (use-package platformio-mode
   :diminish
   :config
   (add-hook 'c++-mode-hook (lambda ()
-                             (lsp-deferred)
+                             ;; (lsp-deferred)
                              (platformio-conditionally-enable)))
   )
 
@@ -2991,18 +2864,18 @@ exist after each headings's drawers."
           :min-width 40
           :min-height 10
           :poshandler posframe-poshandler-window-center))
-   :hook
-   ((dired-mode-hook . org-download-enable)
-    (org-mode-hook . org-download-enable)
-    (org-mode-hook . (lambda ()
-                       (local-set-key (kbd "C-c y") '(lambda ()
-                                                       (interactive)
-                                                       (org-download-clipboard)
-                                                       (org-download-rename-last-file)))))
-    (org-mode-hook . (lambda ()
-                       (local-set-key (kbd "C-c x") '(lambda ()
-                                                       (interactive)
-                                                       (org-download-screenshot)))))))
+  :hook
+  ((dired-mode-hook . org-download-enable)
+   (org-mode-hook . org-download-enable)
+   (org-mode-hook . (lambda ()
+                      (local-set-key (kbd "C-c y") '(lambda ()
+                                                      (interactive)
+                                                      (org-download-clipboard)
+                                                      (org-download-rename-last-file)))))
+   (org-mode-hook . (lambda ()
+                      (local-set-key (kbd "C-c x") '(lambda ()
+                                                      (interactive)
+                                                      (org-download-screenshot)))))))
 
 (use-package org-appear
   :custom
@@ -3376,8 +3249,8 @@ This is a modified version of `mu4e-view-save-attachments'."
     :models '(qwen35-4b
               qwen25-coder-7b
               gemma4-12b))
-   (setq gptel-backend (gptel-get-backend "llama-cpp-main")
-         gptel-model 'qwen36-27b-opti)
+  (setq gptel-backend (gptel-get-backend "llama-cpp-main")
+        gptel-model 'qwen36-27b-opti)
 
   ;; General settings
   (setq
@@ -3439,58 +3312,58 @@ This is a modified version of `mu4e-view-save-attachments'."
 
   ;;; Presets
   (gptel-make-preset 'eli5
-    :system "Explain like I am 5 years old."
-    :use-tools t
-    :tools '("web_url_read" "searxng_web_search"))
+                     :system "Explain like I am 5 years old."
+                     :use-tools t
+                     :tools '("web_url_read" "searxng_web_search"))
 
   (gptel-make-preset 'websearch
-    :description "Web search"
-    :pre (lambda ()
-           (gptel-mcp-connect '("searxng") 'sync nil))
-    :use-tools t
-    :tools '("web_url_read" "searxng_web_search")
-    :system "Use the provided tools to search the web for up-to-date information.")
+                     :description "Web search"
+                     :pre (lambda ()
+                            (gptel-mcp-connect '("searxng") 'sync nil))
+                     :use-tools t
+                     :tools '("web_url_read" "searxng_web_search")
+                     :system "Use the provided tools to search the web for up-to-date information.")
 
   (gptel-make-preset 'creative
-    :description "Quick creative — high temp, no tools"
-    :temperature 1
-    :tools nil :use-tools nil
-    :system "You are an imaginative creative collaborator. Offer vivid, varied ideas.")
+                     :description "Quick creative — high temp, no tools"
+                     :temperature 1
+                     :tools nil :use-tools nil
+                     :system "You are an imaginative creative collaborator. Offer vivid, varied ideas.")
 
   (gptel-make-preset 'research
-    :description "Research — autonomous web search, bounded"
-    :temperature 0.6
-    :pre (lambda ()
-           (gptel-mcp-connect '("searxng") 'sync nil))
-    :use-tools t :tools '("searxng_web_search" "web_url_read" "searxng_instance_info" "searxng_search_suggestions")
-    :system "You are a research assistant. Plan, then perform AT MOST 10 searches, reading the most relevant results, then synthesize a sourced answer. Stop searching once you can answer. You can use search engine suggestions to find related information.")
+                     :description "Research — autonomous web search, bounded"
+                     :temperature 0.6
+                     :pre (lambda ()
+                            (gptel-mcp-connect '("searxng") 'sync nil))
+                     :use-tools t :tools '("searxng_web_search" "web_url_read" "searxng_instance_info" "searxng_search_suggestions")
+                     :system "You are a research assistant. Plan, then perform AT MOST 10 searches, reading the most relevant results, then synthesize a sourced answer. Stop searching once you can answer. You can use search engine suggestions to find related information.")
 
   (gptel-make-preset 'programmer
-    :description "Careful senior programmer — precise, fs-read + web"
-    :temperature 0.7
-    :pre (lambda ()
-           (gptel-mcp-connect '("searxng") 'sync nil))
-    :use-tools t
-    :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
-    :system "You are a careful senior programmer. Reason carefully about design tradeoffs. Use file reads and web search to ground claims. Try to provide code and only code as output without any additional text, prompt or note. If you cannot provide only code, be clear and concise.")
+                     :description "Careful senior programmer — precise, fs-read + web"
+                     :temperature 0.7
+                     :pre (lambda ()
+                            (gptel-mcp-connect '("searxng") 'sync nil))
+                     :use-tools t
+                     :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
+                     :system "You are a careful senior programmer. Reason carefully about design tradeoffs. Use file reads and web search to ground claims. Try to provide code and only code as output without any additional text, prompt or note. If you cannot provide only code, be clear and concise.")
 
   (gptel-make-preset 'architect
-    :description "Architecture/brainstorm — precise, fs-read + web"
-    :temperature 0.7
-    :pre (lambda ()
-           (gptel-mcp-connect '("searxng") 'sync nil))
-    :use-tools t
-    :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
-    :system "You are a senior software architect. Reason carefully about design tradeoffs. Use file reads and web search to ground claims.")
+                     :description "Architecture/brainstorm — precise, fs-read + web"
+                     :temperature 0.7
+                     :pre (lambda ()
+                            (gptel-mcp-connect '("searxng") 'sync nil))
+                     :use-tools t
+                     :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
+                     :system "You are a senior software architect. Reason carefully about design tradeoffs. Use file reads and web search to ground claims.")
 
   (gptel-make-preset 'rag
-    :description "Document RAG — low temp, grounded"
-    :temperature 0.1
-    :pre (lambda ()
-           (gptel-mcp-connect '("searxng") 'sync nil))
-    :use-tools t
-    :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
-    :system "Answer strictly from retrieved context (corpus or fetched pages). If the sources don't contain the answer, say so. Do not speculate. Only provide information from your context.")
+                     :description "Document RAG — low temp, grounded"
+                     :temperature 0.1
+                     :pre (lambda ()
+                            (gptel-mcp-connect '("searxng") 'sync nil))
+                     :use-tools t
+                     :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
+                     :system "Answer strictly from retrieved context (corpus or fetched pages). If the sources don't contain the answer, say so. Do not speculate. Only provide information from your context.")
 
   ;; A custom function to open a single gptel session
   (defun perso/gptel ()
@@ -3501,21 +3374,21 @@ This is a modified version of `mu4e-view-save-attachments'."
     (disable-text-analysis-modes)
     (delete-other-windows))
 
-(use-package gptel-quick
-  :quelpa (gptel-quick :repo "karthink/gptel-quick" :fetcher github :commit "master")
-  :after gptel
-  :bind ("C-z q" . gptel-quick)
-  :config
-  (setq gptel-quick-backend
-      (gptel-make-openai "llama-cpp-quick"
-        :stream t
-        :protocol "http"
-        :host (concat perso/llm-host-backup ":" perso/llm-port-backup)
-        :models '(qwen35-4b)
-        :request-params '(:chat_template_kwargs (:enable_thinking :json-false)
-                                                :temperature 0))
-      gptel-quick-model 'qwen35-4b
-      gptel-quick-timeout 30))
+  (use-package gptel-quick
+    :quelpa (gptel-quick :repo "karthink/gptel-quick" :fetcher github :commit "master")
+    :after gptel
+    :bind ("C-z q" . gptel-quick)
+    :config
+    (setq gptel-quick-backend
+          (gptel-make-openai "llama-cpp-quick"
+            :stream t
+            :protocol "http"
+            :host (concat perso/llm-host-backup ":" perso/llm-port-backup)
+            :models '(qwen35-4b)
+            :request-params '(:chat_template_kwargs (:enable_thinking :json-false)
+                                                    :temperature 0))
+          gptel-quick-model 'qwen35-4b
+          gptel-quick-timeout 30))
 
   (when (file-directory-p "~/.emacs.d/prompts")
     (use-package gptel-prompts
