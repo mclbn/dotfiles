@@ -1427,6 +1427,16 @@ French grammar checking follows the chosen language."
   (flymake-fringe-indicator-position 'right-fringe)
   :hook (emacs-lisp-mode . flymake-mode))
 
+;; Flymake-popon : diagnostics in a popup near point
+(use-package flymake-popon
+  :after flymake
+  :custom
+  (flymake-popon-method 'posframe)
+  (flymake-popon-delay 0.2)
+  (flymake-popon-width 70)
+  (flymake-popon-posframe-border-width 1)
+  :hook (flymake-mode . flymake-popon-mode))
+
 ;; Flymake-collection : linting for non-LSP languages
 ;; (json, yaml, shell, dockerfile, ...)
 (use-package flymake-collection
