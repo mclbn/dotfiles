@@ -972,10 +972,20 @@
                     (ibuffer-switch-to-saved-filter-groups "Main")
                     (local-set-key (kbd ";") '(lambda () (interactive)
                                                 (ibuffer-switch-to-saved-filter-groups "Main")))
-                    ;; Could be either :
-                    ;; ibuffer-vc-set-filter-groups-by-vc-root or ibuffer-projectile-set-filter-groups
+                    (local-set-key (kbd ".") #'ibuffer-vc-set-filter-groups-by-vc-root)
                     (local-set-key (kbd ":") #'ibuffer-projectile-set-filter-groups)))
   :config
+  ;; Auto switch to ibuffer-vc-set-filter-groups-by-vc-root
+  ;; when using vc format
+  ;; Caution : format index 1 is hardcoded
+  (defun perso/ibuffer-vc-groups-on-format (&rest _)
+    "Group ibuffer by VC root when on the VC-status icon format, else `Main'.
+The VC format is index 1 in `all-the-icons-ibuffer-formats'."
+    (when (derived-mode-p 'ibuffer-mode)
+      (if (eql ibuffer-current-format 1)
+          (ignore-errors (ibuffer-vc-set-filter-groups-by-vc-root))
+        (ibuffer-switch-to-saved-filter-groups "Main"))))
+  (advice-add 'ibuffer-switch-format :after #'perso/ibuffer-vc-groups-on-format)
   ;; From https://emacs.stackexchange.com/a/2179
   ;; Allow nice auto-refresh without post-command-hook
   (require 'ibuf-ext)
@@ -1001,9 +1011,6 @@
            " " (size-h 9 -1 :right)
            " " (mode+ 16 16 :left :elide)
            " " filename-and-process)
-     ;; FIXME : it would be nice to have a hook on ii to
-     ;; call ibuffer-vc-set-filter-groups-by-vc-root
-     ;; when switching to this format
      (mark modified read-only locked vc-status-mini
            " " (icon 2 2 :left :elide)
            " " (name 18 18 :left :elide)
