@@ -2691,7 +2691,6 @@ exist after each headings's drawers."
   (require 'diminish)
   (diminish 'org-indent-mode))
 
-;; FIXME : should be inside org-mode config block (?)
 (use-package org-capture
   ;; No need to get it, comes with emacs/org
   :ensure nil
@@ -2808,7 +2807,6 @@ exist after each headings's drawers."
 
 ;; Org-caldav : caldav sync
 ;; Only for personal stuff
-;; FIXME : should be inside org-mode config block (?)
 (if (not (string= (getenv "EMACS_WORK") "Y"))
     (progn
       (use-package org-caldav
@@ -2841,7 +2839,6 @@ exist after each headings's drawers."
 		(setq org-icalendar-use-scheduled '(todo-start event-if-todo event-if-not-todo)))))
 
 ;; Org-superstar : beautify org-mode
-;; FIXME : should be inside org-mode config block (?)
 (use-package org-superstar
   :ensure t
   :hook (org-mode . org-superstar-mode)
@@ -2864,7 +2861,6 @@ exist after each headings's drawers."
   )
 
 ;; Org-download : paste images to org, we only use it for screenshots
-;; FIXME : should be inside org-mode config block (?)
 (use-package org-download
   :pin melpa ;; the good version is on melpa, not melpa-stable
   :custom
