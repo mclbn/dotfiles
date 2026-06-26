@@ -2085,17 +2085,6 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   :after (consult eglot)
   :bind (:map eglot-mode-map ("C-x l s" . consult-eglot-symbols)))
 
-;; FIXME : should be in consult block ?
-(with-eval-after-load 'consult
-  (setq xref-show-xrefs-function       #'consult-xref
-        xref-show-definitions-function #'consult-xref))
-
-;; FIXME : should be in consult / flymake block ?
-(with-eval-after-load 'flymake
-  (define-key flymake-mode-map (kbd "C-x l !") #'consult-flymake)
-  (define-key flymake-mode-map (kbd "M-n")     #'flymake-goto-next-error)
-  (define-key flymake-mode-map (kbd "M-p")     #'flymake-goto-prev-error))
-
 (add-hook 'eglot-managed-mode-hook
           (lambda ()
             (when (eglot-managed-p)
