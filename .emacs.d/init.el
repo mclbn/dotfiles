@@ -1445,7 +1445,6 @@ French grammar checking follows the chosen language."
   :hook (emacs-lisp-mode . flymake-mode))
 
 ;; Flymake-popon : diagnostics in a popup near point
-;; FIXME : any way to silence flymake under modeline message when (and only when) this is on ?
 (use-package flymake-popon
   :after flymake
   :custom
@@ -1453,7 +1452,16 @@ French grammar checking follows the chosen language."
   (flymake-popon-delay 0.2)
   (flymake-popon-width 70)
   (flymake-popon-posframe-border-width 1)
-  :hook (flymake-mode . flymake-popon-mode))
+  :hook (flymake-mode . flymake-popon-mode)
+  (flymake-popon-mode . perso/flymake-popon-quiet-eldoc)
+  :config
+  (defun perso/flymake-popon-quiet-eldoc ()
+    "Drop Flymake's echo-area ElDoc line while the popon shows diagnostics.
+Turning `flymake-popon-mode' off restores it. Eglot's own ElDoc
+documentation (hover, signatures) is left intact."
+    (if flymake-popon-mode
+        (remove-hook 'eldoc-documentation-functions #'flymake-eldoc-function t)
+      (add-hook 'eldoc-documentation-functions #'flymake-eldoc-function nil t))))
 
 ;; Flymake-collection : linting for non-LSP languages
 ;; (json, yaml, shell, dockerfile, ...)
