@@ -1428,6 +1428,7 @@ French grammar checking follows the chosen language."
   :hook (emacs-lisp-mode . flymake-mode))
 
 ;; Flymake-popon : diagnostics in a popup near point
+;; FIXME : any way to silence flymake under modeline message when (and only when) this is on ?
 (use-package flymake-popon
   :after flymake
   :custom
