@@ -2296,15 +2296,6 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
 ;; :hook ((c-mode c++-mode objc-mode cuda-mode) .
 ;;        (lambda () (require 'ccls) (lsp))))
 
-;; Arduino / Teensy specific C / C++ code
-(use-package platformio-mode
-  :diminish
-  :config
-  (add-hook 'c++-mode-hook (lambda ()
-                             ;; (lsp-deferred)
-                             (platformio-conditionally-enable)))
-  )
-
 ;;; Php modes and settings
 ;; PHP-mode settings
 (use-package php-mode
