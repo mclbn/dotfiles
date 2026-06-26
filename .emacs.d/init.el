@@ -1343,29 +1343,27 @@ FACE defaults to inheriting from default and highlight."
          (blink-matching-open))))))
 
 ;; make characters after column 80 purple
+(defun perso/show-trailing-whitespace ()
+  "Show trailing whitespace in the current buffer."
+  (setq-local show-trailing-whitespace t))
+
 (use-package whitespace
   :diminish
+  :hook ((prog-mode . whitespace-mode)
+         (prog-mode . perso/show-trailing-whitespace))
+  :custom
+  (whitespace-line-column 80)
+  (whitespace-style '(face trailing tab-mark space-before-tab))
+  :bind (("C-z w"   . whitespace-cleanup)
+         ("C-z C-l" . perso/whitespace-lines-tail))
   :config
-  (setq whitespace-line-column 80)
-  (setq whitespace-style
-        (quote (face trailing tab-mark space-before-tab)))
   (defun perso/whitespace-lines-tail ()
-    "Toggle whitespace line tails highlighting"
+    "Toggle whitespace line-tail highlighting."
     (interactive)
-    (whitespace-toggle-options 'lines-tail))
-  (bind-key "C-z C-l" #'perso/whitespace-lines-tail)
-  )
+    (whitespace-toggle-options 'lines-tail)))
 
-(add-hook 'prog-mode-hook 'whitespace-mode)
-;; (add-hook 'find-file-hook 'whitespace-mode)
 ;; also display column number
 (setq column-number-mode t)
-
-;; Show trailing whitespace only in code buffers (not minibuffer/special).
-(add-hook 'prog-mode-hook (lambda () (setq-local show-trailing-whitespace t)))
-
-;; Shortcut to clean whitespaces
-(global-set-key (kbd "C-z w") 'whitespace-cleanup)
 
 ;; Wrap lines in compilation and flycheck buffers
 (add-hook 'compilation-mode-hook 'visual-line-mode)
