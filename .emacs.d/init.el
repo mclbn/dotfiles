@@ -2054,7 +2054,8 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   (eglot-ignored-server-capabilities
    '(:documentFormattingProvider
      :documentRangeFormattingProvider
-     :documentOnTypeFormattingProvider))
+     :documentOnTypeFormattingProvider
+     :inlayHintProvider))
   :bind
   (:map eglot-mode-map
         ("C-x l f"   . eglot-format-buffer)
