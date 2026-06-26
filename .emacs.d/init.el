@@ -1427,6 +1427,10 @@ French grammar checking follows the chosen language."
   :custom
   (flymake-no-changes-timeout 0.5)
   (flymake-fringe-indicator-position 'right-fringe)
+  :bind (:map flymake-mode-map
+              ("C-x l !" . consult-flymake)
+              ("M-n"     . flymake-goto-next-error)
+              ("M-p"     . flymake-goto-prev-error))
   :hook (emacs-lisp-mode . flymake-mode))
 
 ;; Flymake-popon : diagnostics in a popup near point
