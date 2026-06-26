@@ -424,10 +424,6 @@
 (use-package treemacs-all-the-icons
   :ensure t)
 
-(use-package treemacs-projectile
-  :after (treemacs projectile)
-  :ensure t)
-
 (use-package treemacs-magit
   :after (treemacs magit)
   :ensure t)
@@ -517,10 +513,6 @@
    ("M-y" . consult-yank-from-kill-ring)
    ([remap goto-line] . consult-goto-line))
   :config
-  ;; Use Projectile to define "the project" for consult-project-* commands
-  (setq consult-project-function
-        (lambda (_) (when (fboundp 'projectile-project-root)
-                      (projectile-project-root))))
   ;; TRAMP: debounce file/buffer preview so moving the selection does
   ;; not eagerly open remote files on every keystroke.
   (consult-customize
@@ -569,26 +561,39 @@
   (nerd-icons-completion-mode 1)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
-;; Projectile : project management
-(use-package projectile
-  :diminish
-  :bind
-  ("C-c p" . projectile-command-map)
+;; Project.el : project management
+(use-package project
+  :ensure nil
   :custom
-  (projectile-completion-system 'default)
-  (projectile-indexing-method 'native)
-  (projectile-enable-caching t)
-  :config
-  (projectile-mode 1)
-  (add-to-list 'projectile-globally-ignored-directories "node_modules"))
+  (project-vc-extra-root-markers
+   '(".projectile"
+     "Makefile"
+     "CMakeLists.txt"
+     "compile_commands.json"
+     "configure.ac"
+     "Cargo.toml"
+     "pom.xml"
+     "Gemfile"
+     "composer.json"
+     "package.json"
+     "pyproject.toml"
+     "platformio.ini")))
 
-;; Project.el : not the main package used for now
-;; So compatibility fix for eglot
-(defun my/project-try-projectile (dir)
-  "Return projectile project root for DIR as a project.el project."
-  (when-let ((root (projectile-project-root dir)))
-    (cons 'transient root)))
-(add-hook 'project-find-functions #'my/project-try-projectile)
+(defvar perso/project-compile-history (make-hash-table :test 'equal)
+  "Per-project memory of the last `compile' command, keyed by project root.")
+
+(defun perso/project-compile ()
+  "Compile from the project root, remembering the command per project.
+Behaves like `projectile-compile-project': the last command used for
+this project is offered as the default."
+  (interactive)
+  (let* ((root (project-root (project-current t)))
+         (default-directory root)
+         (compile-command (or (gethash root perso/project-compile-history)
+                              compile-command))
+         (cmd (compilation-read-command compile-command)))
+    (puthash root cmd perso/project-compile-history)
+    (compile cmd)))
 
 ;; Magit : Git interface
 (use-package magit
@@ -954,8 +959,7 @@
                     (ibuffer-switch-to-saved-filter-groups "Main")
                     (local-set-key (kbd ";") '(lambda () (interactive)
                                                 (ibuffer-switch-to-saved-filter-groups "Main")))
-                    (local-set-key (kbd ".") #'ibuffer-vc-set-filter-groups-by-vc-root)
-                    (local-set-key (kbd ":") #'ibuffer-projectile-set-filter-groups)))
+                    (local-set-key (kbd ":") #'ibuffer-vc-set-filter-groups-by-vc-root)))
   :config
   ;; Auto switch to ibuffer-vc-set-filter-groups-by-vc-root
   ;; when using vc format
@@ -987,9 +991,6 @@ The VC format is index 1 in `all-the-icons-ibuffer-formats'."
   :after ibuffer
   :custom
   (ibuffer-vc-skip-if-remote 'nil))
-
-(use-package ibuffer-projectile
-  :after ibuffer)
 
 ;; All-the-icons-ibuffer : icons for ibuffer
 (use-package all-the-icons-ibuffer
@@ -2151,10 +2152,9 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
   :commands dape
   :custom
   (dape-buffer-window-arrangement 'right)
-  (dape-cwd-function #'projectile-project-root) ; FIXME : change if switching to project.el
   :config
   ;; Optional niceties:
-  ;; (dape-breakpoint-global-mode 1)               ; set breakpoints with the mouse
+  ;; (dape-breakpoint-global-mode 1) ; set breakpoints with the mouse
   )
 
 ;; Compile-mode : view compilation output
@@ -2196,14 +2196,14 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
   :bind (:map c-mode-map
               ("C-c C-c" . (lambda ()
                              (interactive)
-                             (call-interactively 'projectile-compile-project)
+                             (perso/project-compile)
                              (switch-to-buffer-other-frame "*compilation*")))))
 (use-package c-ts-mode
   :defer t
   :bind (:map c-ts-mode-map
               ("C-c C-c" . (lambda ()
                              (interactive)
-                             (call-interactively 'projectile-compile-project)
+                             (perso/project-compile)
                              (switch-to-buffer-other-frame "*compilation*")))))
 
 ;; Python-mode settings
@@ -2839,8 +2839,7 @@ exist after each headings's drawers."
                                      ("WATCHED" . ?☑)
                                      ("CANCELED" . ?☒)
                                      ("RATED" . ?★)
-                                     ))
-  )
+                                     )))
 
 ;; Org-download : paste images to org, we only use it for screenshots
 (use-package org-download
