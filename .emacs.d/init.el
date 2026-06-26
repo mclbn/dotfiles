@@ -1951,7 +1951,7 @@ respectively."
   (corfu-preselect 'prompt)
   (corfu-preview-current 'insert)
   (corfu-quit-at-boundary 'separator)
-  (corfu-quit-no-match 'separator)
+  (corfu-quit-no-match t)
   :bind
   (("C-<tab>" . completion-at-point)
    :map corfu-map
