@@ -133,18 +133,13 @@
 
 ;; Diminish : reduces info about modes in bottom bar
 (use-package diminish
+  :hook ((auto-revert-mode . my/diminish-auto-revert)
+         (hs-minor-mode . my/diminish-hideshow))
   :config
-  (diminish 'visual-line-mode))
-
-;; Stubborn modes to diminish
-(defun my/diminish-auto-revert ()
-  (interactive)
-  (diminish 'auto-revert-mode ""))
-(add-hook 'auto-revert-mode-hook 'my/diminish-auto-revert)
-(defun my/diminish-hideshow ()
-  (interactive)
-  (diminish 'hs-minor-mode ""))
-(add-hook 'hs-minor-mode-hook 'my/diminish-hideshow)
+  (diminish 'visual-line-mode)
+  (diminish 'eldoc-mode)
+  (defun my/diminish-auto-revert () (diminish 'auto-revert-mode ""))
+  (defun my/diminish-hideshow ()    (diminish 'hs-minor-mode "")))
 
 ;;; Unbinding unneeded keys that will be bound by upcoming packages
 (global-set-key (kbd "M-{") nil)
@@ -379,8 +374,8 @@
 
 (use-package dired-subtree
   :after dired
-  :config
-  (setq dired-subtree-use-backgrounds nil)
+  :custom
+  (dired-subtree-use-backgrounds nil)
   :bind
   (:map dired-mode-map
         ("<tab>" . dired-subtree-toggle)))
@@ -1442,6 +1437,7 @@ French grammar checking follows the chosen language."
 
 ;; Flymake-popon : diagnostics in a popup near point
 (use-package flymake-popon
+  :diminish
   :after flymake
   :custom
   (flymake-popon-method 'posframe)
@@ -2054,8 +2050,19 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   :custom
   (eglot-autoshutdown t)
   (eglot-send-changes-idle-time 0.5)
-  (eglot-events-buffer-config '(:size 0 :format full)) ; less overhead; raise only to debug
+  ;; less overhead; raise only to debug
+  (eglot-events-buffer-config '(:size 0 :format full))
   (eglot-extend-to-xref t)
+  (eglot-ignored-server-capabilities
+   '(:documentFormattingProvider
+     :documentRangeFormattingProvider
+     :documentOnTypeFormattingProvider))
+  :bind
+  (:map eglot-mode-map
+        ("C-x l f"   . eglot-format-buffer)
+        ("C-x l r"   . eglot-rename)
+        ("C-x l a"   . eglot-code-actions)
+        ("C-x l g r" . xref-find-references))
   :config
   (add-to-list 'eglot-server-programs
                '((python-mode python-ts-mode) . ("pyright-langserver" "--stdio")))
@@ -2064,12 +2071,14 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   (add-to-list 'eglot-server-programs
                '((web-mode) . ("vscode-html-language-server" "--stdio")))
   ;; the C/C++/ObjC entry is defined later
-  :bind
-  (:map eglot-mode-map
-        ("C-x l f"   . eglot-format-buffer)
-        ("C-x l r"   . eglot-rename)
-        ("C-x l a"   . eglot-code-actions)
-        ("C-x l g r" . xref-find-references)))
+  (add-to-list 'eglot-server-programs
+               `((c-mode c++-mode objc-mode c-ts-mode c++-ts-mode)
+                 . ,#'perso/cc-contact))
+(add-hook 'eglot-managed-mode-hook
+            (lambda ()
+              (when (eglot-managed-p)
+                (setq-local flymake-diagnostic-functions
+                            (list #'eglot-flymake-backend))))))
 
 ;; Eglot-booster: uses emacs-lsp-booster binary
 ;; Improve JSON parsing performance when using lsp-mode
@@ -2084,6 +2093,7 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
 
 ;; Docs on demand
 (use-package eldoc-box
+  :diminish
   :ensure t
   :after eglot
   :bind
@@ -2099,11 +2109,6 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   :ensure t
   :after (consult eglot)
   :bind (:map eglot-mode-map ("C-x l s" . consult-eglot-symbols)))
-
-(add-hook 'eglot-managed-mode-hook
-          (lambda ()
-            (when (eglot-managed-p)
-              (setq-local flymake-diagnostic-functions (list #'eglot-flymake-backend)))))
 
 ;; C/C++ server switch functions
 (defvar perso/cc-server 'clangd
@@ -2127,11 +2132,6 @@ Eglot calls this when (re)connecting; it reads `perso/cc-server'."
     ('ccls     (list perso/ccls-native-path "--log-file=/tmp/ccls.log"))
     ('ccls-esp (list perso/ccls-esp-path    "--log-file=/tmp/ccls-esp.log"))
     (_         (cons "clangd" perso/clangd-args))))
-
-(with-eval-after-load 'eglot
-  (add-to-list 'eglot-server-programs
-               `((c-mode c++-mode objc-mode c-ts-mode c++-ts-mode)
-                 . ,#'perso/cc-contact)))
 
 (defun perso/cc-switch-server (server)
   "Switch the C/C++/ObjC eglot SERVER and restart it in this buffer.
@@ -2183,15 +2183,15 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
 ;;; Python-specific modes and settings
 ;; Python settings
 (use-package python
-  :config
+  :custom
   ;; I usually prefer a dedicated terminal, so maybe remove it
-  (setq python-shell-interpreter "ipython"
-        python-shell-interpreter-args "--simple-prompt -i --pprint"
-        python-indent-offset 4
-        )
-  )
+  (python-shell-interpreter "ipython")
+  (python-shell-interpreter-args "--simple-prompt -i --pprint")
+  (python-indent-offset 4))
 
 ;; C-mode settings
+;; FIXME : tree-sitter C modes indent via treesit, not c-styles
+;; So I may have to check this when emacs 31 drops
 (use-package cc-mode
   :defer t
   :bind (:map c-mode-map
@@ -2381,9 +2381,9 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
 ;; Markdown-mode
 (use-package markdown-mode
   :defer t
-  :config
-  (setq markdown-fontify-code-blocks-natively t)
-  )
+  :custom
+  (markdown-fontify-code-blocks-natively t))
+
 ;; Vmd-mode : alternative markdown live preview
 ;; Maybe the future is grip-mode here...
 (use-package vmd-mode
@@ -3201,8 +3201,6 @@ This is a modified version of `mu4e-view-save-attachments'."
 ;; Elfeed : rss reader
 (use-package elfeed
   :config
-  (setq elfeed-log-level 'info)
-  (setq elfeed-search-filter "@1-month-ago +unread -large +daily")
   (elfeed-set-timeout 36000)
   :bind
   (:map elfeed-search-mode-map
@@ -3212,7 +3210,9 @@ This is a modified version of `mu4e-view-save-attachments'."
         ("R" . perso/elfeed-mark-all-as-read)
         ("q" . perso/elfeed-save-db-and-bury))
   :custom
-  (elfeed-use-curl t))
+  (elfeed-use-curl t)
+  (elfeed-log-level 'info)
+  (elfeed-search-filter "@1-month-ago +unread -large +daily"))
 
 ;; Elfeed-org : org-mode feed file support
 (use-package elfeed-org
