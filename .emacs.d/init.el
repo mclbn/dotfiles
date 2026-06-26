@@ -1880,9 +1880,7 @@ respectively."
   :init
   (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 
-;;; In-buffer completion : Corfu + Cape (replaces Company)
-;; Corfu uses the native completion-at-point-functions, so LSP/Elisp/etc. work
-;; with no per-backend glue. Your lsp-completion-provider :none is already correct.
+;; Corfu : in-buffer completion
 (use-package corfu
   :demand t
   :custom
@@ -1893,7 +1891,7 @@ respectively."
   (corfu-cycle t)
   (corfu-preselect 'prompt)
   (corfu-preview-current 'insert)
-  (corfu-quit-at-boundary 'nil)
+  (corfu-quit-at-boundary 'separator)
   (corfu-quit-no-match 'separator)
   :bind
   (("C-<tab>" . completion-at-point)
