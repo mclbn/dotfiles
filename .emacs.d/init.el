@@ -1,12 +1,7 @@
 ;;; Init.el --- -*- lexical-binding: t -*-
 ;;; Emacs startup configuration file
-
 ;;; Stuff to explore later
 ;; Maybe something to automatically add headers
-;; Bindings to learn :
-;; - treemacs
-;; - projectile
-;; - org-mode
 ;; Custom C / C++ style definition
 ;; Org-mode
 ;; - Disable unused modules to speedup startup ?
