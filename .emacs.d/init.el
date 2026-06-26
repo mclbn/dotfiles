@@ -322,24 +322,6 @@
   ;;        (lambda (file-path)
   ;;          (let ((process-connection-type nil))
   ;;            (start-process "" nil "xdg-open" (shell-quote-argument file-path)))) file-list)))
-
-  (use-package diredfl
-    :after zenburn-theme
-    :custom-face
-    (diredfl-dir-name ((t (:foreground "#94BFF3" :background "#3F3F3F" :weight bold))))
-    :hook (dired-mode . diredfl-mode))
-
-  (use-package dired-git-info
-    :custom
-    (dgi-auto-hide-details-p nil)
-    :bind (:map dired-mode-map (":" . dired-git-info-mode))
-    )
-
-  (use-package dired-recent
-    :custom
-    (dired-recent-max-directories nil)
-    :config
-    (dired-recent-mode 1))
   :bind
   (("C-x C-d" . (lambda () (interactive)(dired "~/")))
    ("C-x d" . dired-jump))
@@ -355,6 +337,24 @@
                   (local-set-key (kbd "M-SPC") #'dired-view-file)
                   (local-set-key (kbd "M-<up>")
                                  (lambda () (interactive) (find-alternate-file ".."))))))
+
+(use-package diredfl
+  :after zenburn-theme
+  :custom-face
+  (diredfl-dir-name ((t (:foreground "#94BFF3" :background "#3F3F3F" :weight bold))))
+  :hook (dired-mode . diredfl-mode))
+
+(use-package dired-git-info
+  :custom
+  (dgi-auto-hide-details-p nil)
+  :bind (:map dired-mode-map (":" . dired-git-info-mode))
+  )
+
+(use-package dired-recent
+  :custom
+  (dired-recent-max-directories nil)
+  :config
+  (dired-recent-mode 1))
 
 (use-package nerd-icons-dired
   :init
@@ -419,23 +419,18 @@
   ("C-z C-t" . treemacs)
   (:map treemacs-mode-map ([mouse-1] . treemacs-single-click-expand-action))
   :config
-  (treemacs-project-follow-mode t)
-  :init
-  (use-package treemacs-all-the-icons
-    :ensure t)
-  ;; Using all-the-icons-dired instead
-  ;; (use-package treemacs-icons-dired
-  ;;   :hook (dired-mode . treemacs-icons-dired-enable-once)
-  ;;   :ensure t
-  ;;   )
-  (use-package treemacs-projectile
-    :after (treemacs projectile)
-    :ensure t
-    )
-  (use-package treemacs-magit
-    :after (treemacs magit)
-    :ensure t
-    ))
+  (treemacs-project-follow-mode t))
+
+(use-package treemacs-all-the-icons
+  :ensure t)
+
+(use-package treemacs-projectile
+  :after (treemacs projectile)
+  :ensure t)
+
+(use-package treemacs-magit
+  :after (treemacs magit)
+  :ensure t)
 
 ;; TRAMP
 (use-package tramp
@@ -832,13 +827,6 @@
 ;; Ibuffer : buffer management and sorting
 (use-package ibuffer
   :ensure nil
-  :init
-  ;; Ibuffer-vc : allows grouping by project
-  (use-package ibuffer-vc
-    ;; :commands (ibuffer-vc-set-filter-groups-by-vc-root)
-    :custom
-    (ibuffer-vc-skip-if-remote 'nil))
-  (use-package ibuffer-projectile)
   :bind
   (("C-x C-b" . ibuffer))
   :custom
@@ -993,6 +981,15 @@ The VC format is index 1 in `all-the-icons-ibuffer-formats'."
     (set (make-local-variable 'auto-revert-verbose) nil)
     (auto-revert-mode 1))
   (add-hook 'ibuffer-mode-hook 'my-ibuffer-auto-revert-setup))
+
+;; Ibuffer-vc : allows grouping by project
+(use-package ibuffer-vc
+  :after ibuffer
+  :custom
+  (ibuffer-vc-skip-if-remote 'nil))
+
+(use-package ibuffer-projectile
+  :after ibuffer)
 
 ;; All-the-icons-ibuffer : icons for ibuffer
 (use-package all-the-icons-ibuffer
@@ -1182,8 +1179,8 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 
 (use-package multiple-cursors
   :bind
-  (("C-z e m" . #'mc/edit-lines)
-   ("C-z e a" . #'mc/mark-all-dwim)))
+  (("C-z e m" . mc/edit-lines)
+   ("C-z e a" . mc/mark-all-dwim)))
 
 ;; Move-text: move text with M-<arrows> a-la org
 (use-package move-text
@@ -1280,7 +1277,6 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 
 (use-package display-line-numbers
   :ensure nil
-  :defer nil
   :hook (prog-mode . display-line-numbers-mode))
 
 ;; Highlight current line
@@ -1378,7 +1374,7 @@ FACE defaults to inheriting from default and highlight."
   :diminish
   :custom
   (beacon-color "#5F7F5F")
-  :hook   ((org-mode text-mode prog-mode) . beacon-mode))
+  :hook (after-init . beacon-mode))
 
 (use-package dimmer
   :pin melpa ;; the good version is on melpa, not melpa-stable
@@ -1711,8 +1707,9 @@ Second call restores each mode to its previously saved state."
   (indent-bars-treesit-ignore-blank-lines-types '("module"))
   :hook ((prog-mode) . indent-bars-mode))
 
-;; Show current function in mode bar
-(add-hook 'prog-mode-hook #'which-function-mode)
+(use-package which-func
+  :ensure nil
+  :hook ((prog-mode org-mode) . which-function-mode))
 
 ;; Hideshow : hide (wrap) parts of the code
 (use-package hideshow
@@ -1911,7 +1908,6 @@ respectively."
 (use-package yasnippet
   :diminish (yas-minor-mode)
   :init
-  (use-package yasnippet-snippets :after yasnippet)
   :hook ((prog-mode LaTeX-mode org-mode markdown-mode) . yas-minor-mode)
   :bind
   (:map yas-minor-mode-map ([(tab)] . nil))
@@ -1920,6 +1916,8 @@ respectively."
   ("C-z C-s" . yas-insert-snippet)
   :config
   (yas-reload-all))
+
+(use-package yasnippet-snippets :after yasnippet)
 
 ;; Dumb-jump : simple "jump to definition" tool
 (use-package dumb-jump
@@ -2042,7 +2040,7 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   :ensure t
   :defer t
   :hook
-  ;; FIXME : should i use prog-mode directly ?
+  ;; Enable more modes here if needed
   (((python-mode c-mode c++-mode objc-mode rust-mode php-mode
                  js-mode js2-mode typescript-mode web-mode cmake-mode
                  ;; tree-sitter variants now, so the Emacs 31 switch is mostly free:
@@ -2342,10 +2340,12 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
 
 ;;; Assembly modes and settings
 ;; asm-mode settings
-(add-hook 'asm-mode-hook (lambda ()
-                           (setq indent-tabs-mode nil) ; use spaces to indent
-                           (electric-indent-mode nil) ; disable auto-indent on RET
-                           ))
+(use-package asm-mode
+  :ensure nil
+  :hook (asm-mode . (lambda ()
+                      (setq-local indent-tabs-mode nil)
+                      (electric-indent-local-mode -1))))
+
 
 ;;; Android development modes and settings
 ;;; smali/baksmali mode (https://github.com/strazzere/Emacs-Smali)
@@ -2396,7 +2396,7 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
 ;; Mise
 (use-package mise
   :hook
-  (prog-mode . global-mise-mode))
+  (prog-mode . mise-mode))
 
 ;;; Org-mode
 ;; Main package and settings
@@ -2674,18 +2674,12 @@ exist after each headings's drawers."
 
   (defun my/org-image-auto-preview-setup ()
     (add-hook 'post-command-hook #'my/org-image--maybe-schedule nil t))
-  (add-hook 'org-mode-hook #'my/org-image-auto-preview-setup)
+  (add-hook 'org-mode-hook #'my/org-image-auto-preview-setup))
 
-  (add-hook 'org-mode-hook  #'which-function-mode))
-
-;; ;; company compatibility (https://github.com/company-mode/company-mode/issues/50)
-;; (defun add-pcomplete-to-capf ()
-;;   (add-hook 'completion-at-point-functions 'pcomplete-completions-at-point nil t))
-;; (add-hook 'org-mode-hook #'add-pcomplete-to-capf)
-
-(with-eval-after-load 'org-indent
-  (require 'diminish)
-  (diminish 'org-indent-mode))
+(use-package org-indent
+  ;; No need to get it, comes with emacs/org
+  :ensure nil
+  :diminish)
 
 (use-package org-capture
   ;; No need to get it, comes with emacs/org
