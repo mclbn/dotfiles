@@ -872,10 +872,14 @@
   (ibuffer-saved-filter-groups
    '(("Main"
       ("Apps" (or
-               ;; FIXME mu4e
                (mode . diary-mode)
                (mode . elfeed-search-mode)
                (mode . elfeed-show-mode)))
+      ("Mail" (or
+               (mode . mu4e-main-mode)
+               (mode . mu4e-headers-mode)
+               (mode . mu4e-view-mode)
+               (mode . mu4e-compose-mode)))
       ("Directories" (mode . dired-mode))
       ("Org" (mode . org-mode))
       ("Config" (or
