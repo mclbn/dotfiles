@@ -3399,6 +3399,19 @@ This is a modified version of `mu4e-view-save-attachments'."
   :bind (("C-z g" . gptel-menu)
          ("C-z C-g" . perso/gptel)))
 
+(use-package gptel-agent
+  :after gptel
+  :config
+  (let ((my-agents (expand-file-name "gptel-agents/" user-emacs-directory)))
+    (unless (file-directory-p my-agents)
+      (make-directory my-agents t))
+    (add-to-list 'gptel-agent-dirs my-agents))
+
+  ;; OPTIONAL token-saver: run *sub-agents* on a cheaper/faster model
+  ;; (setq gptel-agent-preset '(:backend "llama-cpp-back" :model qwen35-4b))
+
+  (gptel-agent-update))
+
 (use-package eca
   :custom
   (eca-chat-use-side-window t)
