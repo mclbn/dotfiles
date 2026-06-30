@@ -3412,6 +3412,17 @@ This is a modified version of `mu4e-view-save-attachments'."
   ;; (setq gptel-agent-preset '(:backend "llama-cpp-back" :model qwen35-4b))
 
   (gptel-mcp-connect '("searxng") 'sync nil)
+  (defun perso/gptel-agent--add-searxng (&rest _)
+    "Append the searxng MCP tools to the `gptel-agent' preset."
+    (when-let* ((plist (copy-sequence
+                        (assoc-default "gptel-agent" gptel-agent--agents))))
+      (apply #'gptel-make-preset 'gptel-agent
+             (plist-put
+              (plist-put plist :tools
+                         (append (plist-get plist :tools) '("mcp-searxng")))
+              :pre (lambda () (gptel-mcp-connect '("searxng") 'sync nil))))))
+  (advice-add 'gptel-agent-update :after #'perso/gptel-agent--add-searxng)
+  (perso/gptel-agent--add-searxng)
   (gptel-agent-update))
 
 ;; Bridge to route gptel-agent WebSearch to mcp-searxng
