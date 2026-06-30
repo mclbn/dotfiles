@@ -3425,29 +3425,30 @@ This is a modified version of `mu4e-view-save-attachments'."
   (perso/gptel-agent--add-searxng)
   (gptel-agent-update))
 
-;; Bridge to route gptel-agent WebSearch to mcp-searxng
-(defcustom perso/gptel-agent-websearch-warn-interval nil
+;; Now a set of variables and functions to bridge the
+;; better mcp-searxng tools over gptel-agent built-ins
+(defcustom perso/gptel-agent-searxng-warn-interval nil
   "Minimum seconds between SearXNG-fallback warnings.
 When nil, warn on every fallback."
   :type '(choice (const :tag "Warn every time" nil)
                  (number :tag "Seconds"))
   :group 'gptel)
 
-(defvar perso/gptel-agent--websearch-last-warn 0.0
+(defvar perso/gptel-agent--searxng-last-warn 0.0
   "Time of the last SearXNG-fallback warning, for throttling.")
 
-(defun perso/gptel-agent--websearch-connection ()
+(defun perso/gptel-agent--searxng-connection ()
   "Return a connected searxng MCP connection, or nil."
   (and (featurep 'mcp)
        (let ((conn (gethash "searxng" mcp-server-connections)))
          (and conn (eq (mcp--status conn) 'connected) conn))))
 
-(defun perso/gptel-agent--websearch-result-error-p (res)
+(defun perso/gptel-agent--searxng-result-error-p (res)
   "Non-nil if MCP tool result RES reports an error."
   (let ((err (plist-get res :isError)))
     (and err (not (memq err '(:false :json-false))))))
 
-(defun perso/gptel-agent--websearch-parse-result (res)
+(defun perso/gptel-agent--searxng-parse-result (res)
   "Return the concatenated text blocks of MCP tool result RES."
   (let (texts)
     (mapc (lambda (item)
@@ -3456,56 +3457,68 @@ When nil, warn on every fallback."
           (plist-get res :content))
     (mapconcat #'identity (nreverse texts) "\n")))
 
-(defun perso/gptel-agent--websearch-warn (reason)
-  "Emit a throttled fallback warning explaining REASON."
+(defun perso/gptel-agent--searxng-warn (label reason)
+  "Emit a throttled fallback warning for LABEL explaining REASON."
   (let ((now (float-time)))
-    (when (or (null perso/gptel-agent-websearch-warn-interval)
-              (>= (- now perso/gptel-agent--websearch-last-warn)
-                  perso/gptel-agent-websearch-warn-interval))
-      (setq perso/gptel-agent--websearch-last-warn now)
-      (message "WebSearch: SearXNG unavailable (%s); using eww fallback." reason))))
+    (when (or (null perso/gptel-agent-searxng-warn-interval)
+              (>= (- now perso/gptel-agent--searxng-last-warn)
+                  perso/gptel-agent-searxng-warn-interval))
+      (setq perso/gptel-agent--searxng-last-warn now)
+      (message "%s: SearXNG unavailable (%s); using eww fallback." label reason))))
 
-(defun perso/gptel-agent--websearch-fallback (reason cb query count)
-  "Warn about REASON, then run the original eww WebSearch.
-CB, QUERY and COUNT are the gptel WebSearch tool arguments."
-  (perso/gptel-agent--websearch-warn reason)
-  (gptel-agent--web-search-eww cb query count))
+(defun perso/gptel-agent--searxng-call (label cb tool args fallback)
+  "Route a gptel-agent web tool through mcp-searxng's TOOL.
+LABEL names the tool in warnings.  CB is the gptel tool callback.  ARGS is
+the argument plist for the MCP TOOL.  On any failure (no connection, tool
+error, unparseable result, or signal) warn once and call FALLBACK, a thunk
+performing the built-in eww behavior."
+  (let ((bail (lambda (reason)
+                (perso/gptel-agent--searxng-warn label reason)
+                (funcall fallback))))
+    (condition-case err
+        (if-let* ((conn (perso/gptel-agent--searxng-connection)))
+            (mcp-async-call-tool
+             conn tool args
+             (lambda (res)
+               (if (perso/gptel-agent--searxng-result-error-p res)
+                   (funcall bail "tool reported error")
+                 (let ((text (condition-case nil
+                                 (perso/gptel-agent--searxng-parse-result res)
+                               (error :gptel-parse-error))))
+                   (if (eq text :gptel-parse-error)
+                       (funcall bail "could not parse result")
+                     (funcall cb text)))))
+             (lambda (code msg) (funcall bail (format "%s: %s" code msg))))
+          (funcall bail "server not connected"))
+      (error (funcall bail (error-message-string err))))))
 
+;;;; Per-tool adapters
 (defun perso/gptel-agent--websearch-bridge (cb query &optional count)
-  "WebSearch via mcp-searxng, falling back to eww search on any failure.
-CB is the gptel tool callback; QUERY and COUNT are the search arguments."
-  (condition-case err
-      (if-let* ((conn (perso/gptel-agent--websearch-connection)))
-          (mcp-async-call-tool
-           conn "searxng_web_search" (list :query query)
-           (lambda (res)
-             (if (perso/gptel-agent--websearch-result-error-p res)
-                 (perso/gptel-agent--websearch-fallback
-                  "tool reported error" cb query count)
-               (let ((text (condition-case nil
-                               (perso/gptel-agent--websearch-parse-result res)
-                             (error :gptel-parse-error))))
-                 (if (eq text :gptel-parse-error)
-                     (perso/gptel-agent--websearch-fallback
-                      "could not parse result" cb query count)
-                   (funcall cb text)))))
-           (lambda (code msg)
-             (perso/gptel-agent--websearch-fallback
-              (format "%s: %s" code msg) cb query count)))
-        (perso/gptel-agent--websearch-fallback "server not connected" cb query count))
-    (error (perso/gptel-agent--websearch-fallback
-            (error-message-string err) cb query count))))
+  "WebSearch via mcp-searxng `searxng_web_search', eww search on failure."
+  (perso/gptel-agent--searxng-call
+   "WebSearch" cb "searxng_web_search" (list :query query)
+   (lambda () (gptel-agent--web-search-eww cb query count))))
 
+(defun perso/gptel-agent--webfetch-bridge (cb url &rest _)
+  "WebFetch via mcp-searxng `web_url_read', eww reader on failure.
+Extra arguments (e.g. WebFetch's extraction prompt) are ignored."
+  (perso/gptel-agent--searxng-call
+   "WebFetch" cb "web_url_read" (list :url url)
+   (lambda () (gptel-agent--read-url cb url))))
+
+;;;; Install both bridges
 (with-eval-after-load 'gptel-agent-tools
-  (let ((orig (gptel-get-tool "WebSearch")))
-    (gptel-make-tool
-     :name "WebSearch"
-     :category "gptel-agent"
-     :async t
-     :include t
-     :description (gptel-tool-description orig)
-     :args (gptel-tool-args orig)
-     :function #'perso/gptel-agent--websearch-bridge)))
+  (dolist (spec '(("WebSearch" . perso/gptel-agent--websearch-bridge)
+                  ("WebFetch"  . perso/gptel-agent--webfetch-bridge)))
+    (let ((orig (gptel-get-tool (car spec))))
+      (gptel-make-tool
+       :name (car spec)
+       :category "gptel-agent"
+       :async t
+       :include t
+       :description (gptel-tool-description orig)
+       :args (gptel-tool-args orig)
+       :function (cdr spec)))))
 
 (use-package eca
   :custom
