@@ -3362,6 +3362,31 @@ This is a modified version of `mu4e-view-save-attachments'."
                      :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
                      :system "Answer strictly from retrieved context (corpus or fetched pages). If the sources don't contain the answer, say so. Do not speculate. Only provide information from your context.")
 
+  ;; Build complex prompts from org mode buffers
+  (defun perso/gptel-set-system-prompt-from-org-buffer (&optional buffer)
+    "Set gptel's system prompt from BUFFER, resolving Org #+INCLUDE directives.
+The result is stored globally (via `setq-default'), so gptel uses it from
+any buffer. BUFFER defaults to the current buffer."
+    (interactive)
+    (require 'ox)
+    (let* ((src  (or buffer (current-buffer)))
+           (file (buffer-file-name src))
+           (dir  (if file (file-name-directory file)
+                   (buffer-local-value 'default-directory src)))
+           (text (with-current-buffer src
+                   (buffer-substring-no-properties (point-min) (point-max))))
+           (resolved
+            (with-temp-buffer
+              (setq default-directory dir)        ; base for relative #+INCLUDE paths
+              (insert text)
+              (let ((org-inhibit-startup t))
+                (delay-mode-hooks (org-mode)))     ; expand fn requires org-mode
+              (org-export-expand-include-keyword nil dir)
+              (buffer-substring-no-properties (point-min) (point-max)))))
+      (setq-default gptel-system-prompt resolved)  ; apply everywhere
+      (message "gptel system prompt set from %s — %d chars, includes resolved."
+               (buffer-name src) (length resolved))))
+
   ;; A custom function to open a single gptel session
   (defun perso/gptel ()
     "Wrapper to load gptel"
