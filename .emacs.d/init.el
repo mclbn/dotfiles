@@ -1211,7 +1211,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
 
 (use-package ediff
   :defer t
-    :custom
+  :custom
   (ediff-split-window-function 'split-window-horizontally)
   (ediff-window-setup-function 'ediff-setup-windows-plain)
   (ediff-diff-options "-w"))
@@ -1454,9 +1454,9 @@ documentation (hover, signatures) is left intact."
   :hook (after-init . flymake-collection-hook-setup))
 
 (dolist (h '(sh-mode-hook bash-ts-mode-hook
-             yaml-mode-hook yaml-ts-mode-hook
-             json-mode-hook js-json-mode-hook json-ts-mode-hook
-             dockerfile-mode-hook))
+                          yaml-mode-hook yaml-ts-mode-hook
+                          json-mode-hook js-json-mode-hook json-ts-mode-hook
+                          dockerfile-mode-hook))
   (add-hook h #'flymake-mode))
 
 ;; Flymake-flycheck : to use flycheck
@@ -2069,7 +2069,7 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
   (add-to-list 'eglot-server-programs
                `((c-mode c++-mode objc-mode c-ts-mode c++-ts-mode)
                  . ,#'perso/cc-contact))
-(add-hook 'eglot-managed-mode-hook
+  (add-hook 'eglot-managed-mode-hook
             (lambda ()
               (when (eglot-managed-p)
                 (setq-local flymake-diagnostic-functions
@@ -3316,83 +3316,129 @@ This is a modified version of `mu4e-view-save-attachments'."
 
   ;;; Presets
   (gptel-make-preset 'eli5
-                     :system "Explain like I am 5 years old."
-                     :use-tools t
-                     :tools '("web_url_read" "searxng_web_search"))
+    :system "Explain like I am 5 years old."
+    :use-tools t
+    :tools '("web_url_read" "searxng_web_search"))
 
   (gptel-make-preset 'websearch
-                     :description "Web search"
-                     :pre (lambda ()
-                            (gptel-mcp-connect '("searxng") 'sync nil))
-                     :use-tools t
-                     :tools '("web_url_read" "searxng_web_search")
-                     :system "Use the provided tools to search the web for up-to-date information.")
+    :description "Web search"
+    :pre (lambda ()
+           (gptel-mcp-connect '("searxng") 'sync nil))
+    :use-tools t
+    :tools '("web_url_read" "searxng_web_search")
+    :system "Use the provided tools to search the web for up-to-date information.")
 
   (gptel-make-preset 'creative
-                     :description "Quick creative — high temp, no tools"
-                     :temperature 1
-                     :tools nil :use-tools nil
-                     :system "You are an imaginative creative collaborator. Offer vivid, varied ideas.")
+    :description "Quick creative — high temp, no tools"
+    :temperature 1
+    :tools nil :use-tools nil
+    :system "You are an imaginative creative collaborator. Offer vivid, varied ideas.")
 
   (gptel-make-preset 'research
-                     :description "Research — autonomous web search, bounded"
-                     :temperature 0.6
-                     :pre (lambda ()
-                            (gptel-mcp-connect '("searxng") 'sync nil))
-                     :use-tools t :tools '("searxng_web_search" "web_url_read" "searxng_instance_info" "searxng_search_suggestions")
-                     :system "You are a research assistant. Plan, then perform AT MOST 10 searches, reading the most relevant results, then synthesize a sourced answer. Stop searching once you can answer. You can use search engine suggestions to find related information.")
+    :description "Research — autonomous web search, bounded"
+    :temperature 0.6
+    :pre (lambda ()
+           (gptel-mcp-connect '("searxng") 'sync nil))
+    :use-tools t :tools '("searxng_web_search" "web_url_read" "searxng_instance_info" "searxng_search_suggestions")
+    :system "You are a research assistant. Plan, then perform AT MOST 10 searches, reading the most relevant results, then synthesize a sourced answer. Stop searching once you can answer. You can use search engine suggestions to find related information.")
 
   (gptel-make-preset 'programmer
-                     :description "Careful senior programmer — precise, fs-read + web"
-                     :temperature 0.7
-                     :pre (lambda ()
-                            (gptel-mcp-connect '("searxng") 'sync nil))
-                     :use-tools t
-                     :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
-                     :system "You are a careful senior programmer. Reason carefully about design tradeoffs. Use file reads and web search to ground claims. Try to provide code and only code as output without any additional text, prompt or note. If you cannot provide only code, be clear and concise.")
+    :description "Careful senior programmer — precise, fs-read + web"
+    :temperature 0.7
+    :pre (lambda ()
+           (gptel-mcp-connect '("searxng") 'sync nil))
+    :use-tools t
+    :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
+    :system "You are a careful senior programmer. Reason carefully about design tradeoffs. Use file reads and web search to ground claims. Try to provide code and only code as output without any additional text, prompt or note. If you cannot provide only code, be clear and concise.")
 
   (gptel-make-preset 'architect
-                     :description "Architecture/brainstorm — precise, fs-read + web"
-                     :temperature 0.7
-                     :pre (lambda ()
-                            (gptel-mcp-connect '("searxng") 'sync nil))
-                     :use-tools t
-                     :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
-                     :system "You are a senior software architect. Reason carefully about design tradeoffs. Use file reads and web search to ground claims.")
+    :description "Architecture/brainstorm — precise, fs-read + web"
+    :temperature 0.7
+    :pre (lambda ()
+           (gptel-mcp-connect '("searxng") 'sync nil))
+    :use-tools t
+    :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
+    :system "You are a senior software architect. Reason carefully about design tradeoffs. Use file reads and web search to ground claims.")
 
   (gptel-make-preset 'rag
-                     :description "Document RAG — low temp, grounded"
-                     :temperature 0.1
-                     :pre (lambda ()
-                            (gptel-mcp-connect '("searxng") 'sync nil))
-                     :use-tools t
-                     :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
-                     :system "Answer strictly from retrieved context (corpus or fetched pages). If the sources don't contain the answer, say so. Do not speculate. Only provide information from your context.")
+    :description "Document RAG — low temp, grounded"
+    :temperature 0.1
+    :pre (lambda ()
+           (gptel-mcp-connect '("searxng") 'sync nil))
+    :use-tools t
+    :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
+    :system "Answer strictly from retrieved context (corpus or fetched pages). If the sources don't contain the answer, say so. Do not speculate. Only provide information from your context.")
 
-  ;; Build complex prompts from org mode buffers
-  (defun perso/gptel-set-system-prompt-from-org-buffer (&optional buffer)
-    "Set gptel's system prompt from BUFFER, resolving Org #+INCLUDE directives.
-The result is stored globally (via `setq-default'), so gptel uses it from
-any buffer. BUFFER defaults to the current buffer."
-    (interactive)
+  ;; Set of functions to load promps from modular org files
+  ;; with included org subfiles
+  (defun perso/gptel--resolve-org-includes (text dir)
+    "Return TEXT (Org source) with #+INCLUDE directives resolved.
+DIR is the base directory for relative include paths."
     (require 'ox)
-    (let* ((src  (or buffer (current-buffer)))
+    (with-temp-buffer
+      (setq default-directory dir)
+      (insert text)
+      (let ((org-inhibit-startup t))
+        (delay-mode-hooks (org-mode)))
+      (org-export-expand-include-keyword nil dir)
+      (buffer-substring-no-properties (point-min) (point-max))))
+
+  ;; Optional local date/time preamble.
+  (defun perso/gptel--datetime-preamble ()
+    "Return the local date/time preamble line for a prompt.
+Weekday name is forced to English via the \"C\" locale, regardless of the
+system locale; the zone (%Z/%z) stays local."
+    (let ((system-time-locale "C"))
+      (format-time-string
+       "Today is %A %Y-%m-%d %H:%M:%S %Z (UTC%z), take it into account when relevant in the following instructions.")))
+
+  (defun perso/gptel--maybe-prepend-datetime (text with-datetime)
+    "Prepend the date/time preamble and a blank line to TEXT when WITH-DATETIME."
+    (if with-datetime
+        (concat (perso/gptel--datetime-preamble) "\n\n" text)
+      text))
+
+  ;; Returning resolvers -- use these in a preset's :system.
+  (defun perso/gptel-prompt-from-org-file (file &optional with-datetime)
+    "Return Org FILE's contents with #+INCLUDE directives resolved.
+With non-nil WITH-DATETIME, prepend a local date/time line and a blank line."
+    (let ((file (expand-file-name file)))
+      (perso/gptel--maybe-prepend-datetime
+       (perso/gptel--resolve-org-includes
+        (with-temp-buffer (insert-file-contents file) (buffer-string))
+        (file-name-directory file))
+       with-datetime)))
+
+  (defun perso/gptel-prompt-from-org-buffer (&optional buffer with-datetime)
+    "Return BUFFER's Org contents with #+INCLUDE directives resolved.
+With non-nil WITH-DATETIME, prepend a local date/time line and a blank line."
+    (let* ((src (or buffer (current-buffer)))
            (file (buffer-file-name src))
            (dir  (if file (file-name-directory file)
-                   (buffer-local-value 'default-directory src)))
-           (text (with-current-buffer src
-                   (buffer-substring-no-properties (point-min) (point-max))))
-           (resolved
-            (with-temp-buffer
-              (setq default-directory dir)        ; base for relative #+INCLUDE paths
-              (insert text)
-              (let ((org-inhibit-startup t))
-                (delay-mode-hooks (org-mode)))     ; expand fn requires org-mode
-              (org-export-expand-include-keyword nil dir)
-              (buffer-substring-no-properties (point-min) (point-max)))))
-      (setq-default gptel-system-prompt resolved)  ; apply everywhere
+                   (buffer-local-value 'default-directory src))))
+      (perso/gptel--maybe-prepend-datetime
+       (perso/gptel--resolve-org-includes
+        (with-current-buffer src
+          (buffer-substring-no-properties (point-min) (point-max)))
+        dir)
+       with-datetime)))
+
+  ;; Interactive setters -- set gptel's global system prompt.
+  (defun perso/gptel-set-system-prompt-from-org-buffer (&optional buffer)
+    "Set gptel's global system prompt from BUFFER, resolving #+INCLUDE."
+    (interactive)
+    (let ((resolved (perso/gptel-prompt-from-org-buffer buffer)))
+      (setq-default gptel-system-prompt resolved)
       (message "gptel system prompt set from %s — %d chars, includes resolved."
-               (buffer-name src) (length resolved))))
+               (buffer-name (or buffer (current-buffer))) (length resolved))))
+
+  (defun perso/gptel-set-system-prompt-from-org-file (file)
+    "Set gptel's global system prompt from Org FILE, resolving #+INCLUDE."
+    (interactive "fOrg prompt file: ")
+    (let ((resolved (perso/gptel-prompt-from-org-file file)))
+      (setq-default gptel-system-prompt resolved)
+      (message "gptel system prompt set from %s — %d chars, includes resolved."
+               (file-name-nondirectory file) (length resolved))))
 
   ;; A custom function to open a single gptel session
   (defun perso/gptel ()
