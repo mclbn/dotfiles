@@ -3307,6 +3307,13 @@ This is a modified version of `mu4e-view-save-attachments'."
    :args (list '(:name "path" :type "string" :description "Directory path."))
    :category "filesystem")
 
+  (gptel-make-tool
+   :name "current_datetime"
+   :function (lambda ()
+               (format-time-string "%A %Y-%m-%d %H:%M:%S %Z (UTC%z)"))
+   :description "Return the current local date and time."
+   :category "time")
+
   ;;; Presets
   (gptel-make-preset 'eli5
                      :system "Explain like I am 5 years old."
