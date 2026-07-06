@@ -1256,7 +1256,7 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
       ((filename (if (equal major-mode 'dired-mode) default-directory (buffer-file-name))))
     (kill-new filename)
     (message "Copied buffer file name '%s' to the clipboard." filename)))
-(bind-key "C-z p" #'full-path-to-clipboard)
+(bind-key "C-z P" #'full-path-to-clipboard)
 
 (use-package vundo
   :bind
@@ -3268,7 +3268,9 @@ This is a modified version of `mu4e-view-save-attachments'."
       :key "B")
     (transient-append-suffix 'gptel-menu "y"
       '(perso/gptel--infix-branching-context
-        :if (lambda () (derived-mode-p 'org-mode)))))
+        :if (lambda () (derived-mode-p 'org-mode))))
+    (transient-append-suffix 'gptel-menu "y"
+       '("p" "Prompt builder" perso/gptel-prompt-builder)))
 
   ;;; Tools
   (gptel-make-tool
@@ -3609,7 +3611,10 @@ Extra arguments (e.g. WebFetch's extraction prompt) are ignored."
 ;; LLM mgmt is in another dedicated file
 (when (file-exists-p (expand-file-name "llm.el" user-emacs-directory))
   (autoload 'perso/llm-menu (expand-file-name "llm.el" user-emacs-directory) nil t)
-  (global-set-key (kbd "C-z @") #'perso/llm-menu))
+  (autoload 'perso/gptel-prompt-builder
+    (expand-file-name "llm.el" user-emacs-directory) nil t)
+  (global-set-key (kbd "C-z @") #'perso/llm-menu)
+  (global-set-key (kbd "C-z p") #'perso/gptel-prompt-builder))
 
 ;; ;; Claude code integration
 ;; (use-package claude-code-ide
