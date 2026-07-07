@@ -241,6 +241,107 @@
                         (with-selected-window win (recenter)))))
                   (current-buffer)))
 
+;; Custom setup for auto-saving scratch buffers
+(require 'subr-x) ; string-trim
+
+(defgroup scratch-autosave nil
+  "Automatically save the *scratch* buffer to a log folder."
+  :group 'convenience
+  :prefix "scratch-autosave-")
+
+(defcustom scratch-autosave-dir "~/log/scratch/"
+  "Directory where *scratch* snapshots are written.
+It is created automatically, together with any missing parent
+directories, the first time a snapshot is saved."
+  :type 'directory
+  :group 'scratch-autosave)
+
+(defcustom scratch-autosave-idle-delay 5
+  "Number of seconds Emacs must be idle before *scratch* is saved.
+Changing this after activation requires calling
+`scratch-autosave-setup' again (or restarting Emacs)."
+  :type 'number
+  :group 'scratch-autosave)
+
+(defvar scratch-autosave--timer nil
+  "The idle timer object, or nil when autosaving is disabled.")
+
+(defvar-local scratch-autosave--file nil
+  "Absolute path this scratch buffer is saved to.
+Set on the first save and reused for the life of the buffer, so a
+killed-and-recreated *scratch* gets a fresh file.")
+
+(defvar-local scratch-autosave--last-content nil
+  "Buffer contents at the last successful save, for change detection.")
+
+(defun scratch-autosave--empty-p (content)
+  "Return non-nil when CONTENT is not worth saving.
+That means it is empty, only whitespace, or still equal to the
+default `initial-scratch-message'."
+  (let ((trimmed (string-trim content)))
+    (or (string= "" trimmed)
+        (and initial-scratch-message
+             (string= trimmed (string-trim initial-scratch-message))))))
+
+(defun scratch-autosave--make-filename ()
+  "Return the absolute path for a new scratch session.
+The name is the local time down to the second plus this Emacs's
+PID, which keeps concurrent Emacs instances from colliding on the
+same second."
+  (expand-file-name
+   (format "%s-%d.scratch"
+           (format-time-string "%Y-%m-%d_%H-%M-%S")
+           (emacs-pid))
+   scratch-autosave-dir))
+
+(defun scratch-autosave--maybe-save ()
+  "Save *scratch* to its log file if it is non-empty and has changed.
+Designed to be called from an idle timer and from
+`kill-emacs-hook'.  It never signals: any error is reported to
+*Messages* and swallowed, so it can neither break the repeating
+timer nor block Emacs from exiting."
+  (condition-case err
+      (let ((buf (get-buffer "*scratch*")))
+        (when (buffer-live-p buf)
+          (with-current-buffer buf
+            (let ((content (save-restriction
+                             (widen)
+                             (buffer-substring-no-properties
+                              (point-min) (point-max)))))
+              (when (and (not (scratch-autosave--empty-p content))
+                         (not (equal content scratch-autosave--last-content)))
+                (unless scratch-autosave--file
+                  (setq scratch-autosave--file (scratch-autosave--make-filename)))
+                (make-directory (file-name-directory scratch-autosave--file) t)
+                (let ((coding-system-for-write 'utf-8))
+                  (write-region content nil scratch-autosave--file nil 'silent))
+                (setq scratch-autosave--last-content content))))))
+    (error
+     (message "scratch-autosave: %s" (error-message-string err)))))
+
+(defun scratch-autosave-setup ()
+  "Enable idle autosaving of the *scratch* buffer.
+Safe to call more than once: it cancels any previous timer first,
+so re-evaluating this file will not stack duplicate timers."
+  (interactive)
+  (when (timerp scratch-autosave--timer)
+    (cancel-timer scratch-autosave--timer))
+  (setq scratch-autosave--timer
+        (run-with-idle-timer scratch-autosave-idle-delay t
+                             #'scratch-autosave--maybe-save))
+  (add-hook 'kill-emacs-hook #'scratch-autosave--maybe-save))
+
+(defun scratch-autosave-teardown ()
+  "Disable idle autosaving of the *scratch* buffer.
+Existing saved files are left untouched."
+  (interactive)
+  (when (timerp scratch-autosave--timer)
+    (cancel-timer scratch-autosave--timer))
+  (setq scratch-autosave--timer nil)
+  (remove-hook 'kill-emacs-hook #'scratch-autosave--maybe-save))
+
+(scratch-autosave-setup)
+
 (use-package saveplace
   :ensure nil
   :init
