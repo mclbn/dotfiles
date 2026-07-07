@@ -198,6 +198,20 @@ builder's fixed keys), :multi (non-nil to allow several selections),
   "Request parameters sent when the thinking toggle is off."
   :type 'sexp :group 'gptel)
 
+(defcustom perso/gptel-prompt-agentic-file "agentic.org"
+  "File name (in the skills directory) of the agentic capability fragment."
+  :type 'string :group 'gptel)
+
+(defcustom perso/gptel-prompt-subagent-file "subagent.org"
+  "File name (in the skills directory) of the sub-agent operating fragment."
+  :type 'string :group 'gptel)
+
+(defcustom perso/gptel-prompt-subagent-directory
+  (expand-file-name "gptel-agents/" user-emacs-directory)
+  "Directory where sub-agent definitions are written.
+Must be a member of `gptel-agent-dirs' for gptel-agent to load them."
+  :type 'directory :group 'gptel)
+
 (defvar perso/gptel-prompt--last-stage nil
   "Stage of the last apply/preview/save, restored when the builder opens.")
 
@@ -212,12 +226,22 @@ builder's fixed keys), :multi (non-nil to allow several selections),
       (error "Unknown prompt category %s" cat)))
 
 (defun perso/gptel-prompt--category-files (cat)
-  "Return the sorted org files of category CAT, or nil."
-  (let ((dir (expand-file-name
-              (plist-get (perso/gptel-prompt--category cat) :dir)
-              perso/gptel-prompt-root)))
-    (and (file-directory-p dir)
-         (directory-files dir nil "\\`[^.].*\\.org\\'"))))
+  "Return the sorted org files of category CAT, or nil.
+Reserved agentic/sub-agent fragments are hidden from the skills category."
+  (let* ((dir (perso/gptel-prompt--category-dir cat))
+         (files (and (file-directory-p dir)
+                     (directory-files dir nil "\\`[^.].*\\.org\\'"))))
+    (if (eq cat 'skills)
+        (seq-remove
+         (lambda (f) (member f (list perso/gptel-prompt-agentic-file
+                                     perso/gptel-prompt-subagent-file)))
+         files)
+      files)))
+
+(defun perso/gptel-prompt--category-dir (cat)
+  "Return the absolute directory of category CAT."
+  (expand-file-name (plist-get (perso/gptel-prompt--category cat) :dir)
+                    perso/gptel-prompt-root))
 
 (defun perso/gptel-prompt--default-stage ()
   "Return a fresh stage plist holding the configured defaults."
@@ -227,7 +251,8 @@ builder's fixed keys), :multi (non-nil to allow several selections),
                             perso/gptel-prompt-categories)
         :tools (copy-tree perso/gptel-prompt-default-tools)
         :use-tools t :confirm 'auto :datetime t :temperature nil :thinking 'unset
-        :mode 'frozen :backend nil :model nil :scope 'global))
+        :mode 'frozen :backend nil :model nil :scope 'global
+        :agentic nil :subagents nil :workdir nil))
 
 (defun perso/gptel-prompt--initial-stage ()
   "Default stage overlaid with the persisted last stage, stale files dropped."
@@ -244,6 +269,15 @@ builder's fixed keys), :multi (non-nil to allow several selections),
           (let ((files (perso/gptel-prompt--category-files (car c))))
             (setcdr cell (seq-filter (lambda (f) (member f files)) (cdr cell))))))
       (plist-put stage :selections sels))
+    (when (plist-get stage :agentic)
+      (when (require 'gptel-agent nil t)
+        (unless (bound-and-true-p gptel-agent--agents)
+          (ignore-errors (gptel-agent-update)))))
+    (when (featurep 'gptel-agent)
+      (let ((avail (perso/gptel-prompt--available-subagents)))
+        (plist-put stage :subagents
+                   (seq-filter (lambda (n) (member n avail))
+                               (plist-get stage :subagents)))))
     stage))
 
 (defun perso/gptel-prompt--stage ()
@@ -335,22 +369,59 @@ date/time preamble."
       (perso/gptel--resolve-org-includes
        (buffer-substring-no-properties (point-min) (point-max)) root))))
 
+(defun perso/gptel-prompt--effective-selections (stage)
+  "Return STAGE's selections, injecting the agentic skill when agent-aware."
+  (let ((sels (copy-tree (plist-get stage :selections))))
+    (when (plist-get stage :agentic)
+      (let* ((file perso/gptel-prompt-agentic-file)
+             (path (expand-file-name file (perso/gptel-prompt--category-dir 'skills))))
+        (unless (file-readable-p path)
+          (user-error "Agentic fragment not found: %s" path))
+        (let ((cell (assq 'skills sels)))
+          (if cell
+              (unless (member file (cdr cell))
+                (setcdr cell (append (cdr cell) (list file))))
+            (setq sels (append sels (list (cons 'skills (list file)))))))))
+    sels))
+
+(defun perso/gptel-prompt--expand-agents (text stage)
+  "Replace {{AGENTS}} in TEXT with STAGE's selected sub-agent roster."
+  (if (not (plist-get stage :agentic))
+      text
+    (let* ((names (plist-get stage :subagents))
+           (roster
+            (mapconcat
+             (lambda (name)
+               (let ((desc (and (bound-and-true-p gptel-agent--agents)
+                                (plist-get (cdr (assoc name gptel-agent--agents))
+                                           :description))))
+                 (format "`%s`: %s" name (or desc ""))))
+             names "\n")))
+      (replace-regexp-in-string (regexp-quote "{{AGENTS}}") (or roster "")
+                                text t t))))
+
+(defun perso/gptel-prompt--body (stage)
+  "Assemble STAGE's prompt body, injecting the agentic layer and roster."
+  (perso/gptel-prompt--expand-agents
+   (perso/gptel-prompt--assemble-body
+    (perso/gptel-prompt--effective-selections stage))
+   stage))
+
 (defun perso/gptel-prompt--system-value (stage)
   "Return STAGE's system prompt: a string, or a function in live modes."
-  (let ((dt (plist-get stage :datetime))
-        (sels (copy-tree (plist-get stage :selections))))
+  (let ((dt (plist-get stage :datetime)))
     (pcase (plist-get stage :mode)
       ('live
        (lambda ()
          (perso/gptel--maybe-prepend-datetime
-          (perso/gptel-prompt--assemble-body sels) dt)))
+          (perso/gptel-prompt--body stage) dt)))
       ('datetime-live
-       (let ((body (perso/gptel-prompt--assemble-body sels)))
+       (let ((body (perso/gptel-prompt--body stage)))
          (if dt
              (lambda () (perso/gptel--maybe-prepend-datetime body t))
            body)))
       (_ (perso/gptel--maybe-prepend-datetime
-          (perso/gptel-prompt--assemble-body sels) dt)))))
+          (perso/gptel-prompt--body stage) dt)))))
 
 ;;;;; Preset spec and application
 
@@ -373,27 +444,33 @@ date/time preamble."
 
 (defun perso/gptel-prompt--spec (stage system &optional with-pre)
   "Return the preset spec for STAGE, with SYSTEM as system prompt value.
-With WITH-PRE, include a :pre hook connecting the MCP servers the
-staged tools require (for saved presets)."
-  (let* ((tools (copy-tree (plist-get stage :tools)))
+With WITH-PRE, include a :pre hook connecting the MCP servers the staged
+tools require (for saved presets).  When agent-aware, inherit the gptel-agent
+preset (tools + delegation) via :parents and add staged tools with :append."
+  (let* ((agentic (plist-get stage :agentic))
+         (tools (copy-tree (plist-get stage :tools)))
+         (tool-names (mapcar #'cdr tools))
          (servers (perso/gptel-prompt--mcp-servers tools))
          (params (pcase (plist-get stage :thinking)
                    ('on (copy-tree perso/gptel-prompt-thinking-on))
                    ('off (copy-tree perso/gptel-prompt-thinking-off))))
+         (use-tools (if agentic
+                        (or (plist-get stage :use-tools) t)
+                      (plist-get stage :use-tools)))
          (spec nil))
     (when (and with-pre servers)
       (setq spec (list :pre (lambda () (gptel-mcp-connect servers 'sync nil)))))
+    (when agentic
+      (setq spec (nconc spec (list :parents '(gptel-agent)))))
     (when (plist-get stage :backend)
       (setq spec (nconc spec (list :backend (plist-get stage :backend)
                                    :model (plist-get stage :model)))))
     (nconc spec
            (list :system system
-                 :tools (mapcar #'cdr tools)
-                 :use-tools (plist-get stage :use-tools)
+                 :tools (if agentic `(:append ,tool-names) tool-names)
+                 :use-tools use-tools
                  :confirm-tool-calls (plist-get stage :confirm)
                  :temperature (plist-get stage :temperature)
-                 ;; Wrapped so `gptel--modify-value' cannot mistake keys of
-                 ;; the parameter plist for its :append/:eval/... actions.
                  :request-params (and params `(:eval (quote ,params)))))))
 
 (defun perso/gptel-prompt--scope-flag (stage)
@@ -407,13 +484,22 @@ staged tools require (for saved presets)."
     (gptel--apply-preset
      (perso/gptel-prompt--spec stage system)
      (lambda (sym val) (gptel--set-with-scope sym val flag))))
+  (let ((wd (and (plist-get stage :agentic) (plist-get stage :workdir))))
+    (when (and wd (bound-and-true-p gptel-mode))
+      (setq-local default-directory (file-name-as-directory wd))))
   (setq perso/gptel-prompt--last-stage (copy-tree stage))
-  (message "gptel prompt applied — mode %s, scope %s, %d tool(s)%s"
-           (plist-get stage :mode) (plist-get stage :scope)
+  (message "gptel prompt applied — %s%s, scope %s, %d staged tool(s)%s%s"
+           (plist-get stage :mode)
+           (if (plist-get stage :agentic) " (agent-aware)" "")
+           (plist-get stage :scope)
            (length (plist-get stage :tools))
            (if (stringp system)
                (format ", %d chars" (length system))
-             ", dynamic system prompt")))
+             ", dynamic system prompt")
+           (let ((wd (and (plist-get stage :agentic) (plist-get stage :workdir))))
+             (if (and wd (bound-and-true-p gptel-mode))
+                 (format ", cwd %s" (abbreviate-file-name wd))
+               ""))))
 
 ;;;;; Preview buffer
 
@@ -437,13 +523,12 @@ staged tools require (for saved presets)."
                         (lambda () (perso/gptel--maybe-prepend-datetime text t))
                       text))
     (_ text)))
-
 (defun perso/gptel-prompt-preview (stage)
   "Show STAGE's assembled prompt in a preview buffer."
   (let* ((mode (plist-get stage :mode))
-         (body (perso/gptel-prompt--assemble-body (plist-get stage :selections)))
+         (body (perso/gptel-prompt--body stage))
          (text (if (eq mode 'datetime-live)
-                   body            ; the date line is added per request
+                   body
                  (perso/gptel--maybe-prepend-datetime
                   body (plist-get stage :datetime))))
          (buffer (get-buffer-create "*gptel prompt preview*")))
@@ -456,12 +541,24 @@ staged tools require (for saved presets)."
       (setq perso/gptel-prompt-preview--stage (copy-tree stage)
             buffer-read-only (eq mode 'live)
             header-line-format
-            (format " Prompt preview [%s] — C-c C-c apply (%s scope), C-c C-k discard%s"
-                    mode (plist-get stage :scope)
-                    (pcase mode
-                      ('live " — read-only, regenerated per request")
-                      ('datetime-live " — date/time line added per request")
-                      (_ ""))))
+            (concat
+             (format " Prompt preview [%s]%s — C-c C-c apply (%s scope), C-c C-k discard"
+                     mode
+                     (if (plist-get stage :agentic) " (agent-aware)" "")
+                     (plist-get stage :scope))
+             (pcase mode
+               ('live " — read-only, regenerated per request")
+               ('datetime-live " — date/time line added per request")
+               (_ ""))
+             (when (plist-get stage :agentic)
+               (format " | parents: gptel-agent | sub-agents: %s%s"
+                       (if (plist-get stage :subagents)
+                           (string-join (plist-get stage :subagents) ",")
+                         "none")
+                       (if (plist-get stage :workdir)
+                           (format " | cwd: %s"
+                                   (abbreviate-file-name (plist-get stage :workdir)))
+                         "")))))
       (when (file-directory-p perso/gptel-prompt-compiled-directory)
         (setq default-directory
               (file-name-as-directory perso/gptel-prompt-compiled-directory))))
@@ -534,6 +631,56 @@ staged tools require (for saved presets)."
   (interactive)
   (let ((stage (perso/gptel-prompt--stage)))
     (plist-put stage :datetime (not (plist-get stage :datetime)))))
+
+(defun perso/gptel-prompt--available-subagents ()
+  "Return delegable sub-agent names (loaded agents minus the two presets)."
+  (when (and (featurep 'gptel-agent) (bound-and-true-p gptel-agent--agents))
+    (cl-remove-if (lambda (n) (member n '("gptel-agent" "gptel-plan")))
+                  (mapcar #'car gptel-agent--agents))))
+
+(defun perso/gptel-prompt--toggle-subagent (stage name)
+  "Toggle sub-agent NAME in STAGE's roster selection."
+  (let ((cur (plist-get stage :subagents)))
+    (plist-put stage :subagents
+               (if (member name cur) (remove name cur)
+                 (append cur (list name))))))
+
+(defun perso/gptel-prompt--update-agents ()
+  "Reload gptel-agent definitions and drop stale sub-agent selections."
+  (interactive)
+  (if (not (fboundp 'gptel-agent-update))
+      (message "gptel-agent is not loaded")
+    (gptel-agent-update)
+    (let* ((stage (perso/gptel-prompt--stage))
+           (avail (perso/gptel-prompt--available-subagents)))
+      (plist-put stage :subagents
+                 (seq-filter (lambda (n) (member n avail))
+                             (plist-get stage :subagents))))
+    (message "gptel-agent: definitions refreshed")))
+
+(defun perso/gptel-prompt--toggle-agentic ()
+  "Toggle agent-aware mode; loading gptel-agent when enabling it."
+  (interactive)
+  (let ((stage (perso/gptel-prompt--stage)))
+    (if (plist-get stage :agentic)
+        (plist-put stage :agentic nil)
+      (unless (require 'gptel-agent nil t)
+        (user-error "gptel-agent is not available"))
+      (unless (bound-and-true-p gptel-agent--agents)
+        (ignore-errors (gptel-agent-update)))
+      (unless (gptel-get-preset 'gptel-agent)
+        (user-error "gptel-agent preset not found (run gptel-agent-update)"))
+      (plist-put stage :agentic t))))
+
+(defun perso/gptel-prompt--select-workdir ()
+  "Set the working directory for the agent-aware session."
+  (interactive)
+  (let ((stage (perso/gptel-prompt--stage)))
+    (unless (plist-get stage :agentic)
+      (user-error "Working directory applies to agent-aware sessions only"))
+    (let* ((cur (or (plist-get stage :workdir) default-directory))
+           (dir (read-directory-name "Agent working directory: " cur nil t)))
+      (plist-put stage :workdir (expand-file-name dir)))))
 
 (defconst perso/gptel-prompt--use-tools-choices
   '(("on (model decides)"     . t)
@@ -666,6 +813,265 @@ Sets gptel's `gptel-confirm-tool-calls' value on apply."
       (gptel-mcp-connect (or chosen names) 'sync nil)
       (message "MCP servers connected: %s" (string-join (or chosen names) ", ")))))
 
+(defun perso/gptel-prompt--subagent-body (stage)
+  "Assemble a sub-agent body: STAGE's selection plus the sub-agent fragment.
+Excludes the agentic layer and the roster; no date/time preamble."
+  (let* ((sels (copy-tree (plist-get stage :selections)))
+         (file perso/gptel-prompt-subagent-file)
+         (path (expand-file-name file (perso/gptel-prompt--category-dir 'skills))))
+    (unless (file-readable-p path)
+      (user-error "Sub-agent fragment not found: %s" path))
+    (let ((cell (assq 'skills sels)))
+      (if cell
+          (unless (member file (cdr cell))
+            (setcdr cell (append (cdr cell) (list file))))
+        (setq sels (append sels (list (cons 'skills (list file)))))))
+    (perso/gptel-prompt--assemble-body sels)))
+
+ (defun perso/gptel-prompt--subagent-file-content (name description stage body nmsg)
+  "Return the Org text for a sub-agent definition.
+Reads tools/model/temperature from STAGE (dropping the Agent tool), derives a
+:pre MCP hook from staged MCP tools, and appends NMSG when non-nil.
+Also embeds a :prompt-recipe: property (STAGE's selections + relative template
+root) so the prompt can be re-assembled from the live fragments on every
+delegation; see `perso/gptel-subagent--dynamize'.  BODY is still written in
+full and serves as a frozen fallback."
+  (let* ((tools (cl-remove "Agent" (mapcar #'cdr (plist-get stage :tools))
+                           :test #'string=))
+         (servers (perso/gptel-prompt--mcp-servers (plist-get stage :tools)))
+         (backend (plist-get stage :backend))
+         (recipe (perso/gptel-subagent--serialize-recipe stage))
+         (props
+          (delq nil
+                (list (format ":name: %s" name)
+                      (format ":description: %s" description)
+                      (and tools (format ":tools: %s" (string-join tools " ")))
+                      (and backend (format ":backend: %s" backend))
+                      (and backend (format ":model: %s" (plist-get stage :model)))
+                      (and (plist-get stage :temperature)
+                           (format ":temperature: %s" (plist-get stage :temperature)))
+                      (and nmsg (format ":num-messages-to-send: %d" nmsg))
+                      (and servers
+                           (format ":pre: (lambda () (gptel-mcp-connect '(%s) 'sync nil))"
+                                   (mapconcat (lambda (s) (format "\"%s\"" s))
+                                              servers " ")))
+                      (format ":prompt-recipe: %s" recipe)))))
+    (concat ":PROPERTIES:\n"
+            (mapconcat #'identity props "\n")
+            "\n:END:\n\n"
+            (string-trim-right body)
+            "\n")))
+
+(defun perso/gptel-prompt--sanitize-agent-name (name)
+  "Return NAME made safe for use as a file base and agent name."
+  (replace-regexp-in-string "[^A-Za-z0-9_-]+" "-" (string-trim name)))
+
+(defun perso/gptel-prompt--default-subagent-name (stage)
+  "Suggest a sub-agent name from STAGE's selected role, else \"specialist\"."
+  (let ((roles (cdr (assq 'roles (plist-get stage :selections)))))
+    (if (= (length roles) 1)
+        (file-name-sans-extension (car roles))
+      "specialist")))
+
+(defvar-local perso/gptel-prompt-subagent-preview--file nil)
+
+(defvar perso/gptel-prompt-subagent-preview-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'perso/gptel-prompt-subagent-preview-write)
+    (define-key map (kbd "C-c C-k") #'perso/gptel-prompt-preview-abort)
+    map))
+
+(define-minor-mode perso/gptel-prompt-subagent-preview-mode
+  "Write or discard a sub-agent definition preview."
+  :lighter " SubagentPreview")
+
+(defun perso/gptel-prompt--subagent-preview (file content)
+  "Preview CONTENT before writing it to FILE."
+  (let ((buf (get-buffer-create "*gptel sub-agent preview*")))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert content))
+      (org-mode)
+      (perso/gptel-prompt-subagent-preview-mode 1)
+      (setq perso/gptel-prompt-subagent-preview--file file
+            header-line-format
+            (format " Sub-agent preview → %s — C-c C-c write, C-c C-k cancel (non-delegating)"
+                    (abbreviate-file-name file)))
+      (goto-char (point-min)))
+    (pop-to-buffer buf)))
+
+(defun perso/gptel-prompt-subagent-preview-write ()
+  "Write the previewed sub-agent definition and refresh gptel-agent."
+  (interactive)
+  (let ((file perso/gptel-prompt-subagent-preview--file)
+        (content (buffer-substring-no-properties (point-min) (point-max))))
+    (unless file (user-error "Not in a sub-agent preview buffer"))
+    (when (and (file-exists-p file)
+               (not (yes-or-no-p (format "%s exists — overwrite? "
+                                         (abbreviate-file-name file)))))
+      (user-error "Aborted"))
+    (make-directory (file-name-directory file) t)
+    (with-temp-file file (insert content))
+    (when (fboundp 'gptel-agent-update) (gptel-agent-update))
+    (message "Sub-agent saved to %s — agents refreshed"
+             (abbreviate-file-name file))
+    (quit-window t)))
+
+(defun perso/gptel-prompt-save-subagent ()
+  "Save the current selection as a gptel-agent sub-agent (with preview)."
+  (interactive)
+  (unless (require 'gptel-agent nil t)
+    (user-error "gptel-agent is not available"))
+  (let* ((stage (copy-tree (perso/gptel-prompt--stage)))
+         (name (perso/gptel-prompt--sanitize-agent-name
+                (read-string "Sub-agent name: "
+                             (perso/gptel-prompt--default-subagent-name stage)))))
+    (when (string-empty-p name) (user-error "Name cannot be empty"))
+    (when (member name '("gptel-agent" "gptel-plan"))
+      (user-error "Refusing to shadow the %s preset" name))
+    (let* ((description (string-trim
+                         (read-string "Description (mandatory, one line): ")))
+           (_ (when (string-empty-p description)
+                (user-error "Description is mandatory")))
+           (nmsg-in (string-trim
+                     (read-string "Max messages to send (empty = default): ")))
+           (nmsg (and (string-match-p "\\`[0-9]+\\'" nmsg-in)
+                      (string-to-number nmsg-in)))
+           (dir (file-name-as-directory
+                 (expand-file-name perso/gptel-prompt-subagent-directory)))
+           (file (expand-file-name (concat name ".org") dir))
+           (body (perso/gptel-prompt--subagent-body stage))
+           (content (perso/gptel-prompt--subagent-file-content
+                     name description stage body nmsg)))
+      (perso/gptel-prompt--subagent-preview file content))))
+
+(defun perso/gptel-subagent--serialize-recipe (stage)
+  "Serialize what re-assembly needs into one `read'-able line.
+Stores STAGE's selections and the template root expressed relative to
+`perso/gptel-prompt-subagent-directory', so the recipe stays valid after the
+prompt project is cloned to another location."
+  (let ((print-length nil)
+        (print-level nil)
+        (print-circle nil)
+        (root-rel (file-relative-name
+                   (expand-file-name perso/gptel-prompt-root)
+                   (expand-file-name perso/gptel-prompt-subagent-directory))))
+    (prin1-to-string (list :selections (plist-get stage :selections)
+                           :root-rel root-rel))))
+
+(defun perso/gptel-subagent--deserialize-recipe (recipe-str)
+  "Parse RECIPE-STR from a :prompt-recipe: property into a plist, or nil.
+Parsing is pure `read' (data only, never evaluated).  Returns nil on any
+error or when the result carries no :selections."
+  (condition-case err
+      (let ((form (car (read-from-string recipe-str))))
+        (and (listp form) (plist-member form :selections) form))
+    (error
+     (message "gptel-subagent: unreadable :prompt-recipe: — %s"
+              (error-message-string err))
+     nil)))
+
+(defun perso/gptel-subagent--root-for-file (recipe agent-file)
+  "Template root for AGENT-FILE, from RECIPE's :root-rel (default \"../templates/\")."
+  (expand-file-name (or (plist-get recipe :root-rel) "../templates/")
+                    (file-name-directory agent-file)))
+
+(defun perso/gptel-subagent--split-drawer (text)
+  "Split sub-agent file TEXT into (DRAWER . BODY), or return nil.
+DRAWER is the leading :PROPERTIES:...:END: block, up to and including the
+FIRST :END: line; BODY is everything after it.  Using only the first :END:
+means a :END: occurring inside the body is never mistaken for the drawer
+terminator."
+  (when (string-prefix-p ":PROPERTIES:" (string-trim-left text))
+    (let ((case-fold-search t))
+      (when (string-match "^[ \t]*:END:[ \t]*\n" text)
+        (let ((end (match-end 0)))
+          (cons (substring text 0 end)
+                (substring text end)))))))
+
+(defun perso/gptel-subagent--sync-fallback (agent-file new-body)
+  "Refresh AGENT-FILE's frozen body with NEW-BODY, preserving its drawer.
+No-op unless AGENT-FILE is readable and writable, parses into a drawer + body,
+and the trimmed on-disk body actually differs from NEW-BODY (so repeated
+identical assemblies cause no writes and no version-control churn).  The
+property drawer, including :prompt-recipe:, is kept byte-for-byte.  The write
+is atomic: a temp file in the same directory is written and then renamed over
+the target, and the temp is always cleaned up.  Errors propagate to the
+caller, which calls this inside `ignore-errors'."
+  (when (and (stringp new-body)
+             (file-readable-p agent-file)
+             (file-writable-p agent-file))
+    (let* ((current (with-temp-buffer
+                      (insert-file-contents agent-file)
+                      (buffer-string)))
+           (parts (perso/gptel-subagent--split-drawer current)))
+      (when parts
+        (let ((old-body (string-trim (cdr parts)))
+              (new-trim (string-trim new-body)))
+          (unless (string-equal old-body new-trim)
+            (let* ((updated (concat (string-trim-right (car parts))
+                                    "\n\n" new-trim "\n"))
+                   (dir (file-name-directory agent-file))
+                   (tmp (make-temp-file
+                         (expand-file-name ".#gptel-fallback-" dir))))
+              (unwind-protect
+                  (progn
+                    (with-temp-file tmp (insert updated))
+                    (rename-file tmp agent-file t))
+                (when (file-exists-p tmp)
+                  (ignore-errors (delete-file tmp)))))))))))
+
+(defun perso/gptel-subagent--system-thunk (recipe agent-file fallback)
+  "Return an arity-safe function that re-assembles a sub-agent system prompt.
+RECIPE is the parsed :prompt-recipe: plist, AGENT-FILE anchors the portable
+template root, and FALLBACK (the frozen body) is returned verbatim if live
+assembly fails for any reason.  On a successful assembly the on-disk frozen
+body is refreshed as a best-effort side effect (see
+`perso/gptel-subagent--sync-fallback'); a write failure never affects the
+value returned to the delegation."
+  (lambda (&rest _)
+    (condition-case err
+        (if (fboundp 'perso/gptel-prompt--subagent-body)
+            (let* ((perso/gptel-prompt-root
+                    (perso/gptel-subagent--root-for-file recipe agent-file))
+                   (body (perso/gptel-prompt--subagent-body recipe)))
+              (when (and (stringp body) (not (string-empty-p (string-trim body))))
+                (ignore-errors
+                  (perso/gptel-subagent--sync-fallback agent-file body)))
+              body)
+          (user-error "perso/gptel-prompt--subagent-body is unavailable"))
+      (error
+       (message "gptel-subagent: dynamic prompt for %s failed (%s); using frozen copy"
+                (file-name-nondirectory agent-file)
+                (error-message-string err))
+       (or fallback "")))))
+
+(defun perso/gptel-subagent--dynamize (orig agent-file &rest args)
+  "Around-advice for `gptel-agent-read-file' enabling dynamic sub-agent prompts.
+On the full (non metadata-only) read of an agent file carrying a
+:prompt-recipe: property, replace its static string :system with a function
+that re-assembles the prompt from the current fragments on every delegation,
+and drop the recipe key.  Files without the property pass through untouched."
+  (let ((result (apply orig agent-file args)))
+    ;; ARGS is (TEMPLATES METADATA-ONLY); only rewrite the full read.
+    (when (and (consp result) (not (cadr args)))
+      (let* ((plist (cdr result))
+             (recipe-str (and plist (plist-get plist :prompt-recipe))))
+        (when recipe-str
+          (let ((fallback (plist-get plist :system))
+                (recipe (perso/gptel-subagent--deserialize-recipe recipe-str)))
+            (cl-remf plist :prompt-recipe)      ;keep it out of gptel's preset code
+            (when recipe
+              (setq plist (plist-put plist :system
+                                     (perso/gptel-subagent--system-thunk
+                                      recipe agent-file fallback))))
+            (setcdr result plist)))))
+    result))
+
+(with-eval-after-load 'gptel-agent
+  (advice-add 'gptel-agent-read-file :around #'perso/gptel-subagent--dynamize))
+
 ;;;;; Menu layout
 
 (defconst perso/gptel-prompt--keychars "abcdefghijklmnopqrstuvwxyz0123456789")
@@ -739,7 +1145,10 @@ Sets gptel's `gptel-confirm-tool-calls' value on apply."
   "Suffixes of the Toggles column, given STAGE."
   (list (list "-d" (format "Date/time preamble %s"
                            (if (plist-get stage :datetime) "[x]" "[ ]"))
-              #'perso/gptel-prompt--toggle-datetime :transient t)))
+              #'perso/gptel-prompt--toggle-datetime :transient t)
+        (list "-a" (format "Agent-aware %s"
+                           (if (plist-get stage :agentic) "[x]" "[ ]"))
+              #'perso/gptel-prompt--toggle-agentic :transient t)))
 
 (defun perso/gptel-prompt--parameters-children (stage)
   "Suffixes of the Parameters column, given STAGE."
@@ -769,9 +1178,42 @@ Sets gptel's `gptel-confirm-tool-calls' value on apply."
                             perso/gptel-prompt--scope-choices
                             (plist-get stage :scope)))
               #'perso/gptel-prompt--select-scope :transient t)
+        (list "-w" (format "Working dir: %s"
+                           (let ((wd (plist-get stage :workdir)))
+                             (cond ((not (plist-get stage :agentic))
+                                    "(agent-aware only)")
+                                   (wd (abbreviate-file-name wd))
+                                   (t "buffer default"))))
+              #'perso/gptel-prompt--select-workdir :transient t)
         (list :info (abbreviate-file-name
                      (expand-file-name perso/gptel-prompt-master
                                        perso/gptel-prompt-root)))))
+
+(defun perso/gptel-prompt--subagents-children (stage)
+  "Suffixes of the Sub-agents column, given STAGE."
+  (if (not (plist-get stage :agentic))
+      (list (list :info "Enable Agent-aware (-a) to choose sub-agents"))
+    (let* ((avail (perso/gptel-prompt--available-subagents))
+           (selected (plist-get stage :subagents))
+           (i -1)
+           (toggles
+            (mapcar
+             (lambda (name)
+               (setq i (1+ i))
+               (list (format "A%c" (aref perso/gptel-prompt--keychars i))
+                     (format "%s %s"
+                             (if (member name selected) "[x]" "[ ]") name)
+                     `(lambda ()
+                        (interactive)
+                        (perso/gptel-prompt--toggle-subagent
+                         (perso/gptel-prompt--stage) ,name))
+                     :transient t))
+             (seq-take avail (length perso/gptel-prompt--keychars)))))
+      (append
+       (list (list "u" "Refresh list (gptel-agent-update)"
+                   #'perso/gptel-prompt--update-agents :transient t))
+       (or toggles
+           (list (list :info "(no sub-agents found — save one below)")))))))
 
 (transient-define-prefix perso/gptel-prompt-builder ()
   "Assemble a modular gptel system prompt from the org template tree.
@@ -826,16 +1268,22 @@ effect when applied (RET, or C-c C-c from the preview)."
       (transient-parse-suffixes
        'perso/gptel-prompt-builder
        (perso/gptel-prompt--session-children (perso/gptel-prompt--stage))))]]
+  [["Sub-agents" :class transient-column
+    :setup-children
+    (lambda (_)
+      (transient-parse-suffixes
+       'perso/gptel-prompt-builder
+       (perso/gptel-prompt--subagents-children (perso/gptel-prompt--stage))))]]
   [["Actions"
     ("RET" "Assemble & apply" perso/gptel-prompt-apply-now)
     ("p" "Preview" perso/gptel-prompt-open-preview)
     ("s" "Save as preset" perso/gptel-prompt-save-preset)
+    ("a" "Save as sub-agent" perso/gptel-prompt-save-subagent)
     ("r" "Reset to defaults" perso/gptel-prompt-reset :transient t)
     ("q" "Quit" transient-quit-one)]]
   (interactive)
   (transient-setup 'perso/gptel-prompt-builder nil nil
                    :scope (perso/gptel-prompt--initial-stage)))
-
 
 (transient-define-prefix perso/llm-menu ()
   "LLM stack management menu."
