@@ -1,0 +1,14 @@
+.emacs.d/perso.el
+.emacs.d/recentf
+.emacs.d/tramp
+.emacs.d/auto-save/
+.emacs.d/auto-save-list/
+.emacs.d/backups/
+.emacs.d/eca/
+.emacs.d/eln-cache/
+.emacs.d/elpa/
+.emacs.d/grammalecte/
+.emacs.d/quelpa/
+.emacs.d/tree-sitter/
+.emacs.d/undo-fu-session/
+.emacs.d/undos/
