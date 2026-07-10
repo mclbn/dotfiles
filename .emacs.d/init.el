@@ -3347,6 +3347,34 @@ This is a modified version of `mu4e-view-save-attachments'."
     :models '(qwen35-4b
               qwen25-coder-7b
               gemma4-12b))
+
+  (gptel-make-openai "OpenCode Go"
+    :host "opencode.ai"
+    :endpoint "/zen/go/v1/chat/completions"
+    :protocol "https"
+    :stream t
+    :key #'gptel-api-key-from-auth-source
+    :models '(glm-5.2
+              glm-5.1
+              kimi-k2.7-code
+              kimi-k2.6
+              deepseek-v4-pro
+              deepseek-v4-flash
+              mimo-v2.5
+              mimo-v2.5-pro))
+
+  (gptel-make-anthropic "OpenCode Go (Anthropic)"
+    :host "opencode.ai"
+    :endpoint "/zen/go/v1/messages"
+    :protocol "https"
+    :stream t
+    :key #'gptel-api-key-from-auth-source
+    :models '(minimax-m3
+              minimax-m2.7
+              qwen3.7-max
+              qwen3.7-plus
+              qwen3.6-plus))
+
   (setq gptel-backend (gptel-get-backend "llama-cpp-main")
         gptel-model 'qwen36-27b-opti)
 
