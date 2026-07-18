@@ -3317,7 +3317,7 @@ This is a modified version of `mu4e-view-save-attachments'."
   :after gptel
   :custom
   (mcp-hub-servers
-   `(("searxng" . (:url ,perso/mcp-searxng-url)))))
+   `(("searxng" . (:url ,perso/mcp-searxng-url :timeout 30)))))
 
 ;; GPTel : chat with LLMs
 (use-package gptel
@@ -3627,8 +3627,10 @@ With non-nil WITH-DATETIME, prepend a local date/time line and a blank line."
                         (assoc-default "gptel-agent" gptel-agent--agents))))
       (apply #'gptel-make-preset 'gptel-agent
              (plist-put
+              ;; We don't add url_fetch and web_search since they are bridged
               (plist-put plist :tools
-                         (append (plist-get plist :tools) '("mcp-searxng")))
+                         (append (plist-get plist :tools)
+                                 '("searxng_instance_info" "searxng_search_suggestions")))
               :pre (lambda () (gptel-mcp-connect '("searxng") 'sync nil))))))
   (advice-add 'gptel-agent-update :after #'perso/gptel-agent--add-searxng)
   (perso/gptel-agent--add-searxng)
@@ -3728,6 +3730,29 @@ Extra arguments (e.g. WebFetch's extraction prompt) are ignored."
        :description (gptel-tool-description orig)
        :args (gptel-tool-args orig)
        :function (cdr spec)))))
+
+;;;; Make MCP tool-call timeouts report instead of hanging ------------------
+;; mcp-async-call-tool sets :timeout but no :timeout-fn, so a timed-out
+;; tools/call fires neither callback and gptel's tool counter never completes
+;; ("Calling agent" forever).  This override is the stock function plus the
+;; missing :timeout-fn.
+(defun perso/mcp-async-call-tool (connection name arguments callback error-callback)
+  "Timeout-reporting replacement for `mcp-async-call-tool'."
+  (jsonrpc-async-request
+   connection :tools/call
+   (list :name name :arguments (if arguments arguments #s(hash-table)))
+   :timeout (mcp--timeout connection)
+   :success-fn (lambda (res) (funcall callback res))
+   :error-fn   (jsonrpc-lambda (&key code message _data)
+                 (funcall error-callback code message))
+   :timeout-fn (lambda ()
+                 (funcall error-callback 'timeout
+                          (format "MCP tool '%s' timed out after %ss"
+                                  name (or (mcp--timeout connection)
+                                           jsonrpc-default-request-timeout))))))
+
+(with-eval-after-load 'mcp
+  (advice-add 'mcp-async-call-tool :override #'perso/mcp-async-call-tool))
 
 (use-package eca
   :custom
