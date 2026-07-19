@@ -1844,6 +1844,54 @@ Second call restores each mode to its previously saved state."
   (doom-modeline-def-modeline 'main
     '(bar workspace-name window-number matches follow buffer-info remote-host buffer-position word-count selection-info)
     '(objed-state misc-info persp-name grip debug repl lsp minor-modes indent-info buffer-encoding major-mode process vcs check " "))
+
+  ;; --- Dired file/folder count segment ---
+  (require 'dired)
+
+  (defvar-local my/dired--count-cache nil
+    "Cons (FILES . DIRS) of displayed entries in the current dired buffer.")
+
+  (defun my/dired--refresh-count-cache ()
+    "Recompute `my/dired--count-cache' from the actual directory on disk."
+    (when (derived-mode-p 'dired-mode)
+      (let* ((ddir (if (consp dired-directory)
+                       (car dired-directory)
+                     dired-directory))
+             (entries (condition-case nil
+                          (directory-files-and-attributes ddir nil nil nil 'nosort)
+                        (error nil)))
+             (files 0)
+             (dirs 0))
+        (dolist (e entries)
+          (let ((name (car e))
+                (attr (cadr e)))
+            (unless (member name '("." ".."))
+              (if (eq t attr)
+                  (setq dirs (1+ dirs))
+                (setq files (1+ files))))))
+        (setq my/dired--count-cache (cons files dirs)))
+      (force-mode-line-update)))
+
+  (doom-modeline-def-segment dired-count
+    "Number of files and directories shown in the current dired buffer."
+    (when (and (derived-mode-p 'dired-mode)
+               my/dired--count-cache)
+      (propertize
+       (format " %d   %d   "
+               (car my/dired--count-cache)
+               (cdr my/dired--count-cache))
+       'face (doom-modeline-face 'doom-modeline-info))))
+
+  (doom-modeline-def-modeline 'dired
+    '(bar workspace-name window-number matches follow buffer-info dired-count remote-host buffer-position selection-info)
+    '(objed-state misc-info persp-name grip debug repl lsp minor-modes indent-info buffer-encoding major-mode process vcs check " "))
+
+  (add-to-list 'doom-modeline-mode-alist '(dired-mode . dired))
+
+  (add-hook 'dired-mode-hook         #'my/dired--refresh-count-cache)
+  (add-hook 'dired-after-readin-hook #'my/dired--refresh-count-cache)
+  (when (boundp 'dired-after-change-hook)
+    (add-hook 'dired-after-change-hook #'my/dired--refresh-count-cache))
   )
 
 ;; Smartparens : auto parenthesis,  etc.
