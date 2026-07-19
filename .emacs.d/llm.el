@@ -1226,29 +1226,42 @@ ordering (here: category, then fragment name) is what the user sees."
       (complete-with-action action candidates string pred))))
 
 (defun perso/gptel-prompt-manage-favorites ()
-  "Choose the dashboard favorites from all visible fragments.
-Candidates are ordered by category (as in `perso/gptel-prompt-categories') and
-then by fragment name within each category."
+  "Toggle the dashboard favorites, then return to the dashboard.
+Each prompt lists *all* fragments as \"category/name\" (ordered by category then
+name) with a =[x]/[ ]= marker for the current working set: pick one to flip it,
+or choose the Done entry to save and exit.  This deliberately avoids
+`completing-read-multiple', whose inline comma-separated entry filtered the
+candidate list down to the already-selected items."
   (interactive)
   (let* ((pairs (cl-loop for c in perso/gptel-prompt-categories
                          append (mapcar (lambda (f) (cons (car c) f))
                                         (perso/gptel-prompt--category-files (car c)))))
-         (label->pair (mapcar (lambda (p)
-                                (cons (format "%s/%s" (car p)
-                                              (file-name-sans-extension (cdr p)))
-                                      p))
-                              pairs))
-         (current (delq nil (mapcar (lambda (fav)
-                                      (car (rassoc fav label->pair)))
-                                    perso/gptel-prompt-favorites)))
-         (chosen (completing-read-multiple
-                  "Favorites (comma-separated): "
-                  (perso/gptel-prompt--ordered-collection
-                   (mapcar #'car label->pair))
-                  nil t
-                  (when current (string-join current ",")))))
-    (setq perso/gptel-prompt-favorites
-          (delq nil (mapcar (lambda (l) (cdr (assoc l label->pair))) chosen)))
+         (working (seq-filter (lambda (fav) (member fav pairs))
+                              (copy-sequence perso/gptel-prompt-favorites)))
+         (done "✓ Done (save favorites)"))
+    (catch 'done
+      (while t
+        (let* ((label->pair
+                (mapcar (lambda (p)
+                          (cons (format "%s %s/%s"
+                                        (if (member p working) "[x]" "[ ]")
+                                        (car p) (file-name-sans-extension (cdr p)))
+                                p))
+                        pairs))
+               (choice (completing-read
+                        (format "Favorites — %d selected — toggle one or Done: "
+                                (length working))
+                        (perso/gptel-prompt--ordered-collection
+                         (cons done (mapcar #'car label->pair)))
+                        nil t)))
+          (if (or (null choice) (string= choice done))
+              (throw 'done nil)
+            (let ((pair (cdr (assoc choice label->pair))))
+              (when pair
+                (setq working (if (member pair working)
+                                  (remove pair working)
+                                (append working (list pair))))))))))
+    (setq perso/gptel-prompt-favorites working)
     (perso/gptel-prompt-dashboard)))
 
 ;;;;; Sub-agents: assembly, save, recipe helpers, tool editing
@@ -1514,7 +1527,11 @@ returned if live assembly fails."
       drawer)))
 
 (defun perso/gptel-prompt-edit-agent-tools ()
-  "Edit the :tools of a saved sub-agent file in place, then refresh gptel-agent."
+  "Edit the :tools of a saved sub-agent file in place, then refresh gptel-agent.
+Tools are toggled one at a time from a list that always shows *every* candidate
+(known tool names and categories, plus whatever the agent already lists) with a
+=[x]/[ ]= marker — avoiding `completing-read-multiple', whose comma-separated
+entry hid the unselected candidates behind the current selection."
   (interactive)
   (let* ((dir (file-name-as-directory
                (expand-file-name perso/gptel-prompt-subagent-directory)))
@@ -1530,11 +1547,34 @@ returned if live assembly fails."
              (body (cdr parts))
              (cur (perso/gptel-prompt--drawer-tools drawer))
              (cands (delete-dups
-                     (append (mapcar #'cdr (perso/gptel-prompt--all-tool-pairs))
+                     (append cur
+                             (mapcar #'cdr (perso/gptel-prompt--all-tool-pairs))
                              (mapcar #'car (bound-and-true-p gptel--known-tools)))))
-             (chosen (completing-read-multiple
-                      "Tools (names or categories, comma-separated): "
-                      cands nil nil (when cur (string-join cur ","))))
+             (working (copy-sequence cur))
+             (done "✓ Done (save tools)")
+             (chosen
+              (catch 'done
+                (while t
+                  (let* ((label->name
+                          (mapcar (lambda (n)
+                                    (cons (format "%s %s"
+                                                  (if (member n working) "[x]" "[ ]")
+                                                  n)
+                                          n))
+                                  cands))
+                         (choice (completing-read
+                                  (format "Agent tools — %d selected — toggle or Done: "
+                                          (length working))
+                                  (perso/gptel-prompt--ordered-collection
+                                   (cons done (mapcar #'car label->name)))
+                                  nil t)))
+                    (if (or (null choice) (string= choice done))
+                        (throw 'done working)
+                      (let ((name (cdr (assoc choice label->name))))
+                        (when name
+                          (setq working (if (member name working)
+                                            (remove name working)
+                                          (append working (list name)))))))))))
              (new-drawer (perso/gptel-prompt--drawer-set-tools drawer chosen)))
         (with-temp-file file (insert new-drawer body))
         (when (fboundp 'gptel-agent-update) (gptel-agent-update))
