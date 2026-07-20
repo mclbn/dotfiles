@@ -3396,6 +3396,14 @@ This is a modified version of `mu4e-view-save-attachments'."
               qwen25-coder-7b
               gemma4-12b))
 
+  (gptel-make-anthropic "Claude"
+    :host "api.anthropic.com"
+    :key #'gptel-api-key-from-auth-source
+    :stream t
+    :models '(claude-sonnet-5
+              claude-opus-4-8
+              claude-haiku-4-5-20251001))
+
   (gptel-make-openai "OpenCode Go"
     :host "opencode.ai"
     :endpoint "/zen/go/v1/chat/completions"
