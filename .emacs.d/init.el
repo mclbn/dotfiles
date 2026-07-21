@@ -3684,6 +3684,7 @@ With non-nil WITH-DATETIME, prepend a local date/time line and a blank line."
       (apply #'gptel-make-preset 'gptel-agent
              (plist-put
               ;; We don't add url_fetch and web_search since they are bridged
+              ;; to Web_Fetch and Web_Search
               (plist-put plist :tools
                          (append (plist-get plist :tools)
                                  '("searxng_instance_info" "searxng_search_suggestions")))
