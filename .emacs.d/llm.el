@@ -6,6 +6,7 @@
 (require 'gptel-transient)
 (require 'cl-lib)
 (require 'subr-x)
+(load (expand-file-name "misc.el" user-emacs-directory) nil t)
 
 (defun perso/portainer-token (machine port)
   "Retrieve the secret for MACHINE and PORT from `auth-sources'.
@@ -310,10 +311,11 @@ dashboard is pushed on the stack and =C-g= pops straight back to it."
         :tools (copy-tree perso/gptel-prompt-default-tools)
         :use-tools t :confirm 'auto :datetime t :temperature nil :thinking 'unset
         :mode 'frozen :backend nil :model nil :scope 'global
-        :agentic nil :subagents nil :workdir nil :main-agent-tools 'extend))
+        :agentic nil :subagents nil :workdir nil))
 
 (defun perso/gptel-prompt--sanitize-stage (stage)
-  "Drop stale file selections and sub-agent names from STAGE; return STAGE."
+  "Drop stale file selections and sub-agent names from STAGE; return STAGE.
+Also reconcile the \"Agent\" tool in STAGE's :tools with its :agentic flag."
   (let ((sels (plist-get stage :selections)))
     (dolist (c perso/gptel-prompt-categories)
       (let ((cell (assq (car c) sels)))
@@ -321,6 +323,13 @@ dashboard is pushed on the stack and =C-g= pops straight back to it."
           (let ((files (perso/gptel-prompt--category-files (car c))))
             (setcdr cell (seq-filter (lambda (f) (member f files)) (cdr cell)))))))
     (plist-put stage :selections sels))
+  (when-let ((pair (perso/gptel-prompt--agent-tool-pair)))
+    (let ((tools (plist-get stage :tools)))
+      (if (plist-get stage :agentic)
+          (unless (member pair tools)
+            (plist-put stage :tools (append tools (list pair))))
+        (when (member pair tools)
+          (plist-put stage :tools (remove pair tools))))))
   (when (featurep 'gptel-agent)
     (let ((avail (perso/gptel-prompt--available-subagents)))
       (plist-put stage :subagents
@@ -598,14 +607,13 @@ and :datetime; references `perso/gptel-prompt-root', never a baked path."
   "Return the preset spec for STAGE, with SYSTEM as system prompt value.
 Omits :temperature and :request-params when unset (leaving gptel's current
 value untouched).  When agent-aware, inherits the gptel-agent preset via
-:parents; :main-agent-tools controls whether staged tools extend (:append)
-or restrict (replace) the inherited toolset.  With WITH-PRE, add a :pre hook
+:parents; the staged tools (including \"Agent\") replace the inherited
+toolset.  With WITH-PRE, add a :pre hook
 connecting the MCP servers the staged tools require."
   (let* ((agentic (plist-get stage :agentic))
          (tools (copy-tree (plist-get stage :tools)))
          (tool-names (mapcar #'cdr tools))
          (servers (perso/gptel-prompt--mcp-servers tools))
-         (restrict (and agentic (eq (plist-get stage :main-agent-tools) 'restrict)))
          (params (pcase (plist-get stage :thinking)
                    ('on (copy-tree perso/gptel-prompt-thinking-on))
                    ('off (copy-tree perso/gptel-prompt-thinking-off))))
@@ -623,9 +631,7 @@ connecting the MCP servers the staged tools require."
                                    :model (plist-get stage :model)))))
     (setq spec (nconc spec
                       (list :system system
-                            :tools (if (and agentic (not restrict))
-                                       (list :append tool-names)
-                                     tool-names)
+                            :tools tool-names
                             :use-tools use-tools
                             :confirm-tool-calls (plist-get stage :confirm))))
     (when temp (setq spec (nconc spec (list :temperature temp))))
@@ -824,26 +830,27 @@ connecting the MCP servers the staged tools require."
     (message "gptel-agent: definitions refreshed")))
 
 (defun perso/gptel-prompt--toggle-agentic ()
-  "Toggle agent-aware mode; loading gptel-agent when enabling it."
+  "Toggle agent-aware mode; loading gptel-agent when enabling it.
+Also add or remove the \"Agent\" tool from STAGE's :tools to match."
   (interactive)
   (let ((stage (perso/gptel-prompt--stage)))
     (if (plist-get stage :agentic)
-        (plist-put stage :agentic nil)
+        (progn
+          (plist-put stage :agentic nil)
+          (when-let ((pair (perso/gptel-prompt--agent-tool-pair)))
+            (plist-put stage :tools
+                       (remove pair (plist-get stage :tools)))))
       (unless (require 'gptel-agent nil t)
         (user-error "gptel-agent is not available"))
       (unless (bound-and-true-p gptel-agent--agents)
         (ignore-errors (gptel-agent-update)))
       (unless (gptel-get-preset 'gptel-agent)
         (user-error "gptel-agent preset not found (run gptel-agent-update)"))
-      (plist-put stage :agentic t))))
-
-(defun perso/gptel-prompt--toggle-main-agent-tools ()
-  "Toggle whether staged tools extend or restrict the main agent's toolset."
-  (interactive)
-  (let ((stage (perso/gptel-prompt--stage)))
-    (plist-put stage :main-agent-tools
-               (if (eq (plist-get stage :main-agent-tools) 'restrict)
-                   'extend 'restrict))))
+      (plist-put stage :agentic t)
+      (when-let ((pair (perso/gptel-prompt--agent-tool-pair)))
+        (unless (member pair (plist-get stage :tools))
+          (plist-put stage :tools
+                     (append (plist-get stage :tools) (list pair))))))))
 
 (defun perso/gptel-prompt--select-workdir ()
   "Set the working directory for the agent-aware session."
@@ -1036,7 +1043,6 @@ STYLE is `dynamic' (rebuilds from fragments via a wrapper) or `frozen'
   (let* ((agentic (plist-get stage :agentic))
          (tools (mapcar #'cdr (plist-get stage :tools)))
          (servers (perso/gptel-prompt--mcp-servers (plist-get stage :tools)))
-         (restrict (and agentic (eq (plist-get stage :main-agent-tools) 'restrict)))
          (params (pcase (plist-get stage :thinking)
                    ('on perso/gptel-prompt-thinking-on)
                    ('off perso/gptel-prompt-thinking-off)))
@@ -1059,10 +1065,7 @@ STYLE is `dynamic' (rebuilds from fragments via a wrapper) or `frozen'
           (add "  :system %s" (prin1-to-string
                                (perso/gptel-prompt-build-system stage)))))
       (when agentic (add "  :parents '(gptel-agent)"))
-      (add "  :tools '%s" (prin1-to-string
-                           (if (and agentic (not restrict))
-                               (list :append tools)
-                             tools)))
+      (add "  :tools '%s" (prin1-to-string tools))
       (add "  :use-tools %s" (perso/gptel-prompt--lisp-atom use-tools))
       (add "  :confirm-tool-calls %s"
            (perso/gptel-prompt--lisp-atom (plist-get stage :confirm)))
@@ -1367,27 +1370,41 @@ returned if live assembly fails."
        (or fallback "")))))
 
 (defun perso/gptel-prompt--dynamize (orig agent-file &rest args)
-  "Around-advice for `gptel-agent-read-file' enabling dynamic sub-agent prompts."
+  "Around-advice for =gptel-agent-read-file' enabling dynamic sub-agent prompts."
   (let ((result (apply orig agent-file args)))
-    (when (and (consp result) (not (cadr args)))
+    (when (consp result)
       (let* ((plist (cdr result))
-             (recipe-str (and plist (plist-get plist :prompt-recipe))))
-        (when recipe-str
-          (let ((fallback (plist-get plist :system))
-                (recipe (perso/gptel-prompt--deserialize-recipe recipe-str)))
-            (cl-remf plist :prompt-recipe)
-            (when recipe
-              (setq plist (plist-put plist :system
-                                     (perso/gptel-prompt--system-thunk
-                                      recipe agent-file fallback))))
+             (recipe-raw (and plist (plist-get plist :prompt-recipe))))
+        (when recipe-raw
+          (let ((fallback (plist-get plist :system)))
+            (cl-remf plist :prompt-recipe)   ; unconditional: never leak to gptel
+            (let ((recipe
+                   (condition-case err
+                       (if (stringp recipe-raw)
+                           (perso/gptel-prompt--deserialize-recipe recipe-raw)
+                         (and (listp recipe-raw)
+                              (plist-member recipe-raw :selections)
+                              recipe-raw))
+                     (error
+                      (message "gptel-subagent: unreadable :prompt-recipe: — %s"
+                               (error-message-string err))
+                      nil))))
+              (when recipe
+                (setq plist (plist-put plist :system
+                                       (perso/gptel-prompt--system-thunk
+                                        recipe agent-file fallback)))))
             (setcdr result plist)))))
     result))
 
 (with-eval-after-load 'gptel-agent
-  (advice-add 'gptel-agent-read-file :around #'perso/gptel-prompt--dynamize))
+  (advice-add 'gptel-agent-read-file :around #'perso/gptel-prompt--dynamize)
+  (when (bound-and-true-p gptel-agent--agents)
+    (ignore-errors (gptel-agent-update))))
 
 (defun perso/gptel-prompt--subagent-file-content (name description stage body nmsg)
-  "Return the Org text for a sub-agent definition."
+  "Return the Org text for a sub-agent definition.
+A sub-agent with no tools writes `:use-tools: nil' so it does not inherit the
+orchestrator's active tools at delegation time."
   (let* ((tools (cl-remove "Agent" (mapcar #'cdr (plist-get stage :tools))
                            :test #'string=))
          (servers (perso/gptel-prompt--mcp-servers (plist-get stage :tools)))
@@ -1398,6 +1415,7 @@ returned if live assembly fails."
                 (list (format ":name: %s" name)
                       (format ":description: %s" description)
                       (and tools (format ":tools: %s" (string-join tools " ")))
+                      (and (null tools) ":use-tools: nil")
                       (and backend (format ":backend: %s" backend))
                       (and backend (format ":model: %s" (plist-get stage :model)))
                       (and (plist-get stage :temperature)
@@ -1528,9 +1546,9 @@ returned if live assembly fails."
 
 (defun perso/gptel-prompt-edit-agent-tools ()
   "Edit the :tools of a saved sub-agent file in place, then refresh gptel-agent.
-Tools are toggled one at a time from a list that always shows *every* candidate
-(known tool names and categories, plus whatever the agent already lists) with a
-=[x]/[ ]= marker — avoiding `completing-read-multiple', whose comma-separated
+Tools are toggled one at a time from a list that always shows every user-selectable
+candidate (known tool names and categories, plus whatever the agent already lists)
+with a =[x]/[ ]= marker — avoiding `completing-read-multiple', whose comma-separated
 entry hid the unselected candidates behind the current selection."
   (interactive)
   (let* ((dir (file-name-as-directory
@@ -1548,7 +1566,9 @@ entry hid the unselected candidates behind the current selection."
              (cur (perso/gptel-prompt--drawer-tools drawer))
              (cands (delete-dups
                      (append cur
-                             (mapcar #'cdr (perso/gptel-prompt--all-tool-pairs))
+                             (mapcar #'cdr (cl-remove-if
+                                            (lambda (p) (equal (cdr p) "Agent"))
+                                            (perso/gptel-prompt--all-tool-pairs)))
                              (mapcar #'car (bound-and-true-p gptel--known-tools)))))
              (working (copy-sequence cur))
              (done "✓ Done (save tools)")
@@ -1588,29 +1608,10 @@ entry hid the unselected candidates behind the current selection."
         ((null (cdr items)) (car items))
         (t (format "%s (+%d more)" (car items) (1- (length items))))))
 
-(defun perso/gptel-prompt--toggle-keys (n reserved)
-  "Return N mutually prefix-free quick-select keys.
-Single lowercase letters (a–z) are used for the first 26 items; beyond that,
-two-character keys of the form \"Aa\", \"Ab\", … (an uppercase first letter and a
-lowercase second letter).  The uppercase first letter avoids the action letters
-in RESERVED, so no key is a prefix of another and none clashes with an uppercase
-action key such as =C=, =E= or =U=."
-  (let ((singles (append "abcdefghijklmnopqrstuvwxyz" nil))
-        (keys nil))
-    (if (<= n (length singles))
-        (dotimes (i n) (push (char-to-string (nth i singles)) keys))
-      (dolist (c singles) (push (char-to-string c) keys))
-      (let ((firsts (seq-remove (lambda (c) (memq c reserved))
-                                (append "ABCDEFGHIJKLMNOPQRSTUVWXYZ" nil)))
-            (seconds (append "abcdefghijklmnopqrstuvwxyz" nil))
-            (i (length singles)))
-        (catch 'done
-          (dolist (f firsts)
-            (dolist (s seconds)
-              (when (>= i n) (throw 'done nil))
-              (push (concat (char-to-string f) (char-to-string s)) keys)
-              (setq i (1+ i)))))))
-    (nreverse keys)))
+(defun perso/gptel-prompt--leaf (s)
+  "Return S's display leaf: text after the last \"/\", sans extension.
+So \"subdir/name.org\" -> \"name\" and \"gptel-agent/Eval\" -> \"Eval\"."
+  (file-name-sans-extension (car (last (split-string s "/")))))
 
 (defun perso/gptel-prompt--ncols (specs &optional maxcols)
   "Columns that fit SPECS across the current frame, 1..MAXCOLS (default 4)."
@@ -1652,7 +1653,9 @@ action key such as =C=, =E= or =U=."
   "Dashboard summary line for staged tools."
   (let* ((stage (perso/gptel-prompt--stage))
          (names (mapcar (lambda (p) (format "%s/%s" (car p) (cdr p)))
-                        (plist-get stage :tools)))
+                        (cl-remove-if
+                         (lambda (pair) (equal (cdr pair) "Agent"))
+                         (plist-get stage :tools))))
          (use (pcase (plist-get stage :use-tools)
                 ('force "force") ('nil "off") (_ "on"))))
     (format "%-9s %s · use:%s · %s" "Tools"
@@ -1779,7 +1782,8 @@ action key such as =C=, =E= or =U=."
          (multi (plist-get (perso/gptel-prompt--category cat) :multi))
          (files (perso/gptel-prompt--category-files cat))
          (selected (cdr (assq cat (plist-get stage :selections))))
-         (keys (perso/gptel-prompt--toggle-keys (length files) nil)))
+         (keys (mnemonic-keys-assign
+                (mapcar #'perso/gptel-prompt--leaf files) nil)))
     (cl-mapcar
      (lambda (key file)
        (list key
@@ -1827,12 +1831,26 @@ action key such as =C=, =E= or =U=."
   (cl-loop for (cat . entries) in (bound-and-true-p gptel--known-tools)
            append (mapcar (lambda (e) (cons cat (car e))) entries)))
 
+(defun perso/gptel-prompt--agent-tool-pair ()
+  "Return the (CATEGORY . NAME) pair for the gptel-agent \"Agent\" tool, or nil."
+  (cl-find "Agent" (perso/gptel-prompt--all-tool-pairs)
+           :key #'cdr :test #'string=))
+
 (defun perso/gptel-prompt--tools-specs ()
-  "Ordered toggle suffix specs for every registered tool."
+  "Ordered toggle suffix specs for every registered user-selectable tool.
+The \"Agent\" tool is excluded; it is managed by the agent-aware toggle."
   (let* ((stage (perso/gptel-prompt--stage))
          (all (perso/gptel-prompt--all-tool-pairs))
+         (selectable (let ((agent-pair (perso/gptel-prompt--agent-tool-pair)))
+                       (sort (if agent-pair (remove agent-pair all) all)
+                             (lambda (a b)
+                               (if (string= (car a) (car b))
+                                   (string-lessp (cdr a) (cdr b))
+                                 (string-lessp (car a) (car b)))))))
          (staged (plist-get stage :tools))
-         (keys (perso/gptel-prompt--toggle-keys (length all) '(?C))))
+         (keys (mnemonic-keys-assign
+                (mapcar #'perso/gptel-prompt--leaf (mapcar #'cdr selectable))
+                '(?C))))
     (cl-mapcar
      (lambda (key pair)
        (list key
@@ -1842,7 +1860,7 @@ action key such as =C=, =E= or =U=."
                 (perso/gptel-prompt--toggle-tool
                  (perso/gptel-prompt--stage) ,(car pair) ,(cdr pair)))
              :transient t))
-     keys all)))
+     keys selectable)))
 
 (defun perso/gptel-prompt--tools-controls ()
   "Control suffixes for the Tools picker (rendered below a blank line)."
@@ -1860,11 +1878,6 @@ action key such as =C=, =E= or =U=."
                                perso/gptel-prompt--confirm-choices
                                (plist-get stage :confirm)))
                  #'perso/gptel-prompt--select-confirm :transient t))
-     (when (plist-get stage :agentic)
-       (list (list "-r" (format "Main-agent tools: %s"
-                                (if (eq (plist-get stage :main-agent-tools) 'restrict)
-                                    "restrict (only staged)" "extend gptel-agent"))
-                   #'perso/gptel-prompt--toggle-main-agent-tools :transient t)))
      (list (list "C" "Connect MCP servers…" #'perso/gptel-prompt--connect-mcp
                  :transient t)
            (list "C-g" "Back" #'transient-quit-one))
@@ -1877,9 +1890,10 @@ action key such as =C=, =E= or =U=."
   "Ordered roster toggle specs; nil when agent-aware is off."
   (let ((stage (perso/gptel-prompt--stage)))
     (when (plist-get stage :agentic)
-      (let* ((avail (perso/gptel-prompt--available-subagents))
+      (let* ((avail (sort (perso/gptel-prompt--available-subagents) #'string-lessp))
              (selected (plist-get stage :subagents))
-             (keys (perso/gptel-prompt--toggle-keys (length avail) '(?E ?U))))
+             (keys (mnemonic-keys-assign
+                    (mapcar #'perso/gptel-prompt--leaf avail) '(?E ?U))))
         (cl-mapcar
          (lambda (key name)
            (list key
