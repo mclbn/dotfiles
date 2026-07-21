@@ -3427,8 +3427,8 @@ This is a modified version of `mu4e-view-save-attachments'."
               qwen3.7-plus
               qwen3.6-plus))
 
-  (setq gptel-backend (gptel-get-backend "llama-cpp-main")
-        gptel-model 'qwen36-27b-opti)
+  (setq gptel-backend (gptel-get-backend "OpenCode Go")
+        gptel-model 'glm-5.2)
 
   ;; General settings
   (setq
