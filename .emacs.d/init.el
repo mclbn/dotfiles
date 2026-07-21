@@ -1325,13 +1325,6 @@ This is the first function that I (Mehrad) wrote in elisp, so it may still needs
   :bind ("C-z ," . iedit-mode)
   :diminish)
 
-;; ;; Pos-tip : required by other modules
-;; ;; at least popup-kill-ring and company-quickhelp
-;; ;; FIXME : check if still true, we may be able to remove it now
-;; (use-package pos-tip
-;;   :pin melpa ;; the good version is on melpa
-;;   )
-
 ;; Yank-media binding
 (global-set-key (kbd "C-c y") 'yank-media)
 
