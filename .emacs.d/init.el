@@ -3358,7 +3358,10 @@ This is a modified version of `mu4e-view-save-attachments'."
   :after gptel
   :custom
   (mcp-hub-servers
-   `(("searxng" . (:url ,perso/mcp-searxng-url :timeout 30)))))
+   `(("searxng" . (:url ,perso/mcp-searxng-url :timeout 30))
+     ("jellyfin" . (:url ,perso/mcp-jellyfin-url :timeout 30))
+     ("omdb"     . (:url ,perso/mcp-omdb-url     :timeout 30))
+     ("tmdb"     . (:url ,perso/mcp-tmdb-url     :timeout 30)))))
 
 ;; GPTel : chat with LLMs
 (use-package gptel
