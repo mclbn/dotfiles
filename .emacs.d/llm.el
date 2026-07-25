@@ -2,6 +2,7 @@
 
 (require 'auth-source)
 (require 'gptel)
+(require 'gptel-agent)
 (require 'transient)
 (require 'gptel-transient)
 (require 'cl-lib)
@@ -2134,5 +2135,16 @@ variable this command sets."
     ("p" "Prompt builder" perso/gptel-prompt-builder)]
    ["Eca"
     ("e" "Start eca" eca)]])
+
+(perso/gptel-prompt-define-preset 'curator
+                                  :description "Film curator assistant."
+                                  :recipe '(:selections ((roles "film_curator.org") (skills "film/fact_checking.org" "film/recommendation.org" "film/taste_profiling.org" "information_retrieval.org") (projects "film/film_marc.org") (outputs "film/film_reco.org")) :datetime t :mode frozen :agentic t :subagents ("web_searcher"))
+                                  :parents '(gptel-agent)
+                                  :tools '("current_datetime" "tmdb" "movie_ratings" "movies_download_add" "movies_download_check" "movies_explore_add" "movies_explore_check" "jellyfin_favorite_set" "movies_gif_add_scene" "Agent" "jellyfin" "jellyfin_collection_add" "movies_download_list" "movies_explore_list")
+                                  :use-tools t
+                                  :confirm-tool-calls 'auto
+                                  :backend "OpenCode Go"
+                                  :model 'deepseek-v4-flash
+                                  :pre (lambda () (gptel-mcp-connect '("tmdb" "omdb" "jellyfin") 'sync nil)))
 
 ;;; llm.el ends here

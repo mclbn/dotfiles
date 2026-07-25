@@ -3635,6 +3635,10 @@ With non-nil WITH-DATETIME, prepend a local date/time line and a blank line."
     (disable-text-analysis-modes)
     (delete-other-windows))
 
+  (setq perso/movies-org-file (expand-file-name "movies.org" org-directory))
+  (with-eval-after-load 'gptel
+    (require 'movies (locate-user-emacs-file "movies")))
+
   (use-package gptel-quick
     :quelpa (gptel-quick :repo "karthink/gptel-quick" :fetcher github :commit "master")
     :after gptel
