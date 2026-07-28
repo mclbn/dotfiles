@@ -292,6 +292,24 @@ fragments first, then by sub-folder name, then by file name."
       (sort (perso/gptel-prompt--org-files-under dir dir)
             #'perso/gptel-prompt--file-lessp))))
 
+(defun perso/gptel-prompt--agentic-files ()
+  "Return agentic skill fragments in the skills directory.
+Files named `_agentic*.org' are returned as bare file names (not
+relative paths), bypassing the hidden-file filter since these
+fragments are intentionally hidden from the normal skills picker
+but meant to be chosen here."
+  (let ((dir (perso/gptel-prompt--category-dir 'skills))
+        (out nil))
+    (when (file-directory-p dir)
+      (dolist (abs (directory-files dir t nil t))
+        (let ((base (file-name-nondirectory abs)))
+          (unless (or (member base '("." ".."))
+                      (file-directory-p abs))
+            (when (and (string-prefix-p "_agentic" base)
+                       (string-suffix-p ".org" base))
+              (push base out))))))
+    (sort out #'string-lessp)))
+
 (defun perso/gptel-prompt--cat-key (cat)
   "Dashboard drill-in key for category CAT (downcase of its :key)."
   (downcase (plist-get (perso/gptel-prompt--category cat) :key)))
@@ -312,7 +330,7 @@ dashboard is pushed on the stack and =C-g= pops straight back to it."
         :tools (copy-tree perso/gptel-prompt-default-tools)
         :use-tools t :confirm 'auto :datetime t :temperature nil :thinking 'unset
         :mode 'frozen :backend nil :model nil :scope 'global
-        :agentic nil :subagents nil :workdir nil))
+        :agentic nil :agentic-skills nil :subagents nil :workdir nil))
 
 (defun perso/gptel-prompt--sanitize-stage (stage)
   "Drop stale file selections and sub-agent names from STAGE; return STAGE.
@@ -336,6 +354,22 @@ Also reconcile the \"Agent\" tool in STAGE's :tools with its :agentic flag."
       (plist-put stage :subagents
                  (seq-filter (lambda (n) (member n avail))
                              (plist-get stage :subagents)))))
+  ;; Sanitize agentic-skills: drop stale entries, reconcile with :agentic.
+  (let ((files (perso/gptel-prompt--agentic-files)))
+    (plist-put stage :agentic-skills
+               (seq-filter (lambda (f) (member f files))
+                           (plist-get stage :agentic-skills))))
+  (when (and (plist-get stage :agentic)
+             (null (plist-get stage :agentic-skills)))
+    (let ((default (and (member perso/gptel-prompt-agentic-file
+                                (perso/gptel-prompt--agentic-files))
+                        (list perso/gptel-prompt-agentic-file))))
+      (if default
+          (plist-put stage :agentic-skills default)
+        (plist-put stage :agentic nil)
+        (when-let ((pair (perso/gptel-prompt--agent-tool-pair)))
+          (plist-put stage :tools
+                     (remove pair (plist-get stage :tools)))))))
   stage)
 
 (defun perso/gptel-prompt--initial-stage ()
@@ -448,10 +482,13 @@ SELECTIONS is an alist of (CATEGORY . FILES)."
        (buffer-substring-no-properties (point-min) (point-max)) root))))
 
 (defun perso/gptel-prompt--effective-selections (stage)
-  "Return STAGE's selections, injecting the agentic skill when agent-aware."
+  "Return STAGE's selections, injecting the agentic skill when agent-aware.
+The agentic skill is the file named in STAGE's :agentic-skills, or
+`perso/gptel-prompt-agentic-file' as a fallback when that slot is nil."
   (let ((sels (copy-tree (plist-get stage :selections))))
     (when (plist-get stage :agentic)
-      (let* ((file perso/gptel-prompt-agentic-file)
+      (let* ((file (or (car (plist-get stage :agentic-skills))
+                       perso/gptel-prompt-agentic-file))
              (path (expand-file-name file (perso/gptel-prompt--category-dir 'skills))))
         (unless (file-readable-p path)
           (user-error "Agentic fragment not found: %s" path))
@@ -516,6 +553,7 @@ and :datetime; references `perso/gptel-prompt-root', never a baked path."
         :datetime (plist-get stage :datetime)
         :mode (plist-get stage :mode)
         :agentic (plist-get stage :agentic)
+        :agentic-skills (copy-sequence (plist-get stage :agentic-skills))
         :subagents (copy-sequence (plist-get stage :subagents))))
 
 (defun perso/gptel-prompt--register-recipe (name recipe)
@@ -567,6 +605,7 @@ and :datetime; references `perso/gptel-prompt-root', never a baked path."
         (plist-put stage :datetime (plist-get recipe :datetime))
         (plist-put stage :mode (or (plist-get recipe :mode) 'live))
         (plist-put stage :agentic (plist-get recipe :agentic))
+        (plist-put stage :agentic-skills (copy-sequence (plist-get recipe :agentic-skills)))
         (plist-put stage :subagents (copy-sequence (plist-get recipe :subagents)))
         (let ((tools (plist-get preset :tools)))
           (when (and (consp tools) (eq (car tools) :append))
@@ -832,12 +871,17 @@ connecting the MCP servers the staged tools require."
 
 (defun perso/gptel-prompt--toggle-agentic ()
   "Toggle agent-aware mode; loading gptel-agent when enabling it.
-Also add or remove the \"Agent\" tool from STAGE's :tools to match."
+Also add or remove the \"Agent\" tool from STAGE's :tools to match.
+When enabling, clears :agentic-skills (no fragment is chosen until
+the user picks one via the agentic skill picker); effective selection
+falls back to `perso/gptel-prompt-agentic-file' if :agentic-skills
+remains nil."
   (interactive)
   (let ((stage (perso/gptel-prompt--stage)))
     (if (plist-get stage :agentic)
         (progn
           (plist-put stage :agentic nil)
+          (plist-put stage :agentic-skills nil)
           (when-let ((pair (perso/gptel-prompt--agent-tool-pair)))
             (plist-put stage :tools
                        (remove pair (plist-get stage :tools)))))
@@ -848,10 +892,40 @@ Also add or remove the \"Agent\" tool from STAGE's :tools to match."
       (unless (gptel-get-preset 'gptel-agent)
         (user-error "gptel-agent preset not found (run gptel-agent-update)"))
       (plist-put stage :agentic t)
+      (plist-put stage :agentic-skills nil)
       (when-let ((pair (perso/gptel-prompt--agent-tool-pair)))
         (unless (member pair (plist-get stage :tools))
           (plist-put stage :tools
                      (append (plist-get stage :tools) (list pair))))))))
+
+(defun perso/gptel-prompt--disable-agentic ()
+  "Disable agent-aware mode (clears the agentic skill selection)."
+  (interactive)
+  (let ((stage (perso/gptel-prompt--stage)))
+    (plist-put stage :agentic nil)
+    (plist-put stage :agentic-skills nil)
+    (when-let ((pair (perso/gptel-prompt--agent-tool-pair)))
+      (plist-put stage :tools
+                 (remove pair (plist-get stage :tools))))))
+
+(defun perso/gptel-prompt--agentic-picker-clear ()
+  "Clear the agentic skill selection in the stage."
+  (interactive)
+  (plist-put (perso/gptel-prompt--stage) :agentic-skills nil))
+
+(defun perso/gptel-prompt--agentic-back ()
+  "Exit the agentic skill picker, reverting agent-aware if no skill was chosen.
+If :agentic-skills is empty after the picker session, the provisional
+agent-aware activation is reverted (flag cleared, Agent tool removed)."
+  (interactive)
+  (let ((stage (perso/gptel-prompt--stage)))
+    (unless (plist-get stage :agentic-skills)
+      ;; No skill chosen — revert any provisional (or prior) activation.
+      (plist-put stage :agentic nil)
+      (plist-put stage :agentic-skills nil)
+      (when-let ((pair (perso/gptel-prompt--agent-tool-pair)))
+        (plist-put stage :tools
+                   (remove pair (plist-get stage :tools)))))))
 
 (defun perso/gptel-prompt--select-workdir ()
   "Set the working directory for the agent-aware session."
@@ -1744,12 +1818,24 @@ So \"subdir/name.org\" -> \"name\" and \"gptel-agent/Eval\" -> \"Eval\"."
 
 (defun perso/gptel-prompt--toggles-children (stage)
   "Suffixes of the Toggles column, given STAGE."
-  (list (list "-d" (format "Date/time preamble %s"
-                           (if (plist-get stage :datetime) "[x]" "[ ]"))
-              #'perso/gptel-prompt--toggle-datetime :transient t)
-        (list "-a" (format "Agent-aware %s"
-                           (if (plist-get stage :agentic) "[x]" "[ ]"))
-              #'perso/gptel-prompt--toggle-agentic :transient t)))
+  (let ((toggles
+         (list (list "-d" (format "Date/time preamble %s"
+                                  (if (plist-get stage :datetime) "[x]" "[ ]"))
+                     #'perso/gptel-prompt--toggle-datetime :transient t)
+               (if (plist-get stage :agentic)
+                   (list "-a" "Agent-aware [x]"
+                         #'perso/gptel-prompt--disable-agentic :transient t)
+                 (list "-a" "Agent-aware [ ]"
+                       #'perso/gptel-prompt-agentic-picker)))))
+    (if (plist-get stage :agentic)
+        (nconc toggles
+               (list (list "-A"
+                           (format "Agentic skill: %s"
+                                   (or (file-name-sans-extension
+                                        (car (plist-get stage :agentic-skills)))
+                                       "(default)"))
+                           #'perso/gptel-prompt-agentic-picker)))
+      toggles)))
 
 (defun perso/gptel-prompt--session-children (stage)
   "Suffixes of the Session column, given STAGE."
@@ -1912,9 +1998,8 @@ The \"Agent\" tool is excluded; it is managed by the agent-aware toggle."
 When agent-aware is off, offer the =-a= toggle in place of the roster."
   (let ((stage (perso/gptel-prompt--stage)))
     (if (not (plist-get stage :agentic))
-        (list (list "-a" (format "Agent-aware %s"
-                                 (if (plist-get stage :agentic) "[x]" "[ ]"))
-                    #'perso/gptel-prompt--toggle-agentic :transient t)
+        (list (list "-a" "Agent-aware [ ]"
+                    #'perso/gptel-prompt-agentic-picker)
               (list "E" "Edit a saved agent's tools…"
                     #'perso/gptel-prompt-edit-agent-tools :transient t)
               (list "C-g" "Back" #'transient-quit-one))
@@ -1926,6 +2011,99 @@ When agent-aware is off, offer the =-a= toggle in place of the roster."
              (list "E" "Edit a saved agent's tools…"
                    #'perso/gptel-prompt-edit-agent-tools :transient t)
              (list "C-g" "Back" #'transient-quit-one))))))
+
+(defun perso/gptel-prompt--agentic-picker-header ()
+  "Title line for the agentic skill picker."
+  "Agentic skill — single-select")
+
+(defun perso/gptel-prompt--agentic-picker-specs ()
+  "Ordered radio-style toggle suffix specs for every agentic skill fragment."
+  (let* ((stage (perso/gptel-prompt--stage))
+         (files (perso/gptel-prompt--agentic-files))
+         (selected (car (plist-get stage :agentic-skills)))
+         (keys (mnemonic-keys-assign
+                (mapcar #'file-name-sans-extension files) nil)))
+    (cl-mapcar
+     (lambda (key file)
+       (list key
+             (format "%s %s"
+                     (if (equal file selected) "(•)" "( )")
+                     (file-name-sans-extension file))
+             `(lambda () (interactive)
+                (plist-put (perso/gptel-prompt--stage)
+                           :agentic-skills (list ,file)))
+             :transient t))
+     keys files)))
+
+(defun perso/gptel-prompt--agentic-picker-controls ()
+  "Control suffixes for the agentic skill picker (rendered below a blank line)."
+  (append
+   (unless (perso/gptel-prompt--agentic-picker-specs)
+     (list (list :info "(no agentic skill fragments found —
+create an _agentic*.org in the skills directory)")))
+   (list (list "DEL" "Clear" #'perso/gptel-prompt--agentic-picker-clear
+               :transient t)
+         (list "C-g" "Back" #'perso/gptel-prompt--agentic-back
+               :transient 'return))))
+
+(transient-define-prefix perso/gptel-prompt-agentic-picker ()
+  "Pick the agentic skill fragment for agent-aware mode.
+On entry, if agent-aware is not yet active, it is provisionally enabled
+\(the Agent tool is added and :agentic set to t).  If no skill is chosen
+before leaving (C-g), the provisional activation is reverted."
+  :refresh-suffixes t
+  [:class transient-column
+          :setup-children
+          (lambda (_)
+            (transient-parse-suffixes 'perso/gptel-prompt-agentic-picker
+                                      (list (list :info (perso/gptel-prompt--agentic-picker-header)))))]
+  [[:class transient-column
+           :if (lambda () (perso/gptel-prompt--col-shown-p
+                           (perso/gptel-prompt--agentic-picker-specs) 0))
+           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                        'perso/gptel-prompt-agentic-picker
+                                        (perso/gptel-prompt--agentic-picker-specs) 0))]
+   [:class transient-column
+           :if (lambda () (perso/gptel-prompt--col-shown-p
+                           (perso/gptel-prompt--agentic-picker-specs) 1))
+           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                        'perso/gptel-prompt-agentic-picker
+                                        (perso/gptel-prompt--agentic-picker-specs) 1))]
+   [:class transient-column
+           :if (lambda () (perso/gptel-prompt--col-shown-p
+                           (perso/gptel-prompt--agentic-picker-specs) 2))
+           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                        'perso/gptel-prompt-agentic-picker
+                                        (perso/gptel-prompt--agentic-picker-specs) 2))]
+   [:class transient-column
+           :if (lambda () (perso/gptel-prompt--col-shown-p
+                           (perso/gptel-prompt--agentic-picker-specs) 3))
+           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                        'perso/gptel-prompt-agentic-picker
+                                        (perso/gptel-prompt--agentic-picker-specs) 3))]]
+  [:class transient-column
+          :setup-children
+          (lambda (_)
+            (transient-parse-suffixes 'perso/gptel-prompt-agentic-picker
+                                      (perso/gptel-prompt--agentic-picker-controls)))]
+  (interactive)
+  (unless perso/gptel-prompt--current-stage
+    (setq perso/gptel-prompt--current-stage (perso/gptel-prompt--initial-stage)))
+  (let ((stage (perso/gptel-prompt--stage)))
+    (unless (plist-get stage :agentic)
+      (unless (require 'gptel-agent nil t)
+        (user-error "gptel-agent is not available"))
+      (unless (bound-and-true-p gptel-agent--agents)
+        (ignore-errors (gptel-agent-update)))
+      (unless (gptel-get-preset 'gptel-agent)
+        (user-error "gptel-agent preset not found (run gptel-agent-update)"))
+      (plist-put stage :agentic t)
+      (plist-put stage :agentic-skills nil)
+      (when-let ((pair (perso/gptel-prompt--agent-tool-pair)))
+        (unless (member pair (plist-get stage :tools))
+          (plist-put stage :tools
+                     (append (plist-get stage :tools) (list pair)))))))
+  (transient-setup 'perso/gptel-prompt-agentic-picker))
 
 ;;;;; Transients
 
