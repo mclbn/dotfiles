@@ -74,7 +74,7 @@ MODEL is a gptel model symbol (e.g. \\='qwen36-27b-opti)."
          (stacks (perso/portainer--curl host "GET" "/api/stacks"))
          (id-alist (cl-loop for s in stacks
                             collect (cons (alist-get 'Name s)
-                                         (alist-get 'Id s)))))
+                                          (alist-get 'Id s)))))
     (dolist (m all-models)
       (unless (eq m model)
         (let ((id (alist-get (symbol-name m) id-alist nil nil #'equal)))
@@ -242,34 +242,34 @@ Initialised only by `perso/gptel-prompt-builder'; sub-menus never reset it.")
   (add-to-list 'savehist-additional-variables 'perso/gptel-prompt--last-stage)
   (add-to-list 'savehist-additional-variables 'perso/gptel-prompt-favorites))
 
-;;;;; Include resolution and date/time preamble=
+;;;;; Include resolution and date/time preamble
 
-  (defun perso/gptel--resolve-org-includes (text dir)
-    "Return TEXT (Org source) with #+INCLUDE directives resolved.
+(defun perso/gptel--resolve-org-includes (text dir)
+  "Return TEXT (Org source) with #+INCLUDE directives resolved.
 DIR is the base directory for relative include paths."
-    (require 'ox)
-    (with-temp-buffer
-      (setq default-directory dir)
-      (insert text)
-      (let ((org-inhibit-startup t))
-        (delay-mode-hooks (org-mode)))
-      (org-export-expand-include-keyword nil dir)
-      (buffer-substring-no-properties (point-min) (point-max))))
+  (require 'ox)
+  (with-temp-buffer
+    (setq default-directory dir)
+    (insert text)
+    (let ((org-inhibit-startup t))
+      (delay-mode-hooks (org-mode)))
+    (org-export-expand-include-keyword nil dir)
+    (buffer-substring-no-properties (point-min) (point-max))))
 
-  ;; Optional local date/time preamble.
-  (defun perso/gptel--datetime-preamble ()
-    "Return the local date/time preamble line for a prompt.
+;; Optional local date/time preamble.
+(defun perso/gptel--datetime-preamble ()
+  "Return the local date/time preamble line for a prompt.
 Weekday name is forced to English via the \"C\" locale, regardless of the
 system locale; the zone (%Z/%z) stays local."
-    (let ((system-time-locale "C"))
-      (format-time-string
-       "Today is %A %Y-%m-%d %H:%M:%S %Z (UTC%z), take it into account when relevant in the following instructions.")))
+  (let ((system-time-locale "C"))
+    (format-time-string
+     "Today is %A %Y-%m-%d %H:%M:%S %Z (UTC%z), take it into account when relevant in the following instructions.")))
 
-  (defun perso/gptel--maybe-prepend-datetime (text with-datetime)
-    "Prepend the date/time preamble and a blank line to TEXT when WITH-DATETIME."
-    (if with-datetime
-        (concat (perso/gptel--datetime-preamble) "\n\n" text)
-      text))
+(defun perso/gptel--maybe-prepend-datetime (text with-datetime)
+  "Prepend the date/time preamble and a blank line to TEXT when WITH-DATETIME."
+  (if with-datetime
+      (concat (perso/gptel--datetime-preamble) "\n\n" text)
+    text))
 
 ;;;;; Stage
 
@@ -1272,7 +1272,7 @@ preset can be loaded back into the builder.  Remaining keys pass to
   "Major mode for the *gptel prompt check* report buffer.")
 
 (define-key perso/gptel-prompt-check-mode-map (kbd "q")
-  #'perso/gptel-prompt-check-quit)
+            #'perso/gptel-prompt-check-quit)
 
 (defun perso/gptel-prompt-check ()
   "Preflight the staged configuration: fragments, tools, MCP, roster."
@@ -2146,31 +2146,31 @@ variable this command sets."
        ,(format "Pick fragments for the `%s' prompt category." cat)
        :refresh-suffixes t
        [:class transient-column
-        :setup-children
-        (lambda (_)
-          (transient-parse-suffixes ',name
-            (list (list :info (perso/gptel-prompt--category-header)))))]
+               :setup-children
+               (lambda (_)
+                 (transient-parse-suffixes ',name
+                                           (list (list :info (perso/gptel-prompt--category-header)))))]
        [[:class transient-column
-         :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--category-specs) 0))
-         :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                      ',name (perso/gptel-prompt--category-specs) 0))]
+                :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--category-specs) 0))
+                :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                             ',name (perso/gptel-prompt--category-specs) 0))]
         [:class transient-column
-         :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--category-specs) 1))
-         :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                      ',name (perso/gptel-prompt--category-specs) 1))]
+                :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--category-specs) 1))
+                :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                             ',name (perso/gptel-prompt--category-specs) 1))]
         [:class transient-column
-         :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--category-specs) 2))
-         :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                      ',name (perso/gptel-prompt--category-specs) 2))]
+                :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--category-specs) 2))
+                :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                             ',name (perso/gptel-prompt--category-specs) 2))]
         [:class transient-column
-         :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--category-specs) 3))
-         :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                      ',name (perso/gptel-prompt--category-specs) 3))]]
+                :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--category-specs) 3))
+                :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                             ',name (perso/gptel-prompt--category-specs) 3))]]
        [:class transient-column
-        :setup-children
-        (lambda (_)
-          (transient-parse-suffixes ',name
-            (perso/gptel-prompt--category-controls)))]
+               :setup-children
+               (lambda (_)
+                 (transient-parse-suffixes ',name
+                                           (perso/gptel-prompt--category-controls)))]
        (interactive)
        (setq perso/gptel-prompt--picker-category ',cat)
        (unless perso/gptel-prompt--current-stage
@@ -2187,35 +2187,35 @@ variable this command sets."
   "Stage tools and tool options."
   :refresh-suffixes t
   [:class transient-column
-   :setup-children
-   (lambda (_)
-     (transient-parse-suffixes 'perso/gptel-prompt-tools-picker
-       (list (list :info "Tools"))))]
+          :setup-children
+          (lambda (_)
+            (transient-parse-suffixes 'perso/gptel-prompt-tools-picker
+                                      (list (list :info "Tools"))))]
   [[:class transient-column
-    :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--tools-specs) 0))
-    :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                 'perso/gptel-prompt-tools-picker
-                                 (perso/gptel-prompt--tools-specs) 0))]
+           :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--tools-specs) 0))
+           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                        'perso/gptel-prompt-tools-picker
+                                        (perso/gptel-prompt--tools-specs) 0))]
    [:class transient-column
-    :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--tools-specs) 1))
-    :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                 'perso/gptel-prompt-tools-picker
-                                 (perso/gptel-prompt--tools-specs) 1))]
+           :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--tools-specs) 1))
+           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                        'perso/gptel-prompt-tools-picker
+                                        (perso/gptel-prompt--tools-specs) 1))]
    [:class transient-column
-    :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--tools-specs) 2))
-    :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                 'perso/gptel-prompt-tools-picker
-                                 (perso/gptel-prompt--tools-specs) 2))]
+           :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--tools-specs) 2))
+           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                        'perso/gptel-prompt-tools-picker
+                                        (perso/gptel-prompt--tools-specs) 2))]
    [:class transient-column
-    :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--tools-specs) 3))
-    :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                 'perso/gptel-prompt-tools-picker
-                                 (perso/gptel-prompt--tools-specs) 3))]]
+           :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--tools-specs) 3))
+           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                        'perso/gptel-prompt-tools-picker
+                                        (perso/gptel-prompt--tools-specs) 3))]]
   [:class transient-column
-   :setup-children
-   (lambda (_)
-     (transient-parse-suffixes 'perso/gptel-prompt-tools-picker
-       (perso/gptel-prompt--tools-controls)))]
+          :setup-children
+          (lambda (_)
+            (transient-parse-suffixes 'perso/gptel-prompt-tools-picker
+                                      (perso/gptel-prompt--tools-controls)))]
   (interactive)
   (unless perso/gptel-prompt--current-stage
     (setq perso/gptel-prompt--current-stage (perso/gptel-prompt--initial-stage)))
@@ -2225,35 +2225,35 @@ variable this command sets."
   "Choose the sub-agent roster and edit saved agents."
   :refresh-suffixes t
   [:class transient-column
-   :setup-children
-   (lambda (_)
-     (transient-parse-suffixes 'perso/gptel-prompt-subagents-picker
-       (list (list :info "Sub-agents"))))]
+          :setup-children
+          (lambda (_)
+            (transient-parse-suffixes 'perso/gptel-prompt-subagents-picker
+                                      (list (list :info "Sub-agents"))))]
   [[:class transient-column
-    :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--subagents-specs) 0))
-    :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                 'perso/gptel-prompt-subagents-picker
-                                 (perso/gptel-prompt--subagents-specs) 0))]
+           :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--subagents-specs) 0))
+           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                        'perso/gptel-prompt-subagents-picker
+                                        (perso/gptel-prompt--subagents-specs) 0))]
    [:class transient-column
-    :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--subagents-specs) 1))
-    :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                 'perso/gptel-prompt-subagents-picker
-                                 (perso/gptel-prompt--subagents-specs) 1))]
+           :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--subagents-specs) 1))
+           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                        'perso/gptel-prompt-subagents-picker
+                                        (perso/gptel-prompt--subagents-specs) 1))]
    [:class transient-column
-    :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--subagents-specs) 2))
-    :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                 'perso/gptel-prompt-subagents-picker
-                                 (perso/gptel-prompt--subagents-specs) 2))]
+           :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--subagents-specs) 2))
+           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                        'perso/gptel-prompt-subagents-picker
+                                        (perso/gptel-prompt--subagents-specs) 2))]
    [:class transient-column
-    :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--subagents-specs) 3))
-    :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                 'perso/gptel-prompt-subagents-picker
-                                 (perso/gptel-prompt--subagents-specs) 3))]]
+           :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--subagents-specs) 3))
+           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                                        'perso/gptel-prompt-subagents-picker
+                                        (perso/gptel-prompt--subagents-specs) 3))]]
   [:class transient-column
-   :setup-children
-   (lambda (_)
-     (transient-parse-suffixes 'perso/gptel-prompt-subagents-picker
-       (perso/gptel-prompt--subagents-controls)))]
+          :setup-children
+          (lambda (_)
+            (transient-parse-suffixes 'perso/gptel-prompt-subagents-picker
+                                      (perso/gptel-prompt--subagents-controls)))]
   (interactive)
   (unless perso/gptel-prompt--current-stage
     (setq perso/gptel-prompt--current-stage (perso/gptel-prompt--initial-stage)))
@@ -2328,12 +2328,12 @@ variable this command sets."
 (transient-define-prefix perso/llm-menu ()
   "LLM stack management menu."
   ["LLM Stack"
-    (:info "")
-    (:info #'perso/llm-menu--running-desc)
-    (:info "")
-    ("b" perso/llm-menu--backend-desc perso/llm-menu--select-backend :transient t)
-    ("m" perso/llm-menu--model-desc   perso/llm-menu--select-model :transient t)
-    ("s" perso/llm-menu--stack-desc   perso/llm-menu--activate-stack :transient t)]
+   (:info "")
+   (:info #'perso/llm-menu--running-desc)
+   (:info "")
+   ("b" perso/llm-menu--backend-desc perso/llm-menu--select-backend :transient t)
+   ("m" perso/llm-menu--model-desc   perso/llm-menu--select-model :transient t)
+   ("s" perso/llm-menu--stack-desc   perso/llm-menu--activate-stack :transient t)]
   [["Gptel"
     ("g" "Start gptel" perso/gptel)
     ("p" "Prompt builder" perso/gptel-prompt-builder)]
@@ -2352,47 +2352,47 @@ variable this command sets."
                                   :pre (lambda () (gptel-mcp-connect '("tmdb" "omdb" "jellyfin") 'sync nil)))
 ;;;;; Org prompt files (standalone)
 
-  ;; Returning resolvers -- use these in a preset's :system.
-  (defun perso/gptel-prompt-from-org-file (file &optional with-datetime)
-    "Return Org FILE's contents with #+INCLUDE directives resolved.
+;; Returning resolvers -- use these in a preset's :system.
+(defun perso/gptel-prompt-from-org-file (file &optional with-datetime)
+  "Return Org FILE's contents with #+INCLUDE directives resolved.
 With non-nil WITH-DATETIME, prepend a local date/time line and a blank line."
-    (let ((file (expand-file-name file)))
-      (perso/gptel--maybe-prepend-datetime
-       (perso/gptel--resolve-org-includes
-        (with-temp-buffer (insert-file-contents file) (buffer-string))
-        (file-name-directory file))
-       with-datetime)))
+  (let ((file (expand-file-name file)))
+    (perso/gptel--maybe-prepend-datetime
+     (perso/gptel--resolve-org-includes
+      (with-temp-buffer (insert-file-contents file) (buffer-string))
+      (file-name-directory file))
+     with-datetime)))
 
-  (defun perso/gptel-prompt-from-org-buffer (&optional buffer with-datetime)
-    "Return BUFFER's Org contents with #+INCLUDE directives resolved.
+(defun perso/gptel-prompt-from-org-buffer (&optional buffer with-datetime)
+  "Return BUFFER's Org contents with #+INCLUDE directives resolved.
 With non-nil WITH-DATETIME, prepend a local date/time line and a blank line."
-    (let* ((src (or buffer (current-buffer)))
-           (file (buffer-file-name src))
-           (dir  (if file (file-name-directory file)
-                   (buffer-local-value 'default-directory src))))
-      (perso/gptel--maybe-prepend-datetime
-       (perso/gptel--resolve-org-includes
-        (with-current-buffer src
-          (buffer-substring-no-properties (point-min) (point-max)))
-        dir)
-       with-datetime)))
+  (let* ((src (or buffer (current-buffer)))
+         (file (buffer-file-name src))
+         (dir  (if file (file-name-directory file)
+                 (buffer-local-value 'default-directory src))))
+    (perso/gptel--maybe-prepend-datetime
+     (perso/gptel--resolve-org-includes
+      (with-current-buffer src
+        (buffer-substring-no-properties (point-min) (point-max)))
+      dir)
+     with-datetime)))
 
-  ;; Interactive setters -- set gptel's global system prompt.
-  (defun perso/gptel-set-system-prompt-from-org-buffer (&optional buffer)
-    "Set gptel's global system prompt from BUFFER, resolving #+INCLUDE."
-    (interactive)
-    (let ((resolved (perso/gptel-prompt-from-org-buffer buffer)))
-      (setq-default gptel-system-prompt resolved)
-      (message "gptel system prompt set from %s — %d chars, includes resolved."
-               (buffer-name (or buffer (current-buffer))) (length resolved))))
+;; Interactive setters -- set gptel's global system prompt.
+(defun perso/gptel-set-system-prompt-from-org-buffer (&optional buffer)
+  "Set gptel's global system prompt from BUFFER, resolving #+INCLUDE."
+  (interactive)
+  (let ((resolved (perso/gptel-prompt-from-org-buffer buffer)))
+    (setq-default gptel-system-prompt resolved)
+    (message "gptel system prompt set from %s — %d chars, includes resolved."
+             (buffer-name (or buffer (current-buffer))) (length resolved))))
 
-  (defun perso/gptel-set-system-prompt-from-org-file (file)
-    "Set gptel's global system prompt from Org FILE, resolving #+INCLUDE."
-    (interactive "fOrg prompt file: ")
-    (let ((resolved (perso/gptel-prompt-from-org-file file)))
-      (setq-default gptel-system-prompt resolved)
-      (message "gptel system prompt set from %s — %d chars, includes resolved."
-               (file-name-nondirectory file) (length resolved))))
+(defun perso/gptel-set-system-prompt-from-org-file (file)
+  "Set gptel's global system prompt from Org FILE, resolving #+INCLUDE."
+  (interactive "fOrg prompt file: ")
+  (let ((resolved (perso/gptel-prompt-from-org-file file)))
+    (setq-default gptel-system-prompt resolved)
+    (message "gptel system prompt set from %s — %d chars, includes resolved."
+             (file-name-nondirectory file) (length resolved))))
 
 (provide 'llm)
 ;;; llm.el ends here
