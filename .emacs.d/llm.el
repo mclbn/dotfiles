@@ -144,8 +144,7 @@ MODEL is a gptel model symbol (e.g. \\='qwen36-27b-opti)."
 ;; together with tools, sampling parameters and scope, and apply the result
 ;; as a gptel preset spec.  Entry point: `perso/gptel-prompt-builder'.
 
-(declare-function perso/gptel--resolve-org-includes nil (text dir))
-(declare-function perso/gptel--maybe-prepend-datetime nil (text with-datetime))
+(declare-function perso/gptel "init")
 (declare-function gptel-mcp-connect "gptel-integrations")
 (declare-function org-map-entries "org" (func &optional match scope &rest skip))
 (declare-function org-end-of-subtree "org" (&optional invisible-ok to-heading))
@@ -242,6 +241,35 @@ Initialised only by `perso/gptel-prompt-builder'; sub-menus never reset it.")
 (with-eval-after-load 'savehist
   (add-to-list 'savehist-additional-variables 'perso/gptel-prompt--last-stage)
   (add-to-list 'savehist-additional-variables 'perso/gptel-prompt-favorites))
+
+;;;;; Include resolution and date/time preamble=
+
+  (defun perso/gptel--resolve-org-includes (text dir)
+    "Return TEXT (Org source) with #+INCLUDE directives resolved.
+DIR is the base directory for relative include paths."
+    (require 'ox)
+    (with-temp-buffer
+      (setq default-directory dir)
+      (insert text)
+      (let ((org-inhibit-startup t))
+        (delay-mode-hooks (org-mode)))
+      (org-export-expand-include-keyword nil dir)
+      (buffer-substring-no-properties (point-min) (point-max))))
+
+  ;; Optional local date/time preamble.
+  (defun perso/gptel--datetime-preamble ()
+    "Return the local date/time preamble line for a prompt.
+Weekday name is forced to English via the \"C\" locale, regardless of the
+system locale; the zone (%Z/%z) stays local."
+    (let ((system-time-locale "C"))
+      (format-time-string
+       "Today is %A %Y-%m-%d %H:%M:%S %Z (UTC%z), take it into account when relevant in the following instructions.")))
+
+  (defun perso/gptel--maybe-prepend-datetime (text with-datetime)
+    "Prepend the date/time preamble and a blank line to TEXT when WITH-DATETIME."
+    (if with-datetime
+        (concat (perso/gptel--datetime-preamble) "\n\n" text)
+      text))
 
 ;;;;; Stage
 
@@ -434,8 +462,6 @@ Signal a `user-error' if several headings carry the tag."
 (defun perso/gptel-prompt--assemble-body (selections)
   "Assemble and resolve the master template for SELECTIONS.
 SELECTIONS is an alist of (CATEGORY . FILES)."
-  (unless (fboundp 'perso/gptel--resolve-org-includes)
-    (user-error "perso/gptel--resolve-org-includes is not defined (gptel config not loaded?)"))
   (let* ((root (file-name-as-directory (expand-file-name perso/gptel-prompt-root)))
          (master (expand-file-name perso/gptel-prompt-master root)))
     (unless (file-readable-p master)
@@ -2324,5 +2350,49 @@ variable this command sets."
                                   :backend "OpenCode Go"
                                   :model 'deepseek-v4-flash
                                   :pre (lambda () (gptel-mcp-connect '("tmdb" "omdb" "jellyfin") 'sync nil)))
+;;;;; Org prompt files (standalone)
 
+  ;; Returning resolvers -- use these in a preset's :system.
+  (defun perso/gptel-prompt-from-org-file (file &optional with-datetime)
+    "Return Org FILE's contents with #+INCLUDE directives resolved.
+With non-nil WITH-DATETIME, prepend a local date/time line and a blank line."
+    (let ((file (expand-file-name file)))
+      (perso/gptel--maybe-prepend-datetime
+       (perso/gptel--resolve-org-includes
+        (with-temp-buffer (insert-file-contents file) (buffer-string))
+        (file-name-directory file))
+       with-datetime)))
+
+  (defun perso/gptel-prompt-from-org-buffer (&optional buffer with-datetime)
+    "Return BUFFER's Org contents with #+INCLUDE directives resolved.
+With non-nil WITH-DATETIME, prepend a local date/time line and a blank line."
+    (let* ((src (or buffer (current-buffer)))
+           (file (buffer-file-name src))
+           (dir  (if file (file-name-directory file)
+                   (buffer-local-value 'default-directory src))))
+      (perso/gptel--maybe-prepend-datetime
+       (perso/gptel--resolve-org-includes
+        (with-current-buffer src
+          (buffer-substring-no-properties (point-min) (point-max)))
+        dir)
+       with-datetime)))
+
+  ;; Interactive setters -- set gptel's global system prompt.
+  (defun perso/gptel-set-system-prompt-from-org-buffer (&optional buffer)
+    "Set gptel's global system prompt from BUFFER, resolving #+INCLUDE."
+    (interactive)
+    (let ((resolved (perso/gptel-prompt-from-org-buffer buffer)))
+      (setq-default gptel-system-prompt resolved)
+      (message "gptel system prompt set from %s — %d chars, includes resolved."
+               (buffer-name (or buffer (current-buffer))) (length resolved))))
+
+  (defun perso/gptel-set-system-prompt-from-org-file (file)
+    "Set gptel's global system prompt from Org FILE, resolving #+INCLUDE."
+    (interactive "fOrg prompt file: ")
+    (let ((resolved (perso/gptel-prompt-from-org-file file)))
+      (setq-default gptel-system-prompt resolved)
+      (message "gptel system prompt set from %s — %d chars, includes resolved."
+               (file-name-nondirectory file) (length resolved))))
+
+(provide 'llm)
 ;;; llm.el ends here

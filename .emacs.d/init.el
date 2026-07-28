@@ -3557,77 +3557,6 @@ This is a modified version of `mu4e-view-save-attachments'."
     :tools '("read_file" "list_directory" "searxng_web_search" "web_url_read")
     :system "Answer strictly from retrieved context (corpus or fetched pages). If the sources don't contain the answer, say so. Do not speculate. Only provide information from your context.")
 
-  ;; Set of functions to load promps from modular org files
-  ;; with included org subfiles
-  (defun perso/gptel--resolve-org-includes (text dir)
-    "Return TEXT (Org source) with #+INCLUDE directives resolved.
-DIR is the base directory for relative include paths."
-    (require 'ox)
-    (with-temp-buffer
-      (setq default-directory dir)
-      (insert text)
-      (let ((org-inhibit-startup t))
-        (delay-mode-hooks (org-mode)))
-      (org-export-expand-include-keyword nil dir)
-      (buffer-substring-no-properties (point-min) (point-max))))
-
-  ;; Optional local date/time preamble.
-  (defun perso/gptel--datetime-preamble ()
-    "Return the local date/time preamble line for a prompt.
-Weekday name is forced to English via the \"C\" locale, regardless of the
-system locale; the zone (%Z/%z) stays local."
-    (let ((system-time-locale "C"))
-      (format-time-string
-       "Today is %A %Y-%m-%d %H:%M:%S %Z (UTC%z), take it into account when relevant in the following instructions.")))
-
-  (defun perso/gptel--maybe-prepend-datetime (text with-datetime)
-    "Prepend the date/time preamble and a blank line to TEXT when WITH-DATETIME."
-    (if with-datetime
-        (concat (perso/gptel--datetime-preamble) "\n\n" text)
-      text))
-
-  ;; Returning resolvers -- use these in a preset's :system.
-  (defun perso/gptel-prompt-from-org-file (file &optional with-datetime)
-    "Return Org FILE's contents with #+INCLUDE directives resolved.
-With non-nil WITH-DATETIME, prepend a local date/time line and a blank line."
-    (let ((file (expand-file-name file)))
-      (perso/gptel--maybe-prepend-datetime
-       (perso/gptel--resolve-org-includes
-        (with-temp-buffer (insert-file-contents file) (buffer-string))
-        (file-name-directory file))
-       with-datetime)))
-
-  (defun perso/gptel-prompt-from-org-buffer (&optional buffer with-datetime)
-    "Return BUFFER's Org contents with #+INCLUDE directives resolved.
-With non-nil WITH-DATETIME, prepend a local date/time line and a blank line."
-    (let* ((src (or buffer (current-buffer)))
-           (file (buffer-file-name src))
-           (dir  (if file (file-name-directory file)
-                   (buffer-local-value 'default-directory src))))
-      (perso/gptel--maybe-prepend-datetime
-       (perso/gptel--resolve-org-includes
-        (with-current-buffer src
-          (buffer-substring-no-properties (point-min) (point-max)))
-        dir)
-       with-datetime)))
-
-  ;; Interactive setters -- set gptel's global system prompt.
-  (defun perso/gptel-set-system-prompt-from-org-buffer (&optional buffer)
-    "Set gptel's global system prompt from BUFFER, resolving #+INCLUDE."
-    (interactive)
-    (let ((resolved (perso/gptel-prompt-from-org-buffer buffer)))
-      (setq-default gptel-system-prompt resolved)
-      (message "gptel system prompt set from %s — %d chars, includes resolved."
-               (buffer-name (or buffer (current-buffer))) (length resolved))))
-
-  (defun perso/gptel-set-system-prompt-from-org-file (file)
-    "Set gptel's global system prompt from Org FILE, resolving #+INCLUDE."
-    (interactive "fOrg prompt file: ")
-    (let ((resolved (perso/gptel-prompt-from-org-file file)))
-      (setq-default gptel-system-prompt resolved)
-      (message "gptel system prompt set from %s — %d chars, includes resolved."
-               (file-name-nondirectory file) (length resolved))))
-
   ;; A custom function to open a single gptel session
   (defun perso/gptel ()
     "Wrapper to load gptel"
@@ -3829,6 +3758,12 @@ Extra arguments (e.g. WebFetch's extraction prompt) are ignored."
   (autoload 'perso/llm-menu (expand-file-name "llm.el" user-emacs-directory) nil t)
   (autoload 'perso/gptel-prompt-builder
     (expand-file-name "llm.el" user-emacs-directory) nil t)
+  (dolist (fn '(perso/gptel-set-system-prompt-from-org-file
+                perso/gptel-set-system-prompt-from-org-buffer))
+    (autoload fn (expand-file-name "llm.el" user-emacs-directory) nil t))
+  (dolist (fn '(perso/gptel-prompt-from-org-file
+                perso/gptel-prompt-from-org-buffer))
+    (autoload fn (expand-file-name "llm.el" user-emacs-directory)))
   (global-set-key (kbd "C-z @") #'perso/llm-menu)
   (global-set-key (kbd "C-z p") #'perso/gptel-prompt-builder))
 
