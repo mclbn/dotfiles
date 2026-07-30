@@ -659,6 +659,12 @@ and :datetime; references `perso/gptel-prompt-root', never a baked path."
             when (string-prefix-p "mcp-" cat)
             collect (substring cat 4))))
 
+(defun perso/gptel-prompt--mcp-registered-servers ()
+  "Return the MCP servers whose tools gptel already knows about.
+Same notion of \"already connected\" as `gptel-mcp-connect': a server counts
+as registered once an `mcp-<server>' tool category exists in gptel."
+  (perso/gptel-prompt--mcp-servers (perso/gptel-prompt--all-tool-pairs)))
+
 (defun perso/gptel-prompt--ensure-tools (tools)
   "Connect the MCP servers TOOLS need and check that each tool resolves."
   (when-let* ((servers (perso/gptel-prompt--mcp-servers tools)))
@@ -839,24 +845,51 @@ connecting the MCP servers the staged tools require."
   (interactive)
   (perso/gptel-prompt-preview (copy-tree (perso/gptel-prompt--stage))))
 
+(defun perso/gptel-prompt--default-preset-name (stage)
+  "Suggest a symbol-safe preset name from STAGE's selections."
+  (let* ((sels (plist-get stage :selections))
+         (parts (delq nil
+                      (mapcar (lambda (c)
+                                (when-let* ((files (cdr (assq (car c) sels))))
+                                  (mapconcat #'file-name-sans-extension
+                                             files "-")))
+                              perso/gptel-prompt-categories))))
+    (perso/gptel-prompt--sanitize-name
+     (if parts (string-join parts "-") "prompt"))))
+
+(defun perso/gptel-prompt--read-preset-name (prompt &optional default)
+  "Read a preset name with PROMPT and DEFAULT, and return it as a symbol.
+The input is sanitised to the same character set as sub-agent names, so the
+result is a plain symbol: valid in exported Elisp, and usable as a gptel
+`@name' cookie."
+  (let* ((input (string-trim
+                 (completing-read prompt
+                                  (mapcar (lambda (p) (symbol-name (car p)))
+                                          (bound-and-true-p
+                                           gptel--known-presets))
+                                  nil nil default)))
+         (clean (string-trim (perso/gptel-prompt--sanitize-name input)
+                             "-+" "-+")))
+    (when (string-empty-p clean)
+      (user-error "Preset name cannot be empty"))
+    (unless (string= clean input)
+      (message "Preset name normalised to %s" clean))
+    (intern clean)))
+
 (defun perso/gptel-prompt-save-preset ()
   "Save the staged configuration as a named gptel preset (session-lived)."
   (interactive)
   (let* ((stage (copy-tree (perso/gptel-prompt--stage)))
-         (input (string-trim
-                 (completing-read "Save as preset: "
-                                  (mapcar (lambda (p) (symbol-name (car p)))
-                                          gptel--known-presets))))
-         (name (intern input)))
-    (when (string-empty-p input)
-      (user-error "Preset name cannot be empty"))
+         (name (perso/gptel-prompt--read-preset-name
+                "Save as preset: "
+                (perso/gptel-prompt--default-preset-name stage))))
     (apply #'gptel-make-preset name
            :description (perso/gptel-prompt--preset-description stage)
            (perso/gptel-prompt--spec
             stage (perso/gptel-prompt--system-value stage) 'with-pre))
     (perso/gptel-prompt--register-recipe name (perso/gptel-prompt--recipe stage))
     (setq perso/gptel-prompt--last-stage (copy-tree stage))
-    (message "gptel preset saved: @%s" input)))
+    (message "gptel preset saved: @%s" name)))
 
 (defun perso/gptel-prompt-reset ()
   "Reset the staged configuration to the configured defaults."
@@ -1085,15 +1118,27 @@ so the choices are identical; the pick is staged rather than applied live."
         (plist-put stage :model (cdr bm))))))
 
 (defun perso/gptel-prompt--connect-mcp ()
-  "Connect MCP servers so their tools appear in the selector."
+  "Connect MCP servers so their tools appear in the selector.
+Servers already registered with gptel are omitted from the candidates,
+mirroring `gptel-mcp-connect'."
   (interactive)
   (if (not (and (locate-library "mcp-hub") (require 'mcp-hub nil t)))
       (message "mcp.el is not available")
-    (let* ((names (mapcar #'car mcp-hub-servers))
-           (chosen (completing-read-multiple
-                    "Connect MCP servers (empty for all): " names nil t)))
-      (gptel-mcp-connect (or chosen names) 'sync nil)
-      (message "MCP servers connected: %s" (string-join (or chosen names) ", ")))))
+    (let* ((registered (perso/gptel-prompt--mcp-registered-servers))
+           (names (cl-remove-if (lambda (n) (member n registered))
+                                (mapcar #'car mcp-hub-servers))))
+      (cond
+       ((null mcp-hub-servers)
+        (message "No MCP servers configured (see `mcp-hub-servers')"))
+       ((null names)
+        (message "All %d MCP server(s) already available to gptel"
+                 (length registered)))
+       (t
+        (let ((chosen (completing-read-multiple
+                       "Connect MCP servers (empty for all): " names nil t)))
+          (gptel-mcp-connect (or chosen names) 'sync nil)
+          (message "MCP servers connected: %s"
+                   (string-join (or chosen names) ", "))))))))
 
 ;;;;; Preset apply / load
 
@@ -1131,10 +1176,12 @@ so the choices are identical; the pick is staged rather than applied live."
 ;;;;; Elisp export
 
 (defun perso/gptel-prompt--lisp-atom (v)
-  "Render V as Elisp source: t/nil bare, other symbols quoted, else `prin1'."
+  "Render V as readable Elisp source: t/nil bare, other symbols quoted.
+Symbols go through `prin1' so that names needing escapes (spaces, colons)
+survive a read/eval round trip instead of splitting into several forms."
   (cond ((eq v t) "t")
         ((null v) "nil")
-        ((symbolp v) (concat "'" (symbol-name v)))
+        ((symbolp v) (prin1-to-string (list 'quote v)))
         (t (prin1-to-string v))))
 
 (defun perso/gptel-prompt--export-code (name stage style)
@@ -1156,12 +1203,14 @@ STYLE is `dynamic' (rebuilds from fragments via a wrapper) or `frozen'
     (cl-flet ((add (fmt &rest args) (push (apply #'format fmt args) lines)))
       (if (eq style 'dynamic)
           (progn
-            (add "(perso/gptel-prompt-define-preset '%s" name)
+            (add "(perso/gptel-prompt-define-preset %s"
+                 (perso/gptel-prompt--lisp-atom name))
             (add "  :description %s" (prin1-to-string desc))
             (add "  :recipe '%s" (prin1-to-string
                                   (perso/gptel-prompt--recipe stage))))
         (progn
-          (add "(gptel-make-preset '%s" name)
+          (add "(gptel-make-preset %s"
+               (perso/gptel-prompt--lisp-atom name))
           (add "  :description %s" (prin1-to-string desc))
           (add "  :system %s" (prin1-to-string
                                (perso/gptel-prompt-build-system stage)))))
@@ -1174,7 +1223,8 @@ STYLE is `dynamic' (rebuilds from fragments via a wrapper) or `frozen'
       (when params (add "  :request-params '%s" (prin1-to-string params)))
       (when backend
         (add "  :backend %s" (prin1-to-string backend))
-        (add "  :model '%s" (plist-get stage :model)))
+        (add "  :model %s"
+             (perso/gptel-prompt--lisp-atom (plist-get stage :model))))
       (when servers
         (add "  :pre (lambda () (gptel-mcp-connect '%s 'sync nil))"
              (prin1-to-string servers))))
@@ -1241,9 +1291,9 @@ preset can be loaded back into the builder.  Remaining keys pass to
   "Export the staged configuration as an Elisp preset definition."
   (interactive)
   (let* ((stage (copy-tree (perso/gptel-prompt--stage)))
-         (name (intern (string-trim
-                        (read-string "Preset name: "
-                                     (perso/gptel-prompt--preset-description stage)))))
+         (name (perso/gptel-prompt--read-preset-name
+                "Preset name: "
+                (perso/gptel-prompt--default-preset-name stage)))
          (style (perso/gptel-prompt--read-choice
                  "Export style"
                  '(("dynamic (rebuilds from fragments)" . dynamic)
@@ -1533,8 +1583,11 @@ orchestrator's active tools at delegation time."
             (string-trim-right body)
             "\n")))
 
-(defun perso/gptel-prompt--sanitize-agent-name (name)
-  "Return NAME made safe for use as a file base and agent name."
+(defun perso/gptel-prompt--sanitize-name (name)
+  "Return NAME reduced to letters, digits, hyphen and underscore.
+Conservative on purpose: one result has to serve as a file base name for a
+sub-agent definition, as a readable Elisp symbol in an exported preset, and
+as a gptel `@name' cookie, which is matched as a whitespace-delimited word."
   (replace-regexp-in-string "[^A-Za-z0-9_-]+" "-" (string-trim name)))
 
 (defun perso/gptel-prompt--default-subagent-name (stage)
@@ -1595,7 +1648,7 @@ orchestrator's active tools at delegation time."
   (unless (require 'gptel-agent nil t)
     (user-error "gptel-agent is not available"))
   (let* ((stage (copy-tree (perso/gptel-prompt--stage)))
-         (name (perso/gptel-prompt--sanitize-agent-name
+         (name (perso/gptel-prompt--sanitize-name
                 (read-string "Sub-agent name: "
                              (perso/gptel-prompt--default-subagent-name stage)))))
     (when (string-empty-p name) (user-error "Name cannot be empty"))
@@ -2350,6 +2403,7 @@ variable this command sets."
                                   :backend "OpenCode Go"
                                   :model 'deepseek-v4-flash
                                   :pre (lambda () (gptel-mcp-connect '("tmdb" "omdb" "jellyfin") 'sync nil)))
+
 ;;;;; Org prompt files (standalone)
 
 ;; Returning resolvers -- use these in a preset's :system.
