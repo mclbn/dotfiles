@@ -3569,7 +3569,6 @@ This is a modified version of `mu4e-view-save-attachments'."
   (setq perso/movies-org-file (expand-file-name "movies.org" org-directory))
   (with-eval-after-load 'gptel
     (require 'movies (locate-user-emacs-file "movies")))
-
   (use-package gptel-quick
     :quelpa (gptel-quick :repo "karthink/gptel-quick" :fetcher github :commit "master")
     :after gptel
@@ -3606,9 +3605,6 @@ This is a modified version of `mu4e-view-save-attachments'."
     (unless (file-directory-p my-agents)
       (make-directory my-agents t))
     (add-to-list 'gptel-agent-dirs my-agents))
-
-  ;; OPTIONAL token-saver: run *sub-agents* on a cheaper/faster model
-  ;; (setq gptel-agent-preset '(:backend "llama-cpp-back" :model qwen35-4b))
 
   (gptel-mcp-connect '("searxng") 'sync nil)
   (defun perso/gptel-agent--add-searxng (&rest _)
