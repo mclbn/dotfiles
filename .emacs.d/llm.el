@@ -2492,6 +2492,7 @@ variable this command sets."
                                   :tools '("current_datetime")
                                   :use-tools t
                                   :confirm-tool-calls 'auto
+                                  :backend "OpenCode Go"
                                   :model 'glm-5.2
                                   :request-params '(:thinking (:type "enabled") :reasoning_effort "max"))
 
@@ -2507,6 +2508,7 @@ variable this command sets."
                                   :tools '("current_datetime")
                                   :use-tools t
                                   :confirm-tool-calls 'auto
+                                  :backend "OpenCode Go (Anthropic)"
                                   :model 'minimax-m3
                                   :request-params '(:thinking (:type "adaptive"))
                                   :temperature 1)
