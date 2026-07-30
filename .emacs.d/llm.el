@@ -2401,6 +2401,7 @@ variable this command sets."
                                              (projects "dev/stages.org")
                                              (outputs "dev/stage1-output-discovery-digest.org"))
                                             :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :org-convert-response nil
                                   :tools '("current_datetime")
                                   :use-tools t
                                   :confirm-tool-calls 'auto
@@ -2417,6 +2418,7 @@ variable this command sets."
                                              (projects "dev/stages.org")
                                              (outputs "dev/stage2-output-design-brief.org"))
                                             :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :org-convert-response nil
                                   :tools '("current_datetime")
                                   :use-tools t
                                   :confirm-tool-calls 'auto
@@ -2433,6 +2435,7 @@ variable this command sets."
                                              (projects "dev/stages.org")
                                              (outputs "dev/stage3-output-design-spec.org"))
                                             :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :org-convert-response nil
                                   :tools '("current_datetime")
                                   :use-tools t
                                   :confirm-tool-calls 'auto
@@ -2449,6 +2452,7 @@ variable this command sets."
                                              (projects "dev/stages.org")
                                              (outputs "dev/stage4-output-task-plan.org"))
                                             :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :org-convert-response nil
                                   :tools '("current_datetime")
                                   :use-tools t
                                   :confirm-tool-calls 'auto
@@ -2464,6 +2468,8 @@ variable this command sets."
                                              (projects "dev/stages.org")
                                              (outputs "dev/stage5-output-scaffold.org"))
                                             :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :org-convert-response nil
+                                  :stream nil
                                   :tools '("current_datetime")
                                   :use-tools t
                                   :confirm-tool-calls 'auto
@@ -2481,6 +2487,8 @@ variable this command sets."
                                              (projects "dev/stages.org")
                                              (outputs "dev/stage6-output-implementation.org"))
                                             :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :org-convert-response nil
+                                  :stream nil
                                   :tools '("current_datetime")
                                   :use-tools t
                                   :confirm-tool-calls 'auto
@@ -2495,6 +2503,7 @@ variable this command sets."
                                              (projects "dev/stages.org")
                                              (outputs "dev/stage7-output-verification-report.org"))
                                             :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :org-convert-response nil
                                   :tools '("current_datetime")
                                   :use-tools t
                                   :confirm-tool-calls 'auto
