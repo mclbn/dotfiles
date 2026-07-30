@@ -3417,7 +3417,8 @@ This is a modified version of `mu4e-view-save-attachments'."
               deepseek-v4-flash
               mimo-v2.5
               mimo-v2.5-pro
-              grok-4.5))
+              grok-4.5
+              hy3))
 
   (gptel-make-anthropic "OpenCode Go (Anthropic)"
     :host "opencode.ai"
@@ -3428,9 +3429,15 @@ This is a modified version of `mu4e-view-save-attachments'."
     :models '(minimax-m3
               minimax-m2.7
               minimax-m2.5
-              qwen3.7-max
-              qwen3.7-plus
-              qwen3.6-plus))
+              qwen3.7-max))
+
+  (gptel-make-anthropic "OpenCode Go (Qwen Plus non streaming)"
+    :host "opencode.ai"
+    :endpoint "/zen/go/v1/messages"
+    :protocol "https"
+    :stream nil
+    :key #'gptel-api-key-from-auth-source
+    :models '(qwen3.7-plus qwen3.6-plus))
 
   (setq gptel-backend (gptel-get-backend "OpenCode Go")
         gptel-model 'glm-5.2)
