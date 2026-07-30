@@ -2393,9 +2393,122 @@ variable this command sets."
    ["Eca"
     ("e" "Start eca" eca)]])
 
+(perso/gptel-prompt-define-preset 'dev-stage1-discovery-partner-divergent-exploration
+                                  :description "A discovery partner for divergent exploration"
+                                  :recipe '(:selections
+                                            ((roles "dev/stage1-role-discovery-partner.org")
+                                             (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage1-skill-divergent-exploration.org")
+                                             (projects "dev/stages.org")
+                                             (outputs "dev/stage1-output-discovery-digest.org"))
+                                            :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :tools '("current_datetime")
+                                  :use-tools t
+                                  :confirm-tool-calls 'auto
+                                  :backend "OpenCode Go"
+                                  :model 'glm-5.2
+                                  :request-params '(:thinking (:type "enabled") :reasoning_effort "high")
+                                  :temperature 1)
+
+(perso/gptel-prompt-define-preset 'dev-stage2-analyst-architect-requirements-synthesis
+                                  :description "An architect analyst for requirements synthesis"
+                                  :recipe '(:selections
+                                            ((roles "dev/stage2-4-role-analyst-architect.org")
+                                             (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage2-skill-requirements-synthesis.org")
+                                             (projects "dev/stages.org")
+                                             (outputs "dev/stage2-output-design-brief.org"))
+                                            :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :tools '("current_datetime")
+                                  :use-tools t
+                                  :confirm-tool-calls 'auto
+                                  :backend "OpenCode Go"
+                                  :model 'glm-5.2
+                                  :request-params '(:thinking (:type "enabled") :reasoning_effort "high")
+                                  :temperature 1)
+
+(perso/gptel-prompt-define-preset 'dev-stage3-analyst-architect-design-resolution
+                                  :description "An architect analyst for design resolution"
+                                  :recipe '(:selections
+                                            ((roles "dev/stage2-4-role-analyst-architect.org")
+                                             (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage3-skill-design-resolution.org")
+                                             (projects "dev/stages.org")
+                                             (outputs "dev/stage3-output-design-spec.org"))
+                                            :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :tools '("current_datetime")
+                                  :use-tools t
+                                  :confirm-tool-calls 'auto
+                                  :backend "OpenCode Go"
+                                  :model 'glm-5.2
+                                  :request-params '(:thinking (:type "enabled") :reasoning_effort "max")
+                                  :temperature 0.7)
+
+(perso/gptel-prompt-define-preset 'dev-stage4-analyst-architect-work-breakdown
+                                  :description "An architect analyst for work breakdown"
+                                  :recipe '(:selections
+                                            ((roles "dev/stage2-4-role-analyst-architect.org")
+                                             (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage4-skill-work-breakdown.org")
+                                             (projects "dev/stages.org")
+                                             (outputs "dev/stage4-output-task-plan.org"))
+                                            :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :tools '("current_datetime")
+                                  :use-tools t
+                                  :confirm-tool-calls 'auto
+                                  :model 'glm-5.2
+                                  :request-params '(:thinking (:type "enabled") :reasoning_effort "high")
+                                  :temperature 0.5)
+
+(perso/gptel-prompt-define-preset 'dev-stage5-implementer-interface-scaffolding
+                                  :description "An implementer for interface scaffolding"
+                                  :recipe '(:selections
+                                            ((roles "dev/stage5-6-role-implementer.org")
+                                             (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage5-skill-interface-scaffolding.org")
+                                             (projects "dev/stages.org")
+                                             (outputs "dev/stage5-output-scaffold.org"))
+                                            :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :tools '("current_datetime")
+                                  :use-tools t
+                                  :confirm-tool-calls 'auto
+                                  :backend "OpenCode Go (Qwen Plus non streaming)"
+                                  :model 'qwen3.7-plus
+                                  :include-reasoning nil
+                                  :request-params '(:thinking (:type "disabled"))
+                                  :temperature 0.1)
+
+(perso/gptel-prompt-define-preset 'dev-stage6-implementer-implementation
+                                  :description "An implementer to implement (wow)"
+                                  :recipe '(:selections
+                                            ((roles "dev/stage5-6-role-implementer.org")
+                                             (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage6-skill-implementation.org")
+                                             (projects "dev/stages.org")
+                                             (outputs "dev/stage6-output-implementation.org"))
+                                            :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :tools '("current_datetime")
+                                  :use-tools t
+                                  :confirm-tool-calls 'auto
+                                  :model 'glm-5.2
+                                  :request-params '(:thinking (:type "enabled") :reasoning_effort "max"))
+
+(perso/gptel-prompt-define-preset 'dev-stage7-verifier-verification
+                                  :description "A verifier to verify (amazing)"
+                                  :recipe '(:selections
+                                            ((roles "dev/stage7-role-verifier.org")
+                                             (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage7-skill-verification.org")
+                                             (projects "dev/stages.org")
+                                             (outputs "dev/stage7-output-verification-report.org"))
+                                            :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :tools '("current_datetime")
+                                  :use-tools t
+                                  :confirm-tool-calls 'auto
+                                  :model 'minimax-m3
+                                  :request-params '(:thinking (:type "adaptive"))
+                                  :temperature 1)
+
 (perso/gptel-prompt-define-preset 'curator
                                   :description "Film curator assistant."
-                                  :recipe '(:selections ((roles "film_curator.org") (skills "film/fact_checking.org" "film/recommendation.org" "film/taste_profiling.org" "information_retrieval.org") (projects "film/film_marc.org") (outputs "film/film_reco.org")) :datetime t :mode frozen :agentic t :subagents ("web_searcher"))
+                                  :recipe '(:selections ((roles "film_curator.org")
+                                                         (skills "film/fact_checking.org" "film/recommendation.org" "film/taste_profiling.org" "information_retrieval.org")
+                                                         (projects "film/film_marc.org")
+                                                         (outputs "film/film_reco.org"))
+                                                        :datetime t :mode frozen :agentic t :subagents ("web_searcher"))
                                   :parents '(gptel-agent)
                                   :tools '("current_datetime" "tmdb" "movie_ratings" "movies_download_add" "movies_download_check" "movies_explore_add" "movies_explore_check" "jellyfin_favorite_set" "movies_gif_add_scene" "Agent" "jellyfin" "jellyfin_collection_add" "movies_download_list" "movies_explore_list")
                                   :use-tools t
