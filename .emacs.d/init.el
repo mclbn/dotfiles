@@ -3604,6 +3604,24 @@ This is a modified version of `mu4e-view-save-attachments'."
   :bind (("C-z g" . gptel-menu)
          ("C-z C-g" . perso/gptel)))
 
+(use-package gptel-tool-policy
+  :ensure nil
+  :load-path user-emacs-directory
+  :after gptel
+  :demand t
+  :custom
+  (gptel-tool-policy-rules
+   '((deny  read  "~/.ssh/**"        "Never expose SSH keys")
+     (deny  write "~/.ssh/**"        "Never write inside ~/.ssh")
+     (deny  read  "~/.gnupg/**"      "Never expose GPG keys")
+     (deny  write "~/.gnupg/**"      "Never write inside ~/.gnupg")
+     (deny  read  "~/.authinfo*"     "Never expose stored credentials")
+     (deny  write "~/.authinfo*"     "Never write stored credentials")
+     (deny  read  "~/.netrc"         "Never expose stored credentials")
+     (deny  write "~/.netrc"         "Never write stored credentials")
+     (deny  read  "~/.aws/**"        "Cloud credentials")
+     (deny  read  "~/.kube/**"       "Cluster credentials"))))
+
 (use-package gptel-agent
   :defer t
   :after gptel
