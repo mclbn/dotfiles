@@ -3605,8 +3605,8 @@ This is a modified version of `mu4e-view-save-attachments'."
          ("C-z C-g" . perso/gptel)))
 
 (use-package gptel-tool-policy
-  :ensure nil
-  :load-path user-emacs-directory
+  :vc (:url https://github.com/mclbn/gptel-tool-policy
+            :branch main)
   :after gptel
   :demand t
   :custom
@@ -3620,7 +3620,14 @@ This is a modified version of `mu4e-view-save-attachments'."
      (deny  read  "~/.netrc"         "Never expose stored credentials")
      (deny  write "~/.netrc"         "Never write stored credentials")
      (deny  read  "~/.aws/**"        "Cloud credentials")
-     (deny  read  "~/.kube/**"       "Cluster credentials"))))
+     (deny  read  "~/.kube/**"       "Cluster credentials")))
+  :custom
+  (gptel-tool-policy-register-tool
+   "read_file" 'read #'(lambda (args)
+                         (gptel-tool-policy--extract-key args :path)))
+  (gptel-tool-policy-register-tool
+   "list_directory" 'read #'(lambda (args)
+                              (gptel-tool-policy--extract-key args :path))))
 
 (use-package gptel-agent
   :defer t
