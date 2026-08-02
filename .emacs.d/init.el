@@ -3624,7 +3624,7 @@ This is a modified version of `mu4e-view-save-attachments'."
      "web_url_read" "searxng_instance_info" "searxng_search_suggestions" "searxng_web_search"
      "movies_gif_add_scene" "movies_download_list" "movies_download_check" "movies_download_add"
      "movies_explore_list" "movies_explore_check" "movies_explore_add"
-     "tmdb" "omdb" "jellyfin" "jellyfin_favorite_set" "jellyfin_collection_add" "movie_ratings"))
+     "tmdb" "omdb" "jellyfin" "jellyfin_favorite_set" "jellyfin_collection_add" "jellyfin_watched_set" "movie_ratings"))
   (gptel-tool-policy-rules
    '((deny  read  "~/.ssh/**"        "Never expose SSH keys")
      (deny  write "~/.ssh/**"        "Never write inside ~/.ssh")

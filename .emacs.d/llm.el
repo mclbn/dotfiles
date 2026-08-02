@@ -3084,28 +3084,24 @@ category headers, the columns to its right the active category's tools."
                                                          (outputs "film/film_reco.org"))
                                                         :datetime t :mode frozen :agentic t :subagents ("web_searcher"))
                                   :parents '(gptel-agent)
-                                  :tools '("current_datetime" "tmdb" "movie_ratings" "movies_download_add" "movies_download_check" "movies_explore_add" "movies_explore_check" "jellyfin_favorite_set" "movies_gif_add_scene" "Agent" "jellyfin" "jellyfin_collection_add" "movies_download_list" "movies_explore_list")
+                                  :tools '("current_datetime" "tmdb" "movie_ratings" "movies_download_add" "movies_download_check" "movies_explore_add" "movies_explore_check" "jellyfin_favorite_set" "jellyfin_watched_set" "movies_gif_add_scene" "Agent" "jellyfin" "jellyfin_collection_add" "movies_download_list" "movies_explore_list")
                                   :use-tools t
                                   :confirm-tool-calls 'auto
                                   :backend "OpenCode Go"
                                   :model 'deepseek-v4-flash
                                   :pre (lambda () (gptel-mcp-connect '("tmdb" "omdb" "jellyfin") 'sync nil)))
 
-(perso/gptel-prompt-define-preset 'curator-multitask
-                                  :description "Film curator assistant (multi-task aware)."
-                                  :recipe '(:selections ((roles "film_curator.org")
-                                                         (skills "film/fact_checking.org" "film/recommendation.org" "film/taste_profiling.org"
-                                                                 "information_retrieval.org" "multitask.org")
-                                                         (projects "film/film_marc.org")
-                                                         (outputs "film/film_reco.org"))
-                                                        :datetime t :mode frozen :agentic t :agentic-skills ("_agentic.org") :subagents ("web_searcher"))
+(perso/gptel-prompt-define-preset 'debate_orchestrator-no_debater
+                                  :description "Debate orchestrator that pick most relevant debaters (but debate roster is empty)"
+                                  :recipe '(:selections ((roles "debate/debate_orchestrator.org")
+                                                         (skills "debate/floor_mgmt_relevant.org")
+                                                         (projects)
+                                                         (outputs))
+                                                        :datetime nil :mode frozen :agentic t :agentic-skills ("_agentic_debate.org") :subagents nil)
                                   :parents '(gptel-agent)
-                                  :tools '("current_datetime" "tmdb" "movie_ratings" "movies_download_add" "movies_download_check" "movies_explore_add" "movies_explore_check" "jellyfin_favorite_set" "movies_gif_add_scene" "Agent" "jellyfin" "jellyfin_collection_add" "movies_download_list" "movies_explore_list" "TaskLoad" "TaskSave" "TaskGet" "TaskList" "TaskUpdate" "TaskCreate")
+                                  :tools '("Agent")
                                   :use-tools t
-                                  :confirm-tool-calls 'auto
-                                  :backend "OpenCode Go"
-                                  :model 'deepseek-v4-flash
-                                  :pre (lambda () (gptel-mcp-connect '("tmdb" "omdb" "jellyfin") 'sync nil)))
+                                  :confirm-tool-calls 'auto)
 
 ;;;;; Org prompt files (standalone)
 
