@@ -3446,7 +3446,7 @@ This is a modified version of `mu4e-view-save-attachments'."
   (setq
    gptel-default-mode 'org-mode
    gptel-use-tools t
-   gptel-confirm-tool-calls t
+   gptel-confirm-tool-calls 'auto
    gptel-include-tool-results 'auto)
 
   (with-eval-after-load 'gptel-transient
@@ -3604,12 +3604,27 @@ This is a modified version of `mu4e-view-save-attachments'."
   :bind (("C-z g" . gptel-menu)
          ("C-z C-g" . perso/gptel)))
 
+(use-package gptel-custom-tools
+  :vc ( :url "https://github.com/mclbn/gptel-custom-tools"
+  :branch main)
+  ;; :load-path "~/dev/gptel-custom-tools/"
+  :custom
+  (gptel-custom-tools-tasklist-directory (expand-file-name "gptel-tasks/" user-emacs-directory)))
+
 (use-package gptel-tool-policy
-  :vc (:url https://github.com/mclbn/gptel-tool-policy
+  :vc (:url "https://github.com/mclbn/gptel-tool-policy"
             :branch main)
   :after gptel
   :demand t
   :custom
+  (gptel-tool-policy-bypass-tools
+   '("current_datetime"
+     "Agent"
+     "TaskLoad" "TaskSave" "TaskGet" "TaskList" "TaskCreate" "TaskUpdate"
+     "web_url_read" "searxng_instance_info" "searxng_search_suggestions" "searxng_web_search"
+     "movies_gif_add_scene" "movies_download_list" "movies_download_check" "movies_download_add"
+     "movies_explore_list" "movies_explore_check" "movies_explore_add"
+     "tmdb" "omdb" "jellyfin" "jellyfin_favorite_set" "favorite_collection_add"))
   (gptel-tool-policy-rules
    '((deny  read  "~/.ssh/**"        "Never expose SSH keys")
      (deny  write "~/.ssh/**"        "Never write inside ~/.ssh")
@@ -3620,14 +3635,7 @@ This is a modified version of `mu4e-view-save-attachments'."
      (deny  read  "~/.netrc"         "Never expose stored credentials")
      (deny  write "~/.netrc"         "Never write stored credentials")
      (deny  read  "~/.aws/**"        "Cloud credentials")
-     (deny  read  "~/.kube/**"       "Cluster credentials")))
-  :custom
-  (gptel-tool-policy-register-tool
-   "read_file" 'read #'(lambda (args)
-                         (gptel-tool-policy--extract-key args :path)))
-  (gptel-tool-policy-register-tool
-   "list_directory" 'read #'(lambda (args)
-                              (gptel-tool-policy--extract-key args :path))))
+     (deny  read  "~/.kube/**"       "Cluster credentials"))))
 
 (use-package gptel-agent
   :defer t
