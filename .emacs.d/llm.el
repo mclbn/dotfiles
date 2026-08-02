@@ -173,7 +173,8 @@ MODEL is a gptel model symbol (e.g. \\='qwen36-27b-opti)."
 (defcustom perso/gptel-prompt-categories
   '((roles    :dir "roles"    :tag "prompt_roles"    :key "R" :multi nil
               :default ("general.org"))
-    (skills   :dir "skills"   :tag "prompt_skills"   :key "S" :multi t)
+    (skills   :dir "skills"   :tag "prompt_skills"   :key "S" :multi t
+              :default ("multitask.org"))
     (projects :dir "projects" :tag "prompt_projects" :key "P" :multi t)
     (outputs  :dir "outputs"  :tag "prompt_outputs"  :key "O" :multi t
               :default ("general.org")))
@@ -185,9 +186,41 @@ allow several selections), :default (list of file names selected by
 default)."
   :type '(alist :key-type symbol :value-type plist) :group 'gptel)
 
-(defcustom perso/gptel-prompt-default-tools '(("time" . "current_datetime"))
-  "Tools staged by default, as (CATEGORY . NAME) pairs."
+(defcustom perso/gptel-prompt-default-tools
+  '(("time"            . "current_datetime")
+    ("custom-tasklist" . "TaskCreate")
+    ("custom-tasklist" . "TaskList")
+    ("custom-tasklist" . "TaskGet")
+    ("custom-tasklist" . "TaskUpdate")
+    ("custom-tasklist" . "TaskSave")
+    ("custom-tasklist" . "TaskLoad"))
+  "Tools staged by default, as (CATEGORY . NAME) pairs.
+The `custom-tasklist' entries are the multitask set named by
+`perso/gptel-prompt-multitask-config': staging them here is what makes
+multitask part of the default stage, so \\[perso/gptel-prompt-reset] restores
+it the way it restores the date/time preamble."
   :type '(alist :key-type string :value-type string) :group 'gptel)
+
+(defcustom perso/gptel-prompt-multitask-config
+  '(:skill "multitask.org" :tool-category "custom-tasklist")
+  "Skill file and tool category for the multitask default set.
+The dashboard toggle adds/removes them together; the sub-agent saver
+strips them by default.
+
+:skill is the fragment's path *relative to the skills directory*, exactly
+as stored in a stage's :selections — a fragment in a sub-folder is
+\"tasks/multitask.org\", not \"multitask.org\".  :tool-category is the gptel
+tool category holding the task tools; the expected tool set is the union of
+that category's entries in `gptel--known-tools' and in
+`perso/gptel-prompt-default-tools', so an unregistered category (gptel not
+fully loaded, MCP server not connected) does not make \"all tools present\"
+vacuously true.
+
+Making multitask part of the default stage is configuration, not code: add
+:skill to the skills category's :default entry in
+`perso/gptel-prompt-categories' and the tools to
+`perso/gptel-prompt-default-tools'."
+  :type '(plist :key-type symbol :value-type string) :group 'gptel)
 
 (defcustom perso/gptel-prompt-thinking-on
   '(:chat_template_kwargs (:enable_thinking t))
@@ -228,6 +261,13 @@ remain usable as #+INCLUDE building blocks and by explicit name."
   "List of (CATEGORY . FILE) favorite fragments, surfaced on the dashboard.
 Managed from the dashboard and persisted via savehist.")
 
+(defvar perso/gptel-prompt-tool-favorites nil
+  "List of tool favorites, surfaced on the dashboard.
+Each entry is a cons (KIND . PAYLOAD):
+  (:group . \"category\")             a whole tool category
+  (:tool  . (\"category\" . \"name\"))  one tool
+Managed from the dashboard and persisted via savehist.")
+
 (defvar perso/gptel-prompt--current-stage nil
   "Working stage shared by the builder dashboard and all its sub-menus.
 Initialised only by `perso/gptel-prompt-builder'; sub-menus never reset it.")
@@ -235,12 +275,20 @@ Initialised only by `perso/gptel-prompt-builder'; sub-menus never reset it.")
 (defvar perso/gptel-prompt--picker-category nil
   "Category symbol the generic category picker is currently editing.")
 
+(defvar perso/gptel-prompt--active-group nil
+  "Group whose items the current grouped picker is showing, or nil.
+Shared by every picker (tools and fragments) in the same spirit as
+`perso/gptel-prompt--picker-category': at most one group is active at a
+time, and each picker's interactive body resets it to nil on entry so a
+group name never leaks from one picker into another.")
+
 (defvar perso/gptel-prompt--recipe-registry (make-hash-table :test 'eq)
   "Map preset NAME (symbol) to its assembly recipe, for loading back / export.")
 
 (with-eval-after-load 'savehist
   (add-to-list 'savehist-additional-variables 'perso/gptel-prompt--last-stage)
-  (add-to-list 'savehist-additional-variables 'perso/gptel-prompt-favorites))
+  (add-to-list 'savehist-additional-variables 'perso/gptel-prompt-favorites)
+  (add-to-list 'savehist-additional-variables 'perso/gptel-prompt-tool-favorites))
 
 ;;;;; Include resolution and date/time preamble
 
@@ -446,6 +494,112 @@ Also reconcile the \"Agent\" tool in STAGE's :tools with its :agentic flag."
     (plist-put stage :tools (if (member pair tools)
                                 (remove pair tools)
                               (append tools (list pair))))))
+
+;;;;; Multitask set
+;; The multitask skill and its task tools are ordinary selections and ordinary
+;; staged tools: no stage key, no flag, nothing for the recipe, the exporter or
+;; the sub-agent saver to learn about.  `perso/gptel-prompt-multitask-config' is
+;; the single source of truth identifying them, shared by the dashboard toggle,
+;; its render-time indicator and the sub-agent stripper.
+
+(defun perso/gptel-prompt--multitask-skill ()
+  "Return the configured multitask skill path, or nil."
+  (plist-get perso/gptel-prompt-multitask-config :skill))
+
+(defun perso/gptel-prompt--multitask-category ()
+  "Return the configured multitask tool category, or nil."
+  (plist-get perso/gptel-prompt-multitask-config :tool-category))
+
+(defun perso/gptel-prompt--multitask-tools ()
+  "Return the expected multitask tool set as (CATEGORY . NAME) pairs.
+The union of the configured category's tools in `gptel--known-tools' and
+in `perso/gptel-prompt-default-tools': the registry alone would be empty
+whenever the category is not currently registered, which would make \"all
+tools of the category are staged\" vacuously true.  Possibly nil."
+  (let ((cat (perso/gptel-prompt--multitask-category))
+        (out nil))
+    (when cat
+      (dolist (pair (append (perso/gptel-prompt--all-tool-pairs)
+                            perso/gptel-prompt-default-tools))
+        (when (and (equal (car pair) cat) (not (member pair out)))
+          (push pair out))))
+    (nreverse out)))
+
+(defun perso/gptel-prompt--multitask-staged-tools (stage)
+  "Return the tools of the configured category currently staged in STAGE.
+Removal works on these — a tool can be staged while its category is
+unregistered — whereas addition works on the expected set."
+  (let ((cat (perso/gptel-prompt--multitask-category)))
+    (and cat (seq-filter (lambda (p) (equal (car p) cat))
+                         (plist-get stage :tools)))))
+
+(defun perso/gptel-prompt--multitask-skill-p (stage)
+  "Non-nil when STAGE selects the configured multitask skill."
+  (let ((skill (perso/gptel-prompt--multitask-skill)))
+    (and skill
+         (member skill (cdr (assq 'skills (plist-get stage :selections))))
+         t)))
+
+(defun perso/gptel-prompt--multitask-status (stage)
+  "Return STAGE's multitask status: `on', `partial' or `off'.
+Pure render-time heuristic computed from the stage itself — no value is
+stored anywhere.  `on' means the skill and every tool of the expected set
+are staged, `off' means neither the skill nor any tool of the category is,
+`partial' is everything in between.  When the expected set is empty the
+tools clause drops out and the status is the skill's presence alone."
+  (let ((skill-p (perso/gptel-prompt--multitask-skill-p stage))
+        (expected (perso/gptel-prompt--multitask-tools))
+        (staged (perso/gptel-prompt--multitask-staged-tools stage)))
+    (cond ((and (not skill-p) (null staged)) 'off)
+          ((and skill-p (seq-every-p (lambda (p) (member p staged)) expected)) 'on)
+          (t 'partial))))
+
+(defun perso/gptel-prompt--toggle-multitask ()
+  "Add or remove the multitask skill and its tools in the shared stage.
+Explicit set operations, never `perso/gptel-prompt--toggle-file' /
+`perso/gptel-prompt--toggle-tool': those flip, so mapping them over the set
+from a partial state would switch the *missing* items on.  The cycle is
+therefore partial -> off, off -> on, on -> off; after this call the stage is
+either fully multitask-on or fully multitask-off."
+  (interactive)
+  (let* ((stage (perso/gptel-prompt--stage))
+         (skill (perso/gptel-prompt--multitask-skill))
+         (cat (perso/gptel-prompt--multitask-category))
+         (selected (cdr (assq 'skills (plist-get stage :selections))))
+         (tools (plist-get stage :tools)))
+    (if (or (perso/gptel-prompt--multitask-skill-p stage)
+            (perso/gptel-prompt--multitask-staged-tools stage))
+        (progn
+          (when skill
+            (perso/gptel-prompt--set-category
+             stage 'skills (seq-remove (lambda (f) (equal f skill)) selected)))
+          (when cat
+            (plist-put stage :tools
+                       (seq-remove (lambda (p) (equal (car p) cat)) tools))))
+      (when skill
+        (perso/gptel-prompt--set-category
+         stage 'skills (append selected (list skill))))
+      (plist-put stage :tools
+                 (append tools
+                         (seq-remove (lambda (p) (member p tools))
+                                     (perso/gptel-prompt--multitask-tools)))))))
+
+(defun perso/gptel-prompt--strip-multitask (stage)
+  "Return a copy of STAGE without the multitask skill and its tools.
+Pure: STAGE itself — and therefore the shared stage the user is still
+working in — is left alone.  Saving a sub-agent is not reconfiguring the
+session."
+  (let ((new (copy-tree stage))
+        (skill (perso/gptel-prompt--multitask-skill))
+        (cat (perso/gptel-prompt--multitask-category)))
+    (when skill
+      (when-let ((cell (assq 'skills (plist-get new :selections))))
+        (setcdr cell (seq-remove (lambda (f) (equal f skill)) (cdr cell)))))
+    (when cat
+      (plist-put new :tools
+                 (seq-remove (lambda (p) (equal (car p) cat))
+                             (plist-get new :tools))))
+    new))
 
 ;;;;; Assembly
 
@@ -1418,6 +1572,94 @@ candidate list down to the already-selected items."
     (setq perso/gptel-prompt-favorites working)
     (perso/gptel-prompt-dashboard)))
 
+;;;;; Tool favorites
+;; A second, separate favorites slot: fragment favorites keep 1-9, tool
+;; favorites get M-1 - M-9, so the two never compete for a digit.  An entry is
+;; always a dotted cons with a keyword car, so `car' discriminates the kind and
+;; `cdr' is the payload — a category string, or the same (CATEGORY . NAME) pair
+;; the stage already uses.
+
+(defun perso/gptel-prompt--tool-favorite-pairs (fav)
+  "Return the (CATEGORY . NAME) pairs favorite FAV currently stands for.
+A group favorite resolves against the live registry, so a category whose
+server is not connected resolves to nothing (and is rendered unstaged and
+staging nothing) rather than being dropped."
+  (pcase (car-safe fav)
+    (:group (let ((cat (cdr fav)))
+              (seq-filter (lambda (p) (equal (car p) cat))
+                          (perso/gptel-prompt--selectable-tool-pairs))))
+    (:tool (list (cdr fav)))))
+
+(defun perso/gptel-prompt--tool-favorite-label (fav)
+  "Return the display label of tool favorite FAV."
+  (pcase (car-safe fav)
+    (:group (format "%s/*" (cdr fav)))
+    (:tool (format "%s/%s" (car (cdr fav)) (cdr (cdr fav))))
+    (_ (format "%s" fav))))
+
+(defun perso/gptel-prompt--tool-favorite-staged-p (fav stage)
+  "Non-nil when every tool of favorite FAV is staged in STAGE.
+A favorite that currently resolves to no tool at all is never \"staged\"."
+  (let ((pairs (perso/gptel-prompt--tool-favorite-pairs fav))
+        (staged (plist-get stage :tools)))
+    (and pairs (seq-every-p (lambda (p) (member p staged)) pairs))))
+
+(defun perso/gptel-prompt--toggle-tool-favorite (fav)
+  "Stage or unstage every tool of favorite FAV: remove if all present, else add."
+  (let* ((stage (perso/gptel-prompt--stage))
+         (pairs (perso/gptel-prompt--tool-favorite-pairs fav))
+         (tools (plist-get stage :tools)))
+    (when pairs
+      (plist-put stage :tools
+                 (if (seq-every-p (lambda (p) (member p tools)) pairs)
+                     (seq-remove (lambda (p) (member p pairs)) tools)
+                   (append tools
+                           (seq-remove (lambda (p) (member p tools)) pairs)))))))
+
+(defun perso/gptel-prompt--tool-favorite-candidates ()
+  "Return every tool favorite that can be picked: each group, then each tool."
+  (let ((pairs (perso/gptel-prompt--selectable-tool-pairs)))
+    (append (mapcar (lambda (g) (cons :group g))
+                    (delete-dups (mapcar #'car pairs)))
+            (mapcar (lambda (p) (cons :tool p)) pairs))))
+
+(defun perso/gptel-prompt-manage-tool-favorites ()
+  "Toggle the dashboard tool favorites, then return to the dashboard.
+Same toggle loop as `perso/gptel-prompt-manage-favorites', over tool groups
+and individual tools (the derived \"Agent\" tool excluded, as in the picker).
+As there, the working set is filtered against what exists when the loop
+opens, so favorites for tools or categories that have gone away are dropped
+on the next visit."
+  (interactive)
+  (let* ((cands (perso/gptel-prompt--tool-favorite-candidates))
+         (working (seq-filter (lambda (f) (member f cands))
+                              (copy-sequence perso/gptel-prompt-tool-favorites)))
+         (done "✓ Done (save tool favorites)"))
+    (catch 'done
+      (while t
+        (let* ((label->fav
+                (mapcar (lambda (f)
+                          (cons (format "%s %s"
+                                        (if (member f working) "[x]" "[ ]")
+                                        (perso/gptel-prompt--tool-favorite-label f))
+                                f))
+                        cands))
+               (choice (completing-read
+                        (format "Tool favorites — %d selected — toggle one or Done: "
+                                (length working))
+                        (perso/gptel-prompt--ordered-collection
+                         (cons done (mapcar #'car label->fav)))
+                        nil t)))
+          (if (or (null choice) (string= choice done))
+              (throw 'done nil)
+            (let ((fav (cdr (assoc choice label->fav))))
+              (when fav
+                (setq working (if (member fav working)
+                                  (remove fav working)
+                                (append working (list fav))))))))))
+    (setq perso/gptel-prompt-tool-favorites working)
+    (perso/gptel-prompt-dashboard)))
+
 ;;;;; Sub-agents: assembly, save, recipe helpers, tool editing
 
 (defun perso/gptel-prompt--subagent-body (stage)
@@ -1643,7 +1885,16 @@ as a gptel `@name' cookie, which is matched as a whitespace-delimited word."
     (quit-window t)))
 
 (defun perso/gptel-prompt-save-subagent ()
-  "Save the current selection as a gptel-agent sub-agent (with preview)."
+  "Save the current selection as a gptel-agent sub-agent (with preview).
+Sub-agents are simple workers: the multitask skill and its task tools are
+stripped by default, unless the keep question is answered yes.  The strip
+happens once, on this function's private copy of the stage, upstream of
+everything generated from it — the frozen body, the embedded
+`:prompt-recipe:' and the `:tools:' drawer line therefore agree, and the
+first delegation (which re-assembles from the recipe and rewrites the body
+on disk) does not put multitask back.  The question is skipped when the
+stage has no multitask content to begin with, and the shared stage is never
+touched."
   (interactive)
   (unless (require 'gptel-agent nil t)
     (user-error "gptel-agent is not available"))
@@ -1662,6 +1913,9 @@ as a gptel `@name' cookie, which is matched as a whitespace-delimited word."
                      (read-string "Max messages to send (empty = default): ")))
            (nmsg (and (string-match-p "\\`[0-9]+\\'" nmsg-in)
                       (string-to-number nmsg-in)))
+           (_ (when (and (not (eq (perso/gptel-prompt--multitask-status stage) 'off))
+                         (not (y-or-n-p "Keep multitask capability? ")))
+                (setq stage (perso/gptel-prompt--strip-multitask stage))))
            (dir (file-name-as-directory
                  (expand-file-name perso/gptel-prompt-subagent-directory)))
            (file (expand-file-name (concat name ".org") dir))
@@ -1796,6 +2050,93 @@ So \"subdir/name.org\" -> \"name\" and \"gptel-agent/Eval\" -> \"Eval\"."
    (or (perso/gptel-prompt--slice-column specs col (perso/gptel-prompt--ncols specs))
        '())))
 
+;;;;; Grouped picker engine
+;; Shared by the tools picker (groups = gptel tool categories) and the fragment
+;; pickers (groups = first-level subdirectories).  Group headers are always
+;; rendered, in the left column; only the active group's items are rendered as
+;; toggle suffixes, laid out by the flat column engine above across the columns
+;; to its right.  The group key implements gptel's three-state cycle: not shown
+;; -> show; shown with any item selected -> deselect all; shown with none
+;; selected -> select all.  The group stays shown throughout; no key collapses
+;; it, and making another group active is what hides it.
+
+(defconst perso/gptel-prompt--root-group "(root)"
+  "Group name of the items that live at the root of their category.")
+
+(defun perso/gptel-prompt--partition (items groupfn)
+  "Partition ITEMS into an ordered alist of (GROUP . ITEMS).
+GROUPFN returns the group name (a string) of one item.  Groups appear in
+the order of their first item and items keep their relative order, so a
+sorted input yields a sorted grouping.  Empty groups cannot occur, and
+therefore are never rendered."
+  (let (out)
+    (dolist (item items)
+      (let* ((group (funcall groupfn item))
+             (cell (assoc group out)))
+        (if cell
+            (setcdr cell (cons item (cdr cell)))
+          (push (cons group (list item)) out))))
+    (mapcar (lambda (cell) (cons (car cell) (nreverse (cdr cell))))
+            (nreverse out))))
+
+(defun perso/gptel-prompt--group-keys (groups &optional reserved)
+  "Assign a mnemonic key to each name in GROUPS; return an alist (GROUP . KEY).
+RESERVED is a list of characters, normally the picker's control keys."
+  (cl-mapcar #'cons groups (mnemonic-keys-assign groups reserved)))
+
+(defun perso/gptel-prompt--group-reserved (keys &optional base)
+  "Return BASE plus the characters that group KEYS deny to item keys.
+Headers and items are suffixes of the same prefix and share one keymap, so
+the two `mnemonic-keys-assign' passes must be ordered: groups first, items
+afterwards with the group keys reserved.  A one-character group key blocks
+that character; for a two-character key, reserving its upper-case first
+character blocks the whole two-character prefix and still leaves the
+lower-case single key free (see the `mnemonic-keys-assign' commentary)."
+  (append base
+          (mapcar (lambda (k)
+                    (if (= (length k) 1) (aref k 0) (upcase (aref k 0))))
+                  keys)))
+
+(defun perso/gptel-prompt--group-header-spec (group key selected total action)
+  "Return the suffix spec of GROUP's header: KEY, name, SELECTED/TOTAL count.
+ACTION is the form invoked by the group key.  The active group is marked."
+  (list key
+        (format "%s%s (%d/%d)"
+                (if (equal group perso/gptel-prompt--active-group) "▸ " "  ")
+                group selected total)
+        action
+        :transient t))
+
+(defun perso/gptel-prompt--group-ncols (specs)
+  "Columns for the active group's items, leaving the header column its width."
+  (perso/gptel-prompt--ncols specs 3))
+
+(defun perso/gptel-prompt--group-col-shown-p (specs col)
+  "Non-nil if item column COL should be shown for SPECS."
+  (and specs (< col (perso/gptel-prompt--group-ncols specs))))
+
+(defun perso/gptel-prompt--group-col-children (prefix specs col)
+  "Parse the item suffixes of column COL of SPECS for PREFIX."
+  (transient-parse-suffixes
+   prefix
+   (or (perso/gptel-prompt--slice-column
+        specs col (perso/gptel-prompt--group-ncols specs))
+       '())))
+
+(defun perso/gptel-prompt--group-cycle (group items selected)
+  "Return the new selection for a group key press, or nil to only activate.
+GROUP is the pressed group, ITEMS every item in it and SELECTED the whole
+category's current selection.  Returns a cons (t . NEW-SELECTION) when the
+press must change the selection — deselect the group when any of its items
+is selected, select it whole otherwise — and nil when the press only makes
+GROUP active."
+  (if (not (equal group perso/gptel-prompt--active-group))
+      (progn (setq perso/gptel-prompt--active-group group) nil)
+    (cons t (if (seq-some (lambda (i) (member i selected)) items)
+                (seq-remove (lambda (i) (member i items)) selected)
+              (append selected
+                      (seq-remove (lambda (i) (member i selected)) items))))))
+
 (defun perso/gptel-prompt--summary-desc (cat)
   "Dashboard summary line for category CAT."
   (let* ((label (capitalize (symbol-name cat)))
@@ -1874,6 +2215,27 @@ So \"subdir/name.org\" -> \"name\" and \"gptel-agent/Eval\" -> \"Eval\"."
                 out))))
     (nreverse out)))
 
+(defun perso/gptel-prompt--tool-favorites-children (_)
+  "Meta-digit toggle suffixes for the dashboard tool favorites (max 9).
+Kept off the plain digits, which belong to the fragment favorites."
+  (let ((stage (perso/gptel-prompt--stage))
+        (i 0)
+        (out nil))
+    (dolist (fav perso/gptel-prompt-tool-favorites)
+      (setq i (1+ i))
+      (when (<= i 9)
+        (push (list (format "M-%d" i)
+                    (format "%s %s"
+                            (if (perso/gptel-prompt--tool-favorite-staged-p
+                                 fav stage)
+                                "[x]" "[ ]")
+                            (perso/gptel-prompt--tool-favorite-label fav))
+                    `(lambda () (interactive)
+                       (perso/gptel-prompt--toggle-tool-favorite ',fav))
+                    :transient t)
+              out)))
+    (nreverse out)))
+
 (defun perso/gptel-prompt--parameters-children (stage)
   "Suffixes of the Parameters column, given STAGE."
   (list (list "-e" (format "Temperature: %s"
@@ -1901,6 +2263,11 @@ So \"subdir/name.org\" -> \"name\" and \"gptel-agent/Eval\" -> \"Eval\"."
          (list (list "-d" (format "Date/time preamble %s"
                                   (if (plist-get stage :datetime) "[x]" "[ ]"))
                      #'perso/gptel-prompt--toggle-datetime :transient t)
+               (list "-T" (format "Multitask %s"
+                                  (pcase (perso/gptel-prompt--multitask-status
+                                          stage)
+                                    ('on "[x]") ('partial "[~]") (_ "[ ]")))
+                     #'perso/gptel-prompt--toggle-multitask :transient t)
                (if (plist-get stage :agentic)
                    (list "-a" "Agent-aware [x]"
                          #'perso/gptel-prompt--disable-agentic :transient t)
@@ -1941,28 +2308,98 @@ So \"subdir/name.org\" -> \"name\" and \"gptel-agent/Eval\" -> \"Eval\"."
             (if (plist-get (perso/gptel-prompt--category cat) :multi)
                 "multi-select" "single-select"))))
 
-(defun perso/gptel-prompt--category-specs ()
-  "Ordered toggle suffix specs for every fragment of the current category."
+(defun perso/gptel-prompt--fragment-group (rel)
+  "Return the first-level group of category-relative fragment path REL.
+Root-level fragments form `perso/gptel-prompt--root-group'.  Only the first
+path segment groups: a deeper fragment stays visible through its relative
+label, but does not open a group of its own."
+  (let ((dir (file-name-directory rel)))
+    (if (or (null dir) (string-empty-p dir))
+        perso/gptel-prompt--root-group
+      (car (split-string dir "/" t)))))
+
+(defun perso/gptel-prompt--fragment-label (rel group)
+  "Return REL displayed relative to GROUP, extension dropped.
+So \"family/subfamily/name.org\" shows as \"subfamily/name\" under the
+\"family\" group.  Only the display shortens; the stage keeps the full
+category-relative path."
+  (file-name-sans-extension
+   (if (equal group perso/gptel-prompt--root-group)
+       rel
+     (substring rel (min (length rel) (1+ (length group)))))))
+
+(defun perso/gptel-prompt--category-groups (cat)
+  "Return CAT's fragments as an ordered alist of (GROUP . RELATIVE-PATHS)."
+  (perso/gptel-prompt--partition (perso/gptel-prompt--category-files cat)
+                                 #'perso/gptel-prompt--fragment-group))
+
+(defun perso/gptel-prompt--category-group-keys ()
+  "Return the (GROUP . KEY) alist of the current category picker's headers."
+  (perso/gptel-prompt--group-keys
+   (mapcar #'car (perso/gptel-prompt--category-groups
+                  perso/gptel-prompt--picker-category))))
+
+(defun perso/gptel-prompt--category-group-key (group)
+  "Handle a group key press on GROUP in the current category picker.
+Multi-select categories get the full three-state cycle; single-select ones
+only activate the group — a second press on an already active group does
+nothing, as selecting all would make no sense."
   (let* ((cat perso/gptel-prompt--picker-category)
+         (multi (plist-get (perso/gptel-prompt--category cat) :multi))
+         (stage (perso/gptel-prompt--stage))
+         (items (cdr (assoc group (perso/gptel-prompt--category-groups cat))))
+         (new (perso/gptel-prompt--group-cycle
+               group items (cdr (assq cat (plist-get stage :selections))))))
+    (when (and new multi)
+      (perso/gptel-prompt--set-category stage cat (cdr new)))))
+
+(defun perso/gptel-prompt--category-group-specs ()
+  "Group header specs for the current category picker (the left column)."
+  (let* ((cat perso/gptel-prompt--picker-category)
+         (selected (cdr (assq cat (plist-get (perso/gptel-prompt--stage)
+                                             :selections))))
+         (keys (perso/gptel-prompt--category-group-keys)))
+    (mapcar
+     (lambda (cell)
+       (let ((group (car cell))
+             (files (cdr cell)))
+         (perso/gptel-prompt--group-header-spec
+          group (cdr (assoc group keys))
+          (seq-count (lambda (f) (member f selected)) files)
+          (length files)
+          `(lambda () (interactive)
+             (perso/gptel-prompt--category-group-key ,group)))))
+     (perso/gptel-prompt--category-groups cat))))
+
+(defun perso/gptel-prompt--category-specs ()
+  "Toggle suffix specs for the fragments of the active group.
+Keys are assigned after the group keys and with them reserved, so no header
+and no visible item can end up on the same key."
+  (let* ((cat perso/gptel-prompt--picker-category)
+         (group perso/gptel-prompt--active-group)
          (stage (perso/gptel-prompt--stage))
          (multi (plist-get (perso/gptel-prompt--category cat) :multi))
-         (files (perso/gptel-prompt--category-files cat))
+         (files (cdr (assoc group (perso/gptel-prompt--category-groups cat))))
          (selected (cdr (assq cat (plist-get stage :selections))))
+         (labels (mapcar (lambda (f) (perso/gptel-prompt--fragment-label f group))
+                         files))
          (keys (mnemonic-keys-assign
-                (mapcar #'perso/gptel-prompt--leaf files) nil)))
+                labels
+                (perso/gptel-prompt--group-reserved
+                 (mapcar #'cdr (perso/gptel-prompt--category-group-keys))))))
     (cl-mapcar
-     (lambda (key file)
+     (lambda (key file label)
        (list key
              (format "%s %s"
                      (cond ((not (member file selected)) (if multi "[ ]" "( )"))
                            (multi "[x]")
                            (t "(•)"))
-                     (file-name-sans-extension file))
+                     label)
              `(lambda () (interactive)
                 (perso/gptel-prompt--toggle-file
                  (perso/gptel-prompt--stage) ',cat ,file))
              :transient t))
-     keys files)))
+     keys files labels)))
 
 (defun perso/gptel-prompt--category-controls ()
   "Control suffixes for the category picker (rendered below a blank line)."
@@ -1970,7 +2407,8 @@ So \"subdir/name.org\" -> \"name\" and \"gptel-agent/Eval\" -> \"Eval\"."
                            perso/gptel-prompt--picker-category)
                           :multi)))
     (append
-     (unless (perso/gptel-prompt--category-specs)
+     (unless (perso/gptel-prompt--category-files
+              perso/gptel-prompt--picker-category)
        (list (list :info "(no fragments)")))
      (when multi
        (list (list "*" "Select all" #'perso/gptel-prompt--category-select-all
@@ -2002,31 +2440,75 @@ So \"subdir/name.org\" -> \"name\" and \"gptel-agent/Eval\" -> \"Eval\"."
   (cl-find "Agent" (perso/gptel-prompt--all-tool-pairs)
            :key #'cdr :test #'string=))
 
-(defun perso/gptel-prompt--tools-specs ()
-  "Ordered toggle suffix specs for every registered user-selectable tool.
-The \"Agent\" tool is excluded; it is managed by the agent-aware toggle."
+(defun perso/gptel-prompt--selectable-tool-pairs ()
+  "Every user-selectable tool as (CATEGORY . NAME), by category then name.
+The \"Agent\" tool is excluded; it is managed by the agent-aware toggle.  A
+category whose only tool is \"Agent\" therefore disappears entirely."
+  (let* ((all (perso/gptel-prompt--all-tool-pairs))
+         (agent-pair (perso/gptel-prompt--agent-tool-pair)))
+    (sort (if agent-pair (remove agent-pair all) all)
+          (lambda (a b)
+            (if (string= (car a) (car b))
+                (string-lessp (cdr a) (cdr b))
+              (string-lessp (car a) (car b)))))))
+
+(defun perso/gptel-prompt--tool-groups ()
+  "Return user-selectable tools as an ordered alist of (CATEGORY . PAIRS)."
+  (perso/gptel-prompt--partition (perso/gptel-prompt--selectable-tool-pairs)
+                                 #'car))
+
+(defun perso/gptel-prompt--tools-group-keys ()
+  "Return the (CATEGORY . KEY) alist of the tools picker's headers."
+  (perso/gptel-prompt--group-keys
+   (mapcar #'car (perso/gptel-prompt--tool-groups)) '(?C)))
+
+(defun perso/gptel-prompt--tools-group-key (group)
+  "Handle a category key press on GROUP in the tools picker.
+Full three-state cycle: show, then deselect all, then select all."
   (let* ((stage (perso/gptel-prompt--stage))
-         (all (perso/gptel-prompt--all-tool-pairs))
-         (selectable (let ((agent-pair (perso/gptel-prompt--agent-tool-pair)))
-                       (sort (if agent-pair (remove agent-pair all) all)
-                             (lambda (a b)
-                               (if (string= (car a) (car b))
-                                   (string-lessp (cdr a) (cdr b))
-                                 (string-lessp (car a) (car b)))))))
+         (items (cdr (assoc group (perso/gptel-prompt--tool-groups))))
+         (new (perso/gptel-prompt--group-cycle
+               group items (plist-get stage :tools))))
+    (when new
+      (plist-put stage :tools (cdr new)))))
+
+(defun perso/gptel-prompt--tools-group-specs ()
+  "Category header specs for the tools picker (the left column)."
+  (let ((staged (plist-get (perso/gptel-prompt--stage) :tools))
+        (keys (perso/gptel-prompt--tools-group-keys)))
+    (mapcar
+     (lambda (cell)
+       (let ((group (car cell))
+             (pairs (cdr cell)))
+         (perso/gptel-prompt--group-header-spec
+          group (cdr (assoc group keys))
+          (seq-count (lambda (p) (member p staged)) pairs)
+          (length pairs)
+          `(lambda () (interactive)
+             (perso/gptel-prompt--tools-group-key ,group)))))
+     (perso/gptel-prompt--tool-groups))))
+
+(defun perso/gptel-prompt--tools-specs ()
+  "Toggle suffix specs for the tools of the active category.
+Keys are assigned after the category keys and with them reserved, so no
+header and no visible tool can end up on the same key."
+  (let* ((stage (perso/gptel-prompt--stage))
+         (pairs (cdr (assoc perso/gptel-prompt--active-group
+                            (perso/gptel-prompt--tool-groups))))
          (staged (plist-get stage :tools))
          (keys (mnemonic-keys-assign
-                (mapcar #'perso/gptel-prompt--leaf (mapcar #'cdr selectable))
-                '(?C))))
+                (mapcar (lambda (p) (perso/gptel-prompt--leaf (cdr p))) pairs)
+                (perso/gptel-prompt--group-reserved
+                 (mapcar #'cdr (perso/gptel-prompt--tools-group-keys)) '(?C)))))
     (cl-mapcar
      (lambda (key pair)
        (list key
-             (format "%s %s/%s" (if (member pair staged) "[x]" "[ ]")
-                     (car pair) (cdr pair))
+             (format "%s %s" (if (member pair staged) "[x]" "[ ]") (cdr pair))
              `(lambda () (interactive)
                 (perso/gptel-prompt--toggle-tool
                  (perso/gptel-prompt--stage) ,(car pair) ,(cdr pair)))
              :transient t))
-     keys selectable)))
+     keys pairs)))
 
 (defun perso/gptel-prompt--tools-controls ()
   "Control suffixes for the Tools picker (rendered below a blank line)."
@@ -2193,7 +2675,11 @@ sets itself up, so it behaves as a genuine transient sub-prefix of the
 dashboard: entering it pushes the dashboard onto the transient stack, and its
 =C-g Back= (a plain `transient-quit-one') pops back to it.  All rendering reuses
 the shared `perso/gptel-prompt--category-*' helpers, which read the category
-variable this command sets."
+variable this command sets.
+
+Fragments are shown grouped by first-level subdirectory: the left column
+holds the group headers, the columns to its right the active group's
+fragments."
   (let ((name (perso/gptel-prompt--category-picker-symbol cat)))
     `(transient-define-prefix ,name ()
        ,(format "Pick fragments for the `%s' prompt category." cat)
@@ -2204,21 +2690,21 @@ variable this command sets."
                  (transient-parse-suffixes ',name
                                            (list (list :info (perso/gptel-prompt--category-header)))))]
        [[:class transient-column
-                :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--category-specs) 0))
-                :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                :if (lambda () (perso/gptel-prompt--category-group-specs))
+                :setup-children (lambda (_) (transient-parse-suffixes
+                                             ',name (perso/gptel-prompt--category-group-specs)))]
+        [:class transient-column
+                :if (lambda () (perso/gptel-prompt--group-col-shown-p (perso/gptel-prompt--category-specs) 0))
+                :setup-children (lambda (_) (perso/gptel-prompt--group-col-children
                                              ',name (perso/gptel-prompt--category-specs) 0))]
         [:class transient-column
-                :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--category-specs) 1))
-                :setup-children (lambda (_) (perso/gptel-prompt--col-children
+                :if (lambda () (perso/gptel-prompt--group-col-shown-p (perso/gptel-prompt--category-specs) 1))
+                :setup-children (lambda (_) (perso/gptel-prompt--group-col-children
                                              ',name (perso/gptel-prompt--category-specs) 1))]
         [:class transient-column
-                :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--category-specs) 2))
-                :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                             ',name (perso/gptel-prompt--category-specs) 2))]
-        [:class transient-column
-                :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--category-specs) 3))
-                :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                             ',name (perso/gptel-prompt--category-specs) 3))]]
+                :if (lambda () (perso/gptel-prompt--group-col-shown-p (perso/gptel-prompt--category-specs) 2))
+                :setup-children (lambda (_) (perso/gptel-prompt--group-col-children
+                                             ',name (perso/gptel-prompt--category-specs) 2))]]
        [:class transient-column
                :setup-children
                (lambda (_)
@@ -2226,6 +2712,7 @@ variable this command sets."
                                            (perso/gptel-prompt--category-controls)))]
        (interactive)
        (setq perso/gptel-prompt--picker-category ',cat)
+       (setq perso/gptel-prompt--active-group nil)
        (unless perso/gptel-prompt--current-stage
          (setq perso/gptel-prompt--current-stage (perso/gptel-prompt--initial-stage)))
        (transient-setup ',name))))
@@ -2237,7 +2724,9 @@ variable this command sets."
         t))
 
 (transient-define-prefix perso/gptel-prompt-tools-picker ()
-  "Stage tools and tool options."
+  "Stage tools and tool options.
+Tools are shown grouped by gptel tool category: the left column holds the
+category headers, the columns to its right the active category's tools."
   :refresh-suffixes t
   [:class transient-column
           :setup-children
@@ -2245,31 +2734,32 @@ variable this command sets."
             (transient-parse-suffixes 'perso/gptel-prompt-tools-picker
                                       (list (list :info "Tools"))))]
   [[:class transient-column
-           :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--tools-specs) 0))
-           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+           :if (lambda () (perso/gptel-prompt--tools-group-specs))
+           :setup-children (lambda (_) (transient-parse-suffixes
+                                        'perso/gptel-prompt-tools-picker
+                                        (perso/gptel-prompt--tools-group-specs)))]
+   [:class transient-column
+           :if (lambda () (perso/gptel-prompt--group-col-shown-p (perso/gptel-prompt--tools-specs) 0))
+           :setup-children (lambda (_) (perso/gptel-prompt--group-col-children
                                         'perso/gptel-prompt-tools-picker
                                         (perso/gptel-prompt--tools-specs) 0))]
    [:class transient-column
-           :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--tools-specs) 1))
-           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+           :if (lambda () (perso/gptel-prompt--group-col-shown-p (perso/gptel-prompt--tools-specs) 1))
+           :setup-children (lambda (_) (perso/gptel-prompt--group-col-children
                                         'perso/gptel-prompt-tools-picker
                                         (perso/gptel-prompt--tools-specs) 1))]
    [:class transient-column
-           :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--tools-specs) 2))
-           :setup-children (lambda (_) (perso/gptel-prompt--col-children
+           :if (lambda () (perso/gptel-prompt--group-col-shown-p (perso/gptel-prompt--tools-specs) 2))
+           :setup-children (lambda (_) (perso/gptel-prompt--group-col-children
                                         'perso/gptel-prompt-tools-picker
-                                        (perso/gptel-prompt--tools-specs) 2))]
-   [:class transient-column
-           :if (lambda () (perso/gptel-prompt--col-shown-p (perso/gptel-prompt--tools-specs) 3))
-           :setup-children (lambda (_) (perso/gptel-prompt--col-children
-                                        'perso/gptel-prompt-tools-picker
-                                        (perso/gptel-prompt--tools-specs) 3))]]
+                                        (perso/gptel-prompt--tools-specs) 2))]]
   [:class transient-column
           :setup-children
           (lambda (_)
             (transient-parse-suffixes 'perso/gptel-prompt-tools-picker
                                       (perso/gptel-prompt--tools-controls)))]
   (interactive)
+  (setq perso/gptel-prompt--active-group nil)
   (unless perso/gptel-prompt--current-stage
     (setq perso/gptel-prompt--current-stage (perso/gptel-prompt--initial-stage)))
   (transient-setup 'perso/gptel-prompt-tools-picker))
@@ -2346,6 +2836,13 @@ variable this command sets."
       (transient-parse-suffixes
        'perso/gptel-prompt-dashboard
        (perso/gptel-prompt--favorites-children nil)))]]
+  [["Tool favs" :class transient-column
+    :if (lambda () perso/gptel-prompt-tool-favorites)
+    :setup-children
+    (lambda (_)
+      (transient-parse-suffixes
+       'perso/gptel-prompt-dashboard
+       (perso/gptel-prompt--tool-favorites-children nil)))]]
   [["Status" :class transient-column
     :setup-children
     (lambda (_)
@@ -2365,6 +2862,7 @@ variable this command sets."
    ["Utility"
     ("C" "Check" perso/gptel-prompt-check)
     ("F" "Manage favorites…" perso/gptel-prompt-manage-favorites)
+    ("T" "Manage tool favorites…" perso/gptel-prompt-manage-tool-favorites)
     ("R" "Reset" perso/gptel-prompt-reset :transient t)
     ("C-g" "Quit" transient-quit-one)]]
   (interactive)
@@ -2522,6 +3020,22 @@ variable this command sets."
                                                         :datetime t :mode frozen :agentic t :subagents ("web_searcher"))
                                   :parents '(gptel-agent)
                                   :tools '("current_datetime" "tmdb" "movie_ratings" "movies_download_add" "movies_download_check" "movies_explore_add" "movies_explore_check" "jellyfin_favorite_set" "movies_gif_add_scene" "Agent" "jellyfin" "jellyfin_collection_add" "movies_download_list" "movies_explore_list")
+                                  :use-tools t
+                                  :confirm-tool-calls 'auto
+                                  :backend "OpenCode Go"
+                                  :model 'deepseek-v4-flash
+                                  :pre (lambda () (gptel-mcp-connect '("tmdb" "omdb" "jellyfin") 'sync nil)))
+
+(perso/gptel-prompt-define-preset 'curator-multitask
+                                  :description "Film curator assistant (multi-task aware)."
+                                  :recipe '(:selections ((roles "film_curator.org")
+                                                         (skills "film/fact_checking.org" "film/recommendation.org" "film/taste_profiling.org"
+                                                                 "information_retrieval.org" "multitask.org")
+                                                         (projects "film/film_marc.org")
+                                                         (outputs "film/film_reco.org"))
+                                                        :datetime t :mode frozen :agentic t :agentic-skills ("_agentic.org") :subagents ("web_searcher"))
+                                  :parents '(gptel-agent)
+                                  :tools '("current_datetime" "tmdb" "movie_ratings" "movies_download_add" "movies_download_check" "movies_explore_add" "movies_explore_check" "jellyfin_favorite_set" "movies_gif_add_scene" "Agent" "jellyfin" "jellyfin_collection_add" "movies_download_list" "movies_explore_list" "TaskLoad" "TaskSave" "TaskGet" "TaskList" "TaskUpdate" "TaskCreate")
                                   :use-tools t
                                   :confirm-tool-calls 'auto
                                   :backend "OpenCode Go"
