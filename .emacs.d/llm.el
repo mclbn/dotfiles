@@ -1794,12 +1794,25 @@ returned if live assembly fails."
   (when (bound-and-true-p gptel-agent--agents)
     (ignore-errors (gptel-agent-update))))
 
-(defun perso/gptel-prompt--subagent-file-content (name description stage body nmsg)
+(defun perso/gptel-prompt--subagent-tools (stage)
+  "Return the tool names STAGE contributes to a sub-agent definition.
+The derived `Agent' tool is dropped: an isolated worker does not delegate
+further.  Single source of truth for \"does this worker have tools?\" — the
+export, the drawer line and the inherit question must all agree."
+  (cl-remove "Agent" (mapcar #'cdr (plist-get stage :tools)) :test #'string=))
+
+(defun perso/gptel-prompt--subagent-file-content
+    (name description stage body nmsg &optional inherit-tools)
   "Return the Org text for a sub-agent definition.
-A sub-agent with no tools writes `:use-tools: nil' so it does not inherit the
-orchestrator's active tools at delegation time."
-  (let* ((tools (cl-remove "Agent" (mapcar #'cdr (plist-get stage :tools))
-                           :test #'string=))
+With no staged tools the drawer gets `:use-tools: nil', which switches tool
+use off for the delegated request.  That line, not an empty tool list, is
+what makes the worker tool-less: gptel sends tools only when `gptel-use-tools'
+and `gptel-tools' are both non-nil, and `gptel-tools' is left holding the
+orchestrator's live value when the definition does not set it.
+
+With INHERIT-TOOLS, neither line is written; that absence /is/ the inherit
+encoding.  INHERIT-TOOLS is ignored when tools are staged."
+  (let* ((tools (perso/gptel-prompt--subagent-tools stage))
          (servers (perso/gptel-prompt--mcp-servers (plist-get stage :tools)))
          (backend (plist-get stage :backend))
          (recipe (perso/gptel-prompt--serialize-recipe stage))
@@ -1808,7 +1821,7 @@ orchestrator's active tools at delegation time."
                 (list (format ":name: %s" name)
                       (format ":description: %s" description)
                       (and tools (format ":tools: %s" (string-join tools " ")))
-                      (and (null tools) ":use-tools: nil")
+                      (and (null tools) (not inherit-tools) ":use-tools: nil")
                       (and backend (format ":backend: %s" backend))
                       (and backend (format ":model: %s" (plist-get stage :model)))
                       (and (plist-get stage :temperature)
@@ -1894,7 +1907,12 @@ everything generated from it — the frozen body, the embedded
 first delegation (which re-assembles from the recipe and rewrites the body
 on disk) does not put multitask back.  The question is skipped when the
 stage has no multitask content to begin with, and the shared stage is never
-touched."
+touched.
+
+When the stage ends up with no tools, a second question offers to let the
+worker inherit the orchestrator's live toolset instead.  Answering no — the
+default intent — writes the tool-less encoding described in
+`perso/gptel-prompt--subagent-file-content'."
   (interactive)
   (unless (require 'gptel-agent nil t)
     (user-error "gptel-agent is not available"))
@@ -1916,22 +1934,38 @@ touched."
            (_ (when (and (not (eq (perso/gptel-prompt--multitask-status stage) 'off))
                          (not (y-or-n-p "Keep multitask capability? ")))
                 (setq stage (perso/gptel-prompt--strip-multitask stage))))
+           ;; Asked after the strip, which is what usually empties the list.
+           (inherit-tools
+            (and (null (perso/gptel-prompt--subagent-tools stage))
+                 (y-or-n-p
+                  "No tools staged — inherit the orchestrator's toolset instead? ")))
            (dir (file-name-as-directory
                  (expand-file-name perso/gptel-prompt-subagent-directory)))
            (file (expand-file-name (concat name ".org") dir))
            (body (perso/gptel-prompt--subagent-body stage))
            (content (perso/gptel-prompt--subagent-file-content
-                     name description stage body nmsg)))
+                     name description stage body nmsg inherit-tools)))
       (perso/gptel-prompt--subagent-preview file content))))
 
 (defun perso/gptel-prompt--agent-tools-desc (name)
-  "Describe sub-agent NAME's tools for the picker (best-effort)."
-  (let ((tools (and (bound-and-true-p gptel-agent--agents)
-                    (plist-get (cdr (assoc name gptel-agent--agents)) :tools))))
-    (cond ((null tools) "(inherits main)")
-          ((listp tools) (string-join (mapcar (lambda (x) (format "%s" x)) tools) ", "))
-          ((stringp tools) tools)
-          (t (format "%s" tools)))))
+  "Describe sub-agent NAME's tools for the picker (best-effort).
+`:use-tools' is read first, and with `plist-member' rather than `plist-get',
+because the three states differ by *absence*: an explicit nil turns tool use
+off whatever `:tools' says, while an absent `:use-tools' with an absent
+`:tools' leaves both gptel variables alone and the worker runs on the
+orchestrator's live toolset."
+  (let* ((plist (and (bound-and-true-p gptel-agent--agents)
+                     (cdr (assoc name gptel-agent--agents))))
+         (tools (plist-get plist :tools))
+         (names (cond ((listp tools)
+                       (string-join (mapcar (lambda (x) (format "%s" x)) tools) ", "))
+                      ((stringp tools) tools)
+                      (t (format "%s" tools))))
+         (off (and (plist-member plist :use-tools)
+                   (null (plist-get plist :use-tools)))))
+    (cond (off (if tools (format "%s (disabled)" names) "(no tools)"))
+          ((null tools) "(inherits main)")
+          (t names))))
 
 (defun perso/gptel-prompt--drawer-tools (drawer)
   "Return the list of tool tokens in DRAWER's :tools: line, or nil."
@@ -1939,25 +1973,50 @@ touched."
     (split-string (match-string 1 drawer) "[ \t]+" t)))
 
 (defun perso/gptel-prompt--drawer-set-tools (drawer tools)
-  "Return DRAWER with its :tools: line set to TOOLS (a list), inserting if absent."
+  "Return DRAWER with its :tools: line set to TOOLS (a list), inserting if absent.
+FIXEDCASE is passed to every replacement: the insertion anchors on the
+all-upper-case =:END:=, and without it Emacs case-folds the replacement to
+match, writing `:TOOLS: READ' — which then fails tool lookup at delegation."
   (if (string-match-p "^[ \t]*:tools:[ \t]*.*$" drawer)
       (if tools
           (replace-regexp-in-string "^[ \t]*:tools:[ \t]*.*$"
                                     (concat ":tools: " (string-join tools " "))
-                                    drawer)
-        (replace-regexp-in-string "^[ \t]*:tools:[ \t]*.*\n?" "" drawer))
+                                    drawer t)
+        (replace-regexp-in-string "^[ \t]*:tools:[ \t]*.*\n?" "" drawer t))
     (if tools
         (replace-regexp-in-string "^\\([ \t]*:END:\\)"
                                   (concat ":tools: " (string-join tools " ") "\n\\1")
-                                  drawer)
+                                  drawer t)
       drawer)))
+
+(defun perso/gptel-prompt--drawer-set-use-tools (drawer mode)
+  "Return DRAWER with its `:use-tools:' line adjusted for MODE.
+MODE `none' writes `:use-tools: nil', the tool-less encoding.  MODE `unset'
+drops such a line, restoring gptel's default so a listed toolset is actually
+sent and a tool-less definition inherits the orchestrator's.  Only an
+explicit nil is dropped: a hand-written `t' or `force' is left alone, as is
+DRAWER for any other MODE.  FIXEDCASE is passed so an upper-case property
+name in a hand-edited drawer cannot case-mangle the replacement."
+  (pcase mode
+    ('unset (replace-regexp-in-string
+             "^[ \t]*:use-tools:[ \t]*nil[ \t]*\n?" "" drawer t))
+    ('none (if (string-match-p "^[ \t]*:use-tools:[ \t]*.*$" drawer)
+               (replace-regexp-in-string
+                "^[ \t]*:use-tools:[ \t]*.*$" ":use-tools: nil" drawer t)
+             (replace-regexp-in-string
+              "^\\([ \t]*:END:\\)" ":use-tools: nil\n\\1" drawer t)))
+    (_ drawer)))
 
 (defun perso/gptel-prompt-edit-agent-tools ()
   "Edit the :tools of a saved sub-agent file in place, then refresh gptel-agent.
 Tools are toggled one at a time from a list that always shows every user-selectable
 candidate (known tool names and categories, plus whatever the agent already lists)
 with a =[x]/[ ]= marker — avoiding `completing-read-multiple', whose comma-separated
-entry hid the unselected candidates behind the current selection."
+entry hid the unselected candidates behind the current selection.
+
+`:use-tools:' is kept consistent with the result: selecting tools drops a
+`:use-tools: nil' that would otherwise silently discard them, and emptying the
+list asks the same inherit question the export asks."
   (interactive)
   (let* ((dir (file-name-as-directory
                (expand-file-name perso/gptel-prompt-subagent-directory)))
@@ -2003,7 +2062,13 @@ entry hid the unselected candidates behind the current selection."
                           (setq working (if (member name working)
                                             (remove name working)
                                           (append working (list name)))))))))))
-             (new-drawer (perso/gptel-prompt--drawer-set-tools drawer chosen)))
+             (new-drawer
+              (perso/gptel-prompt--drawer-set-use-tools
+               (perso/gptel-prompt--drawer-set-tools drawer chosen)
+               (cond (chosen 'unset)     ;a stale nil would kill the new list
+                     ((y-or-n-p "No tools left — inherit the orchestrator's toolset? ")
+                      'unset)
+                     (t 'none)))))
         (with-temp-file file (insert new-drawer body))
         (when (fboundp 'gptel-agent-update) (gptel-agent-update))
         (message "Updated tools for %s" (file-name-nondirectory file))))))
