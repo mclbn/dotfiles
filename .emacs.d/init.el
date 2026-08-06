@@ -3413,6 +3413,7 @@ This is a modified version of `mu4e-view-save-attachments'."
               kimi-k3
               kimi-k2.7-code
               kimi-k2.6
+              gpt-5.6-luna
               deepseek-v4-pro
               deepseek-v4-flash
               mimo-v2.5
@@ -3463,7 +3464,7 @@ This is a modified version of `mu4e-view-save-attachments'."
       '(perso/gptel--infix-branching-context
         :if (lambda () (derived-mode-p 'org-mode))))
     (transient-append-suffix 'gptel-menu "y"
-       '("p" "Prompt builder" perso/gptel-prompt-builder)))
+       '("p" "Prompt builder" gptel-builder)))
 
   ;;; Tools
   (gptel-make-tool
@@ -3663,6 +3664,172 @@ This is a modified version of `mu4e-view-save-attachments'."
   (perso/gptel-agent--add-searxng)
   (gptel-agent-update))
 
+(use-package gptel-builder
+  :vc (:url "https://github.com/mclbn/gptel-builder" :rev :newest)
+  :after gptel
+  :demand t ; presets must exist before you @-call them
+  :bind (("C-z p" . gptel-builder))
+
+  :custom
+  (gptel-builder-root (locate-user-emacs-file "prompts/templates/"))
+  (gptel-builder-compiled-directory (locate-user-emacs-file "prompts/"))
+  (gptel-builder-subagent-directory (locate-user-emacs-file "gptel-agents/"))
+  (gptel-builder-default-tools
+   '(("time"            . "current_datetime")
+     ("custom-tasklist" . "TaskCreate")
+     ("custom-tasklist" . "TaskList")
+     ("custom-tasklist" . "TaskGet")
+     ("custom-tasklist" . "TaskUpdate")
+     ("custom-tasklist" . "TaskSave")
+     ("custom-tasklist" . "TaskLoad")))
+  :config
+  (gptel-builder-define-preset 'dev-stage1-discovery-partner-divergent-exploration
+                               :description "A discovery partner for divergent exploration"
+                               :recipe '(:selections
+                                         ((roles "dev/stage1-role-discovery-partner.org")
+                                          (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage1-skill-divergent-exploration.org")
+                                          (projects "dev/stages.org")
+                                          (outputs "dev/stage1-output-discovery-digest.org"))
+                                         :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                               :org-convert-response nil
+                               :tools '("current_datetime")
+                               :use-tools t
+                               :confirm-tool-calls 'auto
+                               :backend "OpenCode Go"
+                               :model 'glm-5.2
+                               :request-params '(:thinking (:type "enabled") :reasoning_effort "high")
+                               :temperature 1)
+
+  (gptel-builder-define-preset 'dev-stage2-analyst-architect-requirements-synthesis
+                               :description "An architect analyst for requirements synthesis"
+                               :recipe '(:selections
+                                         ((roles "dev/stage2-4-role-analyst-architect.org")
+                                          (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage2-skill-requirements-synthesis.org")
+                                          (projects "dev/stages.org")
+                                          (outputs "dev/stage2-output-design-brief.org"))
+                                         :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                               :org-convert-response nil
+                               :tools '("current_datetime")
+                               :use-tools t
+                               :confirm-tool-calls 'auto
+                               :backend "OpenCode Go"
+                               :model 'glm-5.2
+                               :request-params '(:thinking (:type "enabled") :reasoning_effort "high")
+                               :temperature 1)
+
+  (gptel-builder-define-preset 'dev-stage3-analyst-architect-design-resolution
+                               :description "An architect analyst for design resolution"
+                               :recipe '(:selections
+                                         ((roles "dev/stage2-4-role-analyst-architect.org")
+                                          (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage3-skill-design-resolution.org")
+                                          (projects "dev/stages.org")
+                                          (outputs "dev/stage3-output-design-spec.org"))
+                                         :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                               :org-convert-response nil
+                               :tools '("current_datetime")
+                               :use-tools t
+                               :confirm-tool-calls 'auto
+                               :backend "OpenCode Go"
+                               :model 'glm-5.2
+                               :request-params '(:thinking (:type "enabled") :reasoning_effort "max")
+                               :temperature 0.7)
+
+  (gptel-builder-define-preset 'dev-stage4-analyst-architect-work-breakdown
+                               :description "An architect analyst for work breakdown"
+                               :recipe '(:selections
+                                         ((roles "dev/stage2-4-role-analyst-architect.org")
+                                          (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage4-skill-work-breakdown.org")
+                                          (projects "dev/stages.org")
+                                          (outputs "dev/stage4-output-task-plan.org"))
+                                         :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                               :org-convert-response nil
+                               :tools '("current_datetime")
+                               :use-tools t
+                               :confirm-tool-calls 'auto
+                               :model 'glm-5.2
+                               :request-params '(:thinking (:type "enabled") :reasoning_effort "high")
+                               :temperature 0.5)
+
+  (gptel-builder-define-preset 'dev-stage5-implementer-interface-scaffolding
+                               :description "An implementer for interface scaffolding"
+                               :recipe '(:selections
+                                         ((roles "dev/stage5-6-role-implementer.org")
+                                          (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage5-skill-interface-scaffolding.org")
+                                          (projects "dev/stages.org")
+                                          (outputs "dev/stage5-output-scaffold.org"))
+                                         :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                               :org-convert-response nil
+                               :stream nil
+                               :tools '("current_datetime")
+                               :use-tools t
+                               :confirm-tool-calls 'auto
+                               :backend "OpenCode Go (Qwen Plus non streaming)"
+                               :model 'qwen3.7-plus
+                               :include-reasoning nil
+                               :request-params '(:thinking (:type "disabled"))
+                               :temperature 0.1)
+
+  (gptel-builder-define-preset 'dev-stage6-implementer-implementation
+                               :description "An implementer to implement (wow)"
+                               :recipe '(:selections
+                                         ((roles "dev/stage5-6-role-implementer.org")
+                                          (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage6-skill-implementation.org")
+                                          (projects "dev/stages.org")
+                                          (outputs "dev/stage6-output-implementation.org"))
+                                         :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                               :org-convert-response nil
+                               :stream nil
+                               :tools '("current_datetime")
+                               :use-tools t
+                               :confirm-tool-calls 'auto
+                               :backend "OpenCode Go"
+                               :model 'glm-5.2
+                               :request-params '(:thinking (:type "enabled") :reasoning_effort "max"))
+
+  (gptel-builder-define-preset 'dev-stage7-verifier-verification
+                               :description "A verifier to verify (amazing)"
+                               :recipe '(:selections
+                                         ((roles "dev/stage7-role-verifier.org")
+                                          (skills "dev/stage1-7-skill-org-markup-output.org" "dev/stage7-skill-verification.org")
+                                          (projects "dev/stages.org")
+                                          (outputs "dev/stage7-output-verification-report.org"))
+                                         :datetime t :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                               :org-convert-response nil
+                               :tools '("current_datetime")
+                               :use-tools t
+                               :confirm-tool-calls 'auto
+                               :backend "OpenCode Go (Anthropic)"
+                               :model 'minimax-m3
+                               :request-params '(:thinking (:type "adaptive"))
+                               :temperature 1)
+
+  (gptel-builder-define-preset 'curator
+                               :description "Film curator assistant."
+                               :recipe '(:selections ((roles "film_curator.org")
+                                                      (skills "film/fact_checking.org" "film/recommendation.org" "film/taste_profiling.org" "information_retrieval.org")
+                                                      (projects "film/film_marc.org")
+                                                      (outputs "film/film_reco.org"))
+                                                     :datetime t :mode frozen :agentic t :subagents ("web_searcher"))
+                               :parents '(gptel-agent)
+                               :tools '("current_datetime" "tmdb" "movie_ratings" "movies_download_add" "movies_download_check" "movies_explore_add" "movies_explore_check" "jellyfin_favorite_set" "jellyfin_watched_set" "movies_gif_add_scene" "Agent" "jellyfin" "jellyfin_collection_add" "movies_download_list" "movies_explore_list")
+                               :use-tools t
+                               :confirm-tool-calls 'auto
+                               :backend "OpenCode Go"
+                               :model 'deepseek-v4-flash
+                               :pre (lambda () (gptel-mcp-connect '("tmdb" "omdb" "jellyfin") 'sync nil)))
+
+  (gptel-builder-define-preset 'debate_orchestrator-no_debater
+                               :description "Debate orchestrator that pick most relevant debaters (but debate roster is empty)"
+                               :recipe '(:selections ((roles "debate/debate_orchestrator.org")
+                                                      (skills "debate/floor_mgmt_relevant.org")
+                                                      (projects)
+                                                      (outputs))
+                                                     :datetime nil :mode frozen :agentic t :agentic-skills ("_agentic_debate.org") :subagents nil)
+                               :parents '(gptel-agent)
+                               :tools '("Agent")
+                               :use-tools t
+                               :confirm-tool-calls 'auto))
+
 ;; Now a set of variables and functions to bridge the
 ;; better mcp-searxng tools over gptel-agent built-ins
 (defcustom perso/gptel-agent-searxng-warn-interval nil
@@ -3789,19 +3956,11 @@ Extra arguments (e.g. WebFetch's extraction prompt) are ignored."
   :vc (:url "https://github.com/editor-code-assistant/eca-emacs" :rev :newest)
   :hook (eca-chat-mode . disable-text-analysis-modes))
 
-;; LLM mgmt is in another dedicated file
-(when (file-exists-p (expand-file-name "llm.el" user-emacs-directory))
-  (autoload 'perso/llm-menu (expand-file-name "llm.el" user-emacs-directory) nil t)
-  (autoload 'perso/gptel-prompt-builder
-    (expand-file-name "llm.el" user-emacs-directory) nil t)
-  (dolist (fn '(perso/gptel-set-system-prompt-from-org-file
-                perso/gptel-set-system-prompt-from-org-buffer))
-    (autoload fn (expand-file-name "llm.el" user-emacs-directory) nil t))
-  (dolist (fn '(perso/gptel-prompt-from-org-file
-                perso/gptel-prompt-from-org-buffer))
-    (autoload fn (expand-file-name "llm.el" user-emacs-directory)))
-  (global-set-key (kbd "C-z @") #'perso/llm-menu)
-  (global-set-key (kbd "C-z p") #'perso/gptel-prompt-builder))
+;; LLM stack management (Portainer + menu) is in another dedicated file
+(when (file-exists-p (expand-file-name "perso-llm.el" user-emacs-directory))
+  (autoload 'perso/llm-menu
+    (expand-file-name "perso-llm.el" user-emacs-directory) nil t)
+  (global-set-key (kbd "C-z @") #'perso/llm-menu))
 
 ;; ;; Claude code integration
 ;; (use-package claude-code-ide
