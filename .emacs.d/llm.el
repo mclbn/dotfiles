@@ -3103,6 +3103,18 @@ category headers, the columns to its right the active category's tools."
                                   :use-tools t
                                   :confirm-tool-calls 'auto)
 
+(perso/gptel-prompt-define-preset 'game_design
+                                  :description "A game designer partner, focused on emergent design and procedural generation"
+                                  :recipe '(:selections
+                                            ((roles "game/game_designer.org")
+                                             (skills "game/algorithmic_design.org" "game/character_design.org" "game/emergent_design.org" "game/game_system_design.org" "game/gameplay_ideation.org" "game/narrative_design.org" "game/playtest_critique.org" "game/procedural_generation.org" "game/ux_ergonomics.org")
+                                             (projects)
+                                             (outputs))
+                                            :datetime nil :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                                  :tools 'nil
+                                  :use-tools t
+                                  :confirm-tool-calls 'auto)
+
 ;;;;; Org prompt files (standalone)
 
 ;; Returning resolvers -- use these in a preset's :system.
