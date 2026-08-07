@@ -3430,7 +3430,7 @@ This is a modified version of `mu4e-view-save-attachments'."
     :models '(minimax-m3
               minimax-m2.7
               minimax-m2.5
-              qwen3.7-max))
+              qwen3.8-max))
 
   (gptel-make-anthropic "OpenCode Go (Qwen Plus non streaming)"
     :host "opencode.ai"
@@ -3438,7 +3438,7 @@ This is a modified version of `mu4e-view-save-attachments'."
     :protocol "https"
     :stream nil
     :key #'gptel-api-key-from-auth-source
-    :models '(qwen3.7-plus qwen3.6-plus))
+    :models '(qwen3.7-plus))
 
   (setq gptel-backend (gptel-get-backend "OpenCode Go")
         gptel-model 'glm-5.2)
@@ -3829,6 +3829,18 @@ This is a modified version of `mu4e-view-save-attachments'."
                                :tools '("Agent")
                                :use-tools t
                                :confirm-tool-calls 'auto))
+
+(gptel-builder-define-preset 'game_design
+                             :description "A game designer partner, focused on emergent design and procedural generation"
+                             :recipe '(:selections
+                                       ((roles "game/game_designer.org")
+                                        (skills "game/algorithmic_design.org" "game/character_design.org" "game/emergent_design.org" "game/game_system_design.org" "game/gameplay_ideation.org" "game/narrative_design.org" "game/playtest_critique.org" "game/procedural_generation.org" "game/ux_ergonomics.org")
+                                        (projects)
+                                        (outputs))
+                                       :datetime nil :mode frozen :agentic nil :agentic-skills nil :subagents nil)
+                             :tools 'nil
+                             :use-tools t
+                             :confirm-tool-calls 'auto)
 
 ;; Now a set of variables and functions to bridge the
 ;; better mcp-searxng tools over gptel-agent built-ins
