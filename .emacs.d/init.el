@@ -3408,8 +3408,7 @@ This is a modified version of `mu4e-view-save-attachments'."
     :protocol "https"
     :stream t
     :key #'gptel-api-key-from-auth-source
-    :models '(glm-5.2
-              glm-5.1
+    :models '(glm-5.3-flash
               kimi-k3
               kimi-k2.7-code
               kimi-k2.6
@@ -3622,7 +3621,7 @@ This is a modified version of `mu4e-view-save-attachments'."
    '("current_datetime"
      "Agent"
      "TaskLoad" "TaskSave" "TaskGet" "TaskList" "TaskCreate" "TaskUpdate"
-     "web_url_read" "searxng_instance_info" "searxng_search_suggestions" "searxng_web_search"
+     "web_url_read" "searxng_instance_info" "searxng_search_suggestions" "searxng_web_search" "YouTube"
      "movies_gif_add_scene" "movies_download_list" "movies_download_check" "movies_download_add"
      "movies_explore_list" "movies_explore_check" "movies_explore_add"
      "tmdb" "omdb" "jellyfin" "jellyfin_favorite_set" "jellyfin_collection_add" "jellyfin_watched_set" "movie_ratings"))
