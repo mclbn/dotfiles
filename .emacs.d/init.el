@@ -3608,6 +3608,7 @@ This is a modified version of `mu4e-view-save-attachments'."
   :vc ( :url "https://github.com/mclbn/gptel-custom-tools"
   :branch main)
   ;; :load-path "~/dev/gptel-custom-tools/"
+  :after gptel
   :custom
   (gptel-custom-tools-tasklist-directory (expand-file-name "gptel-tasks/" user-emacs-directory)))
 
@@ -3646,7 +3647,7 @@ This is a modified version of `mu4e-view-save-attachments'."
       (make-directory my-agents t))
     (add-to-list 'gptel-agent-dirs my-agents))
 
-  (gptel-mcp-connect '("searxng") 'sync nil)
+  ;; (gptel-mcp-connect '("searxng") 'sync nil)
   (defun perso/gptel-agent--add-searxng (&rest _)
     "Append the searxng MCP tools to the `gptel-agent' preset."
     (when-let* ((plist (copy-sequence
