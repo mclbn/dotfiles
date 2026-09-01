@@ -1526,7 +1526,9 @@ French grammar checking follows the chosen language."
   :diminish
   :after flymake
   :custom
-  (flymake-popon-method 'posframe)
+  (flymake-popon-method (if (or (display-graphic-p) (featurep 'tty-child-frames))
+                            'posframe
+                          'popon))
   (flymake-popon-delay 0.2)
   (flymake-popon-width 70)
   (flymake-popon-posframe-border-width 1)
@@ -2097,9 +2099,10 @@ respectively."
 
 ;; Corfu popup in the terminal (-nw),
 ;; where child frames are unavailable
-(use-package corfu-terminal
-  :after corfu
-  :config (corfu-terminal-mode 1))
+(unless (featurep 'tty-child-frames)
+  (use-package corfu-terminal
+    :after corfu
+    :config (corfu-terminal-mode 1)))
 
 ;; Prescient sorting for Corfu (Orderless still filters)
 (use-package corfu-prescient
