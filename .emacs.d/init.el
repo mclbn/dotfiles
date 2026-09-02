@@ -3402,34 +3402,13 @@ This is a modified version of `mu4e-view-save-attachments'."
               claude-opus-4-8
               claude-haiku-4-5-20251001))
 
-  (gptel-make-openai "OpenCode Go"
-    :host "opencode.ai"
-    :endpoint "/zen/go/v1/chat/completions"
-    :protocol "https"
-    :stream t
-    :key #'gptel-api-key-from-auth-source
-    :models '(glm-5.3-flash
-              kimi-k3
-              kimi-k2.7-code
-              kimi-k2.6
-              gpt-5.6-luna
-              deepseek-v4-pro
-              deepseek-v4-flash
-              mimo-v2.5
-              mimo-v2.5-pro
-              grok-4.5
-              hy3))
-
-  (gptel-make-anthropic "OpenCode Go (Anthropic)"
-    :host "opencode.ai"
-    :endpoint "/zen/go/v1/messages"
-    :protocol "https"
-    :stream t
-    :key #'gptel-api-key-from-auth-source
-    :models '(minimax-m3
-              minimax-m2.7
-              minimax-m2.5
-              qwen3.8-max))
+  ;; Update the file with my/opencode-go-gptel-config
+  (let ((f (expand-file-name "gptel-opencode-models.el" user-emacs-directory)))
+    (when (file-readable-p f)
+      (condition-case err
+          (load f nil t t)
+        (error (message "gptel: OpenCode Go models failed to load: %s"
+                        (error-message-string err))))))
 
   (gptel-make-anthropic "OpenCode Go (Qwen Plus non streaming)"
     :host "opencode.ai"
@@ -3437,7 +3416,14 @@ This is a modified version of `mu4e-view-save-attachments'."
     :protocol "https"
     :stream nil
     :key #'gptel-api-key-from-auth-source
-    :models '(qwen3.7-plus))
+    :models '((qwen3.7-plus
+     :description "Qwen3.7 Plus [stream off]"
+     :capabilities (tool-use reasoning cache media)
+     :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
+     :context-window 1000
+     :input-cost 0.4
+     :output-cost 1.6
+     :request-params (:model "qwen3.7-plus"))))
 
   (setq gptel-backend (gptel-get-backend "OpenCode Go")
         gptel-model 'glm-5.2)
@@ -3972,6 +3958,11 @@ Extra arguments (e.g. WebFetch's extraction prompt) are ignored."
   (autoload 'perso/llm-menu
     (expand-file-name "perso-llm.el" user-emacs-directory) nil t)
   (global-set-key (kbd "C-z @") #'perso/llm-menu))
+
+;; Fetching Opencode Go models from subscription
+(when (file-exists-p (expand-file-name "opencode-go-gptel.el" user-emacs-directory))
+  (autoload 'my/opencode-go-gptel-config
+    (expand-file-name "opencode-go-gptel.el" user-emacs-directory) nil t))
 
 ;; ;; Claude code integration
 ;; (use-package claude-code-ide
