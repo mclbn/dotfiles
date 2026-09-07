@@ -1,4 +1,4 @@
-;;; gptel backends for OpenCode Go -- generated 2026-09-02 13:35
+;;; gptel backends for OpenCode Go -- generated 2026-09-02 13:35  -*- lexical-binding: t; -*-
 ;;; probe mode: responses
 ;;; 33 models: 20 openai-compatible, 9 anthropic, 4 unavailable
 ;;;
