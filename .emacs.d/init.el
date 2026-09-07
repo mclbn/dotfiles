@@ -2601,6 +2601,7 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
   ("C-z a" . org-agenda)
   ("C-c l" . org-store-link)
   ("C-z o l" . org-toggle-link-display)
+  (:map org-mode-map ("C-c C-M-l" . my/org-link-sync-description))
   :config
   ;; Unbind keys bound to buffer-move
   (unbind-key (kbd "<C-S-up>") org-mode-map)
@@ -2806,7 +2807,81 @@ exist after each headings's drawers."
 
   (defun my/org-image-auto-preview-setup ()
     (add-hook 'post-command-hook #'my/org-image--maybe-schedule nil t))
-  (add-hook 'org-mode-hook #'my/org-image-auto-preview-setup))
+  (add-hook 'org-mode-hook #'my/org-image-auto-preview-setup)
+
+;;;  Refresh Org link descriptions from their target heading
+  (defvar my/org-link-sync-types '("id" "custom-id")
+    "Link types whose description may be re-derived from the target heading.
+Deliberately excludes `fuzzy' ([[*Heading]]) links, which break outright
+on rename, and all external types, which must never be opened just to
+read a description.")
+
+  (defun my/org-link--target-title (type path)
+    "Return the current heading title for a TYPE:PATH Org link, or nil.
+Resolves the target without opening it, so no browser is launched, no
+window configuration changes and nothing is pushed onto the mark ring."
+    (let ((pos (pcase type
+                 ;; Drop any ::search suffix; the heading itself is what we want.
+                 ("id" (org-id-find (car (split-string path "::")) 'marker))
+                 ("custom-id" (org-find-property "CUSTOM_ID" path)))))
+      (when pos
+        (org-with-point-at pos
+          ;; A file-level :ID: has no heading; refuse rather than guess.
+          (unless (org-before-first-heading-p)
+            (org-trim
+             (replace-regexp-in-string
+              "[ \t]+" " "
+              (replace-regexp-in-string
+               ;; Statistics cookies are volatile noise in a description.
+               "\\[[0-9]*\\(?:%\\|/[0-9]*\\)\\]" ""
+               ;; Flatten any links inside the heading to their own text.
+               (org-link-display-format (org-get-heading t t t t))))))))))
+
+  (defun my/org-link-sync-description ()
+    "Rewrite the description of the Org link at point from its target heading."
+    (interactive)
+    (let ((el (org-element-context)))
+      (unless (eq (org-element-type el) 'link)
+        (user-error "Point is not on a link"))
+      (let ((type (org-element-property :type el))
+            (path (org-element-property :path el))
+            (raw  (org-element-property :raw-link el)))
+        (unless (member type my/org-link-sync-types)
+          (user-error "Refusing to sync a %S link" type))
+        ;; Resolve first: on failure the buffer is left untouched.
+        (let ((title (my/org-link--target-title type path))
+              (beg (org-element-property :begin el))
+              ;; :end includes trailing whitespace; :post-blank counts it.
+              (end (- (org-element-property :end el)
+                      (or (org-element-property :post-blank el) 0))))
+          (unless (org-string-nw-p title)
+            (user-error "No target heading for %s" raw))
+          (goto-char beg)
+          (delete-region beg end)
+          (insert (org-link-make-string raw title))
+          (message "%s" title)))))
+
+  (defun my/org-sync-all-link-descriptions ()
+    "Refresh descriptions of every id:/custom-id link in the buffer.
+Positions are collected first and replaced back-to-front so earlier
+edits cannot shift later ones."
+    (interactive)
+    (let ((positions (org-element-map (org-element-parse-buffer) 'link
+                       (lambda (l)
+                         (when (member (org-element-property :type l)
+                                       my/org-link-sync-types)
+                           (org-element-property :begin l)))))
+          (done 0) (skipped 0))
+      (org-save-outline-visibility t
+        (save-excursion
+          (dolist (pos (nreverse positions))
+            (goto-char pos)
+            (condition-case err
+                (progn (my/org-link-sync-description) (setq done (1+ done)))
+              (user-error
+               (setq skipped (1+ skipped))
+               (message "skipped @%d: %s" pos (error-message-string err)))))))
+      (message "%d updated, %d skipped" done skipped))))
 
 (use-package org-indent
   ;; No need to get it, comes with emacs/org
@@ -3488,13 +3563,13 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
     :stream nil
     :key #'gptel-api-key-from-auth-source
     :models '((qwen3.7-plus
-     :description "Qwen3.7 Plus [stream off]"
-     :capabilities (tool-use reasoning cache media)
-     :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
-     :context-window 1000
-     :input-cost 0.4
-     :output-cost 1.6
-     :request-params (:model "qwen3.7-plus"))))
+               :description "Qwen3.7 Plus [stream off]"
+               :capabilities (tool-use reasoning cache media)
+               :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
+               :context-window 1000
+               :input-cost 0.4
+               :output-cost 1.6
+               :request-params (:model "qwen3.7-plus"))))
 
   (my/opencode-patch-backends)
   (setq gptel-backend (gptel-get-backend "OpenCode Go")
@@ -3521,7 +3596,7 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
       '(perso/gptel--infix-branching-context
         :if (lambda () (derived-mode-p 'org-mode))))
     (transient-append-suffix 'gptel-menu "y"
-       '("p" "Prompt builder" gptel-builder)))
+      '("p" "Prompt builder" gptel-builder)))
 
   ;;; Tools
   (gptel-make-tool
@@ -3664,7 +3739,7 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
 
 (use-package gptel-custom-tools
   :vc ( :url "https://github.com/mclbn/gptel-custom-tools"
-  :branch main)
+        :branch main)
   ;; :load-path "~/dev/gptel-custom-tools/"
   :after gptel
   :custom
