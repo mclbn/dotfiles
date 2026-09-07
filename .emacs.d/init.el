@@ -3442,7 +3442,9 @@ This is a modified version of `mu4e-view-save-attachments'."
      ("jellyfin" . (:url ,perso/mcp-jellyfin-url :timeout 30))
      ("omdb"     . (:url ,perso/mcp-omdb-url     :timeout 30))
      ("tmdb"     . (:url ,perso/mcp-tmdb-url     :timeout 30))
-     ("exa"      . (:url "https://mcp.exa.ai/mcp" :timeout 30 :token ,(apply-partially #'gptel-api-key-from-auth-source "api.exa.ai"))))))
+     ("exa"      . (:url "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa"
+                         :timeout 90
+                         :token ,(apply-partially #'gptel-api-key-from-auth-source "api.exa.ai"))))))
 
 ;; GPTel : chat with LLMs
 (use-package gptel
@@ -3756,6 +3758,8 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
    '("current_datetime"
      "Agent"
      "TaskLoad" "TaskSave" "TaskGet" "TaskList" "TaskCreate" "TaskUpdate"
+     "web_search" "web_fetch"
+     ;;; following line mostly obsolete ?
      "web_url_read" "searxng_instance_info" "searxng_search_suggestions" "searxng_web_search" "YouTube"
      "movies_gif_add_scene" "movies_download_list" "movies_download_check" "movies_download_add"
      "movies_explore_list" "movies_explore_check" "movies_explore_add"
@@ -3782,21 +3786,18 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
     (add-to-list 'gptel-agent-dirs my-agents))
 
   ;; (gptel-mcp-connect '("searxng") 'sync nil)
-  (defun perso/gptel-agent--add-searxng (&rest _)
-    "Append the searxng MCP tools to the `gptel-agent' preset."
-    (when-let* ((plist (copy-sequence
-                        (assoc-default "gptel-agent" gptel-agent--agents))))
-      (apply #'gptel-make-preset 'gptel-agent
-             (plist-put
-              ;; We don't add url_fetch and web_search since they are bridged
-              ;; to Web_Fetch and Web_Search
-              (plist-put plist :tools
-                         (append (plist-get plist :tools)
-                                 '("searxng_instance_info" "searxng_search_suggestions")))
-              :pre (lambda () (gptel-mcp-connect '("searxng") 'sync nil))))))
-  (advice-add 'gptel-agent-update :after #'perso/gptel-agent--add-searxng)
-  (perso/gptel-agent--add-searxng)
   (gptel-agent-update))
+
+(use-package gptel-web-tools-bridge
+  :vc (:url "https://github.com/mclbn/gptel-web-tools-bridge"
+            :branch main)
+  :after gptel
+  :demand t ; must register its tools at load
+  :custom
+  (gptel-web-tools-bridge-provider 'exa)
+  (gptel-web-tools-bridge-max-characters 8000)
+  (gptel-web-tools-bridge-default-results 5)
+  (gptel-web-tools-bridge-override-agent-tools nil))
 
 (use-package gptel-builder
   :vc (:url "https://github.com/mclbn/gptel-builder" :rev :newest)
@@ -3975,101 +3976,6 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
                              :tools 'nil
                              :use-tools t
                              :confirm-tool-calls 'auto)
-
-;; Now a set of variables and functions to bridge the
-;; better mcp-searxng tools over gptel-agent built-ins
-(defcustom perso/gptel-agent-searxng-warn-interval nil
-  "Minimum seconds between SearXNG-fallback warnings.
-When nil, warn on every fallback."
-  :type '(choice (const :tag "Warn every time" nil)
-                 (number :tag "Seconds"))
-  :group 'gptel)
-
-(defvar perso/gptel-agent--searxng-last-warn 0.0
-  "Time of the last SearXNG-fallback warning, for throttling.")
-
-(defun perso/gptel-agent--searxng-connection ()
-  "Return a connected searxng MCP connection, or nil."
-  (and (featurep 'mcp)
-       (let ((conn (gethash "searxng" mcp-server-connections)))
-         (and conn (eq (mcp--status conn) 'connected) conn))))
-
-(defun perso/gptel-agent--searxng-result-error-p (res)
-  "Non-nil if MCP tool result RES reports an error."
-  (let ((err (plist-get res :isError)))
-    (and err (not (memq err '(:false :json-false))))))
-
-(defun perso/gptel-agent--searxng-parse-result (res)
-  "Return the concatenated text blocks of MCP tool result RES."
-  (let (texts)
-    (mapc (lambda (item)
-            (when (string= "text" (plist-get item :type))
-              (push (or (plist-get item :text) "") texts)))
-          (plist-get res :content))
-    (mapconcat #'identity (nreverse texts) "\n")))
-
-(defun perso/gptel-agent--searxng-warn (label reason)
-  "Emit a throttled fallback warning for LABEL explaining REASON."
-  (let ((now (float-time)))
-    (when (or (null perso/gptel-agent-searxng-warn-interval)
-              (>= (- now perso/gptel-agent--searxng-last-warn)
-                  perso/gptel-agent-searxng-warn-interval))
-      (setq perso/gptel-agent--searxng-last-warn now)
-      (message "%s: SearXNG unavailable (%s); using eww fallback." label reason))))
-
-(defun perso/gptel-agent--searxng-call (label cb tool args fallback)
-  "Route a gptel-agent web tool through mcp-searxng's TOOL.
-LABEL names the tool in warnings.  CB is the gptel tool callback.  ARGS is
-the argument plist for the MCP TOOL.  On any failure (no connection, tool
-error, unparseable result, or signal) warn once and call FALLBACK, a thunk
-performing the built-in eww behavior."
-  (let ((bail (lambda (reason)
-                (perso/gptel-agent--searxng-warn label reason)
-                (funcall fallback))))
-    (condition-case err
-        (if-let* ((conn (perso/gptel-agent--searxng-connection)))
-            (mcp-async-call-tool
-             conn tool args
-             (lambda (res)
-               (if (perso/gptel-agent--searxng-result-error-p res)
-                   (funcall bail "tool reported error")
-                 (let ((text (condition-case nil
-                                 (perso/gptel-agent--searxng-parse-result res)
-                               (error :gptel-parse-error))))
-                   (if (eq text :gptel-parse-error)
-                       (funcall bail "could not parse result")
-                     (funcall cb text)))))
-             (lambda (code msg) (funcall bail (format "%s: %s" code msg))))
-          (funcall bail "server not connected"))
-      (error (funcall bail (error-message-string err))))))
-
-;;;; Per-tool adapters
-(defun perso/gptel-agent--websearch-bridge (cb query &optional count)
-  "WebSearch via mcp-searxng `searxng_web_search', eww search on failure."
-  (perso/gptel-agent--searxng-call
-   "WebSearch" cb "searxng_web_search" (list :query query)
-   (lambda () (gptel-agent--web-search-eww cb query count))))
-
-(defun perso/gptel-agent--webfetch-bridge (cb url &rest _)
-  "WebFetch via mcp-searxng `web_url_read', eww reader on failure.
-Extra arguments (e.g. WebFetch's extraction prompt) are ignored."
-  (perso/gptel-agent--searxng-call
-   "WebFetch" cb "web_url_read" (list :url url)
-   (lambda () (gptel-agent--read-url cb url))))
-
-;;;; Install both bridges
-(with-eval-after-load 'gptel-agent-tools
-  (dolist (spec '(("WebSearch" . perso/gptel-agent--websearch-bridge)
-                  ("WebFetch"  . perso/gptel-agent--webfetch-bridge)))
-    (let ((orig (gptel-get-tool (car spec))))
-      (gptel-make-tool
-       :name (car spec)
-       :category "gptel-agent"
-       :async t
-       :include t
-       :description (gptel-tool-description orig)
-       :args (gptel-tool-args orig)
-       :function (cdr spec)))))
 
 ;;;; Make MCP tool-call timeouts report instead of hanging ------------------
 ;; mcp-async-call-tool sets :timeout but no :timeout-fn, so a timed-out
