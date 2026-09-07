@@ -3375,6 +3375,74 @@ This is a modified version of `mu4e-view-save-attachments'."
   (require 'gptel-org)
   (when (executable-find "curl")
     (setq gptel-use-curl t))
+
+  ;;; OpenCode Go: required x-opencode-session / User-Agent headers
+
+  (defvar my/opencode-host-regexp "opencode\\.ai\\'"
+    "Backends whose host matches this get OpenCode Go's required headers.")
+
+  (defvar my/opencode-user-agent "gptel/Emacs"
+    "User-Agent announced to OpenCode Go, which rejects broad agents.")
+
+  (defvar-local my/opencode-session-id nil
+    "Stable `x-opencode-session' value for this buffer's conversation.")
+
+  (defvar my/opencode--patched (make-hash-table :test #'eq :weakness 'key)
+    "Backends already carrying the OpenCode header wrapper.")
+
+  (defun my/opencode-session-id (&optional info)
+    "Return a stable session id for the gptel request described by INFO."
+    (let ((buf (plist-get info :buffer)))
+      (with-current-buffer (if (buffer-live-p buf) buf (current-buffer))
+        (or my/opencode-session-id
+            (setq my/opencode-session-id
+                  (concat "ses_" (substring
+                                  (md5 (format "%s%s%s" (buffer-name)
+                                               (float-time) (random)))
+                                  0 24)))))))
+
+  (defun my/opencode--eval-header (header info)
+    "Evaluate a gptel backend HEADER (alist or function) for request INFO."
+    (if (functionp header)
+        (let ((max (cdr (func-arity header))))
+          ;; gptel now calls header functions with the request plist; older
+          ;; versions call them with no arguments.
+          (if (or (eq max 'many) (>= max 1))
+              (funcall header info)
+            (funcall header)))
+      header))
+
+  (defun my/opencode--wrap-header (header)
+    "Return a header function adding OpenCode Go's headers to HEADER."
+    (lambda (&optional info)
+      (let ((extra `(("x-opencode-session" . ,(my/opencode-session-id info))
+                     ("User-Agent"         . ,my/opencode-user-agent))))
+        (append extra
+                (seq-remove (lambda (cell) (assoc-string (car cell) extra t))
+                            (my/opencode--eval-header header info))))))
+
+  (defun my/opencode--patch-backend (backend)
+    "Add OpenCode Go headers to BACKEND if it is served from opencode.ai.
+Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
+    (when (and (gptel-backend-p backend)
+               (string-match-p my/opencode-host-regexp
+                               (or (gptel-backend-host backend) ""))
+               (not (gethash backend my/opencode--patched)))
+      (puthash backend t my/opencode--patched)
+      (aset backend
+            (cl-struct-slot-offset 'gptel-backend 'header)
+            (my/opencode--wrap-header (gptel-backend-header backend))))
+    backend)
+
+  (defun my/opencode-patch-backends ()
+    "Patch every registered gptel backend served from opencode.ai."
+    (interactive)
+    (mapc (lambda (entry) (my/opencode--patch-backend (cdr entry)))
+          gptel--known-backends))
+
+  (dolist (fn '(gptel-make-openai gptel-make-anthropic))
+    (advice-add fn :filter-return #'my/opencode--patch-backend))
+
   (gptel-make-openai "llama-cpp-main"
     :stream t
     :protocol "http"
@@ -3428,6 +3496,7 @@ This is a modified version of `mu4e-view-save-attachments'."
      :output-cost 1.6
      :request-params (:model "qwen3.7-plus"))))
 
+  (my/opencode-patch-backends)
   (setq gptel-backend (gptel-get-backend "OpenCode Go")
         gptel-model 'glm-5.2)
 
