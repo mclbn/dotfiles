@@ -3789,8 +3789,7 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
   (gptel-agent-update))
 
 (use-package gptel-web-tools-bridge
-  :vc (:url "https://github.com/mclbn/gptel-web-tools-bridge"
-            :branch main)
+  :vc (:url "https://github.com/mclbn/gptel-web-tools-bridge" :rev :newest)
   :after gptel
   :demand t ; must register its tools at load
   :custom
