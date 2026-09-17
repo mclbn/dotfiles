@@ -3448,7 +3448,29 @@ This is a modified version of `mu4e-view-save-attachments'."
 
 ;; GPTel : chat with LLMs
 (use-package gptel
+  :preface
+  (defun perso/gptel-reasoning-buffer-toggle ()
+    "Toggle redirection of this buffer's gptel reasoning to its own buffer."
+    (interactive)
+    (if (stringp gptel-include-reasoning)
+        (kill-local-variable 'gptel-include-reasoning)
+      (setq-local gptel-include-reasoning
+                  (format "*gptel-reasoning: %s*" (buffer-name))))
+    (message "gptel reasoning: %s"
+             (if (stringp gptel-include-reasoning) gptel-include-reasoning "inline")))
+
+  (defun perso/gptel-reasoning-buffer-new-entry ()
+    "Open a new, separated entry in this buffer's reasoning sink."
+    (when (stringp gptel-include-reasoning)
+      (with-current-buffer (get-buffer-create gptel-include-reasoning)
+        (unless visual-line-mode (visual-line-mode 1))
+        (save-excursion
+          (goto-char (point-max))
+          (unless (bobp) (insert "\n\n"))
+          (insert (format "──────── %s ────────\n\n"
+                          (format-time-string "%H:%M:%S")))))))
   :config
+  (add-hook 'gptel-pre-response-hook #'perso/gptel-reasoning-buffer-new-entry)
   (require 'gptel-integrations)
   (require 'gptel-org)
   (when (executable-find "curl")
@@ -3548,7 +3570,7 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
     :key #'gptel-api-key-from-auth-source
     :stream t
     :models '(claude-sonnet-5
-              claude-opus-4-8
+              claude-opus-5
               claude-haiku-4-5-20251001))
 
   ;; Update the file with my/opencode-go-gptel-config

@@ -1,6 +1,6 @@
-;;; gptel backends for OpenCode Go -- generated 2026-09-02 13:35  -*- lexical-binding: t; -*-
+;;; gptel backends for OpenCode Go -- generated 2026-09-14 16:28  -*- lexical-binding: t; -*-
 ;;; probe mode: responses
-;;; 33 models: 20 openai-compatible, 9 anthropic, 4 unavailable
+;;; 37 models: 23 openai-compatible, 9 anthropic, 5 unavailable
 ;;;
 ;;; Effort variants override :model via :request-params, which gptel
 ;;; merges last, so they beat both the symbol name and any preset.
@@ -14,36 +14,39 @@
   :key #'gptel-api-key-from-auth-source
   :models
   '(
+    (deepseek-flash
+     :description "deepseek-flash"
+     :request-params (:model "deepseek-flash"))
     (deepseek-v4-flash
      :description "DeepSeek V4 Flash"
      :capabilities (tool-use reasoning json cache)
      :context-window 1000
-     :input-cost 0.22
-     :output-cost 0.66
+     :input-cost 0.15
+     :output-cost 0.6
      :cutoff-date "2025-05"
      :request-params (:model "deepseek-v4-flash"))
     (deepseek-v4-flash-effort-low
      :description "DeepSeek V4 Flash [effort low]"
      :capabilities (tool-use reasoning json cache)
      :context-window 1000
-     :input-cost 0.22
-     :output-cost 0.66
+     :input-cost 0.15
+     :output-cost 0.6
      :cutoff-date "2025-05"
      :request-params (:model "deepseek-v4-flash" :reasoning_effort "low"))
     (deepseek-v4-flash-effort-high
      :description "DeepSeek V4 Flash [effort high]"
      :capabilities (tool-use reasoning json cache)
      :context-window 1000
-     :input-cost 0.22
-     :output-cost 0.66
+     :input-cost 0.15
+     :output-cost 0.6
      :cutoff-date "2025-05"
      :request-params (:model "deepseek-v4-flash" :reasoning_effort "high"))
     (deepseek-v4-flash-effort-max
      :description "DeepSeek V4 Flash [effort max]"
      :capabilities (tool-use reasoning json cache)
      :context-window 1000
-     :input-cost 0.22
-     :output-cost 0.66
+     :input-cost 0.15
+     :output-cost 0.6
      :cutoff-date "2025-05"
      :request-params (:model "deepseek-v4-flash" :reasoning_effort "max"))
     (deepseek-v4-flash-vision-exp
@@ -51,32 +54,32 @@
      :capabilities (tool-use reasoning json cache media)
      :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
      :context-window 1000
-     :input-cost 0.22
-     :output-cost 0.66
+     :input-cost 0.15
+     :output-cost 0.6
      :request-params (:model "deepseek-v4-flash-vision-exp"))
     (deepseek-v4-flash-vision-exp-effort-low
      :description "DeepSeek V4 Flash Vision Exp [effort low]"
      :capabilities (tool-use reasoning json cache media)
      :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
      :context-window 1000
-     :input-cost 0.22
-     :output-cost 0.66
+     :input-cost 0.15
+     :output-cost 0.6
      :request-params (:model "deepseek-v4-flash-vision-exp" :reasoning_effort "low"))
     (deepseek-v4-flash-vision-exp-effort-high
      :description "DeepSeek V4 Flash Vision Exp [effort high]"
      :capabilities (tool-use reasoning json cache media)
      :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
      :context-window 1000
-     :input-cost 0.22
-     :output-cost 0.66
+     :input-cost 0.15
+     :output-cost 0.6
      :request-params (:model "deepseek-v4-flash-vision-exp" :reasoning_effort "high"))
     (deepseek-v4-flash-vision-exp-effort-max
      :description "DeepSeek V4 Flash Vision Exp [effort max]"
      :capabilities (tool-use reasoning json cache media)
      :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
      :context-window 1000
-     :input-cost 0.22
-     :output-cost 0.66
+     :input-cost 0.15
+     :output-cost 0.6
      :request-params (:model "deepseek-v4-flash-vision-exp" :reasoning_effort "max"))
     (deepseek-v4-pro
      :description "DeepSeek V4 Pro (New)"
@@ -102,6 +105,42 @@
      :output-cost 1.98
      :cutoff-date "2025-05"
      :request-params (:model "deepseek-v4-pro" :reasoning_effort "max"))
+    (deepseek-v4.1-flash
+     :description "DeepSeek V4.1 Flash"
+     :capabilities (tool-use reasoning json cache media)
+     :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
+     :context-window 1000
+     :input-cost 0.15
+     :output-cost 0.6
+     :cutoff-date "2025-05"
+     :request-params (:model "deepseek-v4.1-flash"))
+    (deepseek-v4.1-flash-effort-low
+     :description "DeepSeek V4.1 Flash [effort low]"
+     :capabilities (tool-use reasoning json cache media)
+     :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
+     :context-window 1000
+     :input-cost 0.15
+     :output-cost 0.6
+     :cutoff-date "2025-05"
+     :request-params (:model "deepseek-v4.1-flash" :reasoning_effort "low"))
+    (deepseek-v4.1-flash-effort-high
+     :description "DeepSeek V4.1 Flash [effort high]"
+     :capabilities (tool-use reasoning json cache media)
+     :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
+     :context-window 1000
+     :input-cost 0.15
+     :output-cost 0.6
+     :cutoff-date "2025-05"
+     :request-params (:model "deepseek-v4.1-flash" :reasoning_effort "high"))
+    (deepseek-v4.1-flash-effort-max
+     :description "DeepSeek V4.1 Flash [effort max]"
+     :capabilities (tool-use reasoning json cache media)
+     :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
+     :context-window 1000
+     :input-cost 0.15
+     :output-cost 0.6
+     :cutoff-date "2025-05"
+     :request-params (:model "deepseek-v4.1-flash" :reasoning_effort "max"))
     (glm-5
      :description "GLM-5"
      :capabilities (tool-use reasoning cache)
@@ -168,36 +207,36 @@
      :output-cost 4.4
      :request-params (:model "glm-5.3" :reasoning_effort "max"))
     (glm-5.3-flash
-     :description "GLM-5.3-Flash (2x usage)"
+     :description "GLM-5.3-Flash"
      :capabilities (tool-use reasoning json cache media)
      :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif" "application/pdf")
      :context-window 1000
-     :input-cost 0.075
-     :output-cost 0.25
+     :input-cost 0.15
+     :output-cost 0.5
      :request-params (:model "glm-5.3-flash"))
     (glm-5.3-flash-effort-low
-     :description "GLM-5.3-Flash (2x usage) [effort low]"
+     :description "GLM-5.3-Flash [effort low]"
      :capabilities (tool-use reasoning json cache media)
      :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif" "application/pdf")
      :context-window 1000
-     :input-cost 0.075
-     :output-cost 0.25
+     :input-cost 0.15
+     :output-cost 0.5
      :request-params (:model "glm-5.3-flash" :reasoning_effort "low"))
     (glm-5.3-flash-effort-high
-     :description "GLM-5.3-Flash (2x usage) [effort high]"
+     :description "GLM-5.3-Flash [effort high]"
      :capabilities (tool-use reasoning json cache media)
      :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif" "application/pdf")
      :context-window 1000
-     :input-cost 0.075
-     :output-cost 0.25
+     :input-cost 0.15
+     :output-cost 0.5
      :request-params (:model "glm-5.3-flash" :reasoning_effort "high"))
     (glm-5.3-flash-effort-max
-     :description "GLM-5.3-Flash (2x usage) [effort max]"
+     :description "GLM-5.3-Flash [effort max]"
      :capabilities (tool-use reasoning json cache media)
      :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif" "application/pdf")
      :context-window 1000
-     :input-cost 0.075
-     :output-cost 0.25
+     :input-cost 0.15
+     :output-cost 0.5
      :request-params (:model "glm-5.3-flash" :reasoning_effort "max"))
     (hy3
      :description "Hy3"
@@ -326,7 +365,31 @@
      :input-cost 0.435
      :output-cost 0.87
      :cutoff-date "2024-12"
-     :request-params (:model "mimo-v2.5-pro"))))
+     :request-params (:model "mimo-v2.5-pro"))
+    (omen-alpha
+     :description "Omen Alpha"
+     :capabilities (tool-use reasoning json cache media)
+     :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
+     :context-window 500
+     :input-cost 0.2
+     :output-cost 0.66
+     :request-params (:model "omen-alpha"))
+    (omen-alpha-effort-low
+     :description "Omen Alpha [effort low]"
+     :capabilities (tool-use reasoning json cache media)
+     :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
+     :context-window 500
+     :input-cost 0.2
+     :output-cost 0.66
+     :request-params (:model "omen-alpha" :reasoning_effort "low"))
+    (omen-alpha-effort-high
+     :description "Omen Alpha [effort high]"
+     :capabilities (tool-use reasoning json cache media)
+     :mime-types ("image/jpeg" "image/png" "image/webp" "image/gif")
+     :context-window 500
+     :input-cost 0.2
+     :output-cost 0.66
+     :request-params (:model "omen-alpha" :reasoning_effort "high"))))
 
 (gptel-make-anthropic "OpenCode Go (Anthropic)"
   :host "opencode.ai"
@@ -464,16 +527,19 @@
 ;;   grok-4.5
 ;;   grok-4.6
 ;;   muse-spark-1.2-contributor
+;;   muse-spark-1.3-contributor
 
 ;; ---- Probe failures ----
 ;;   gpt-5.6-luna [openai]        {"type":"error","error":{"type":"error","message":"Internal server error"}}
 ;;   gpt-5.6-luna [anthropic]     {"type":"error","error":{"type":"error","message":"Internal server error"}}
-;;   grok-4.5 [openai]            {"error":{"type":"server_error","message":"Error from provider (Console Go): Upstream request failed: Endpoint is unavailable."}}
+;;   grok-4.5 [openai]            {"type":"error","error":{"type":"MissingSessionID","message":"Error from provider (Console Go): Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencode.ai/docs/go/#where-can-i-use-it"}}
 ;;   grok-4.5 [anthropic]         {"type":"error","error":{"type":"ModelError","message":"Model grok-4.5 is not supported for format anthropic"}}
 ;;   grok-4.6 [openai]            {"type":"error","error":{"type":"ModelError","message":"Model grok-4.6 is not supported for format oa-compat"}}
 ;;   grok-4.6 [anthropic]         {"type":"error","error":{"type":"ModelError","message":"Model grok-4.6 is not supported for format anthropic"}}
 ;;   muse-spark-1.2-contributor [openai] {"type":"error","error":{"type":"DataPolicyError","message":"This model collects data used to improve its quality and requires explicit opt in: https://opencode.ai/workspace/wrk_01KX6DV7M3E7NYBG6P6SKT0JNQ/go"}}
 ;;   muse-spark-1.2-contributor [anthropic] {"type":"error","error":{"type":"DataPolicyError","message":"This model collects data used to improve its quality and requires explicit opt in: https://opencode.ai/workspace/wrk_01KX6DV7M3E7NYBG6P6SKT0JNQ/go"}}
+;;   muse-spark-1.3-contributor [openai] {"type":"error","error":{"type":"DataPolicyError","message":"This model collects data used to improve its quality and requires explicit opt in: https://opencode.ai/workspace/wrk_01KX6DV7M3E7NYBG6P6SKT0JNQ/go"}}
+;;   muse-spark-1.3-contributor [anthropic] {"type":"error","error":{"type":"DataPolicyError","message":"This model collects data used to improve its quality and requires explicit opt in: https://opencode.ai/workspace/wrk_01KX6DV7M3E7NYBG6P6SKT0JNQ/go"}}
 ;;
 ;; ACTION: at least one model needs an explicit data-policy
 ;; opt-in in your workspace console (see the URL above).
@@ -484,6 +550,7 @@
 ;; around it; that model is Responses-only.
 
 ;; ---- Reachable but absent from models.dev ----
+;;   deepseek-flash
 ;;   hy3-preview
 ;; Emitted bare: no limits, capabilities or effort variants.
 
