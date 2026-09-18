@@ -2125,10 +2125,35 @@ respectively."
   :custom
   (cape-dabbrev-check-other-buffers t)
   :init
+  ;; Emacs 30+ adds `ispell-completion-at-point' to every text/org buffer via
+  ;; `text-mode-ispell-word-completion'. Corfu calls it on each keystroke, and
+  ;; it errors when no plain word-list is configured -- one Corfu backtrace in
+  ;; *Messages* per keypress. Jinx owns spell-checking here and `cape-dict'
+  ;; (below) owns dictionary completion, so retire that capf entirely.
+  (setq text-mode-ispell-word-completion nil)
+
   ;; Baseline for buffers the per-mode hooks below don't touch (conf, special…)
   (add-hook 'completion-at-point-functions #'cape-dabbrev)
   (add-hook 'completion-at-point-functions #'cape-file)
   :config
+  ;; Plain word lists for `cape-dict' (Debian: wamerican/wfrench, Arch: words…).
+  ;; Prefer the language-specific files: /usr/share/dict/words is often a
+  ;; symlink repointed according to the system locale.
+  (defvar perso/cape-dict-files
+    (or (seq-filter #'file-readable-p
+                    '("/usr/share/dict/american-english"
+                      "/usr/share/dict/french"))
+        (seq-filter #'file-readable-p '("/usr/share/dict/words")))
+    "Existing plain word lists for `cape-dict', in completion order.")
+
+  (if perso/cape-dict-files
+      (setq cape-dict-file  perso/cape-dict-files
+            ;; grep's -m<limit> truncates in *file* order, which for a sorted
+            ;; list drops the obvious matches; let Orderless/Prescient rank.
+            cape-dict-limit nil)
+    (message "cape-dict: no plain word list found in /usr/share/dict; \
+install your distribution's word-list package to enable dictionary completion"))
+
   ;; Reproduce your grouped company-backends:
   ;;   ((company-capf company-dabbrev :with company-yasnippet) company-files)
   ;; -> a super-capf merging the buffer's own capf + dabbrev (main sources) with
@@ -2142,20 +2167,28 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
                                      `(,@mains cape-dabbrev :with yasnippet-capf))
                               #'cape-file))))
 
+  (defun perso/capf-dict ()
+    "List containing `cape-dict', or nil when no word list is installed."
+    (and perso/cape-dict-files (list #'cape-dict)))
+
   ;; Generic case: capture the capf the mode already set (Elisp, Lua, sh, markdown,
   ;; plain text…) and merge the extras onto it.
   (defun perso/capf-here ()
-    ;; (perso/capf (remq t completion-at-point-functions)))
-    ;; Drop ispell's capf — it errors when no word-list is installed.
-    (perso/capf (seq-remove (lambda (f) (eq f #'ispell-completion-at-point))
-                            (remq t completion-at-point-functions))))
+    (perso/capf (remq t completion-at-point-functions)))
+
+  ;; Prose: same as above, plus the dictionary.
+  (defun perso/capf-prose ()
+    (perso/capf (append (remq t completion-at-point-functions)
+                        (perso/capf-dict))))
 
   (add-hook 'prog-mode-hook #'perso/capf-here)
-  (add-hook 'text-mode-hook #'perso/capf-here)
+  (add-hook 'text-mode-hook #'perso/capf-prose)
 
   ;; Org: pcomplete as the primary (overrides the text-mode catch-all, runs after it)
   (add-hook 'org-mode-hook
-            (lambda () (perso/capf (list #'pcomplete-completions-at-point))))
+            (lambda ()
+              (perso/capf (append (list #'pcomplete-completions-at-point)
+                                  (perso/capf-dict)))))
 
   ;; ;; LSP: fires once the server is connected, so lsp-completion-at-point exists.
   ;; ;; THIS is what keeps dabbrev/yasnippet merged *with* LSP instead of a fallback.
