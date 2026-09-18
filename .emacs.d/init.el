@@ -1005,8 +1005,6 @@ this project is offered as the default."
               (mode . js2-mode)
               (mode . rjsx-mode)
               (mode . php-mode)))
-      ("Android" (or
-                  (mode . smali-mode)))
       ("Scripts" (or
                   (mode . shell-script-mode)
                   (mode . shell-mode)
@@ -2477,14 +2475,6 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
   :hook (asm-mode . (lambda ()
                       (setq-local indent-tabs-mode nil)
                       (electric-indent-local-mode -1))))
-
-
-;;; Android development modes and settings
-;;; smali/baksmali mode (https://github.com/strazzere/Emacs-Smali)
-(use-package smali-mode
-  :load-path (lambda () (expand-file-name "Emacs-Smali" user-emacs-directory))
-  :config
-  (add-to-list 'auto-mode-alist '("\\.smali$" . smali-mode)))
 
 ;;; Lua modes and settings
 (use-package lua-mode

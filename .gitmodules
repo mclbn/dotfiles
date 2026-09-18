@@ -1,6 +1,3 @@
-[submodule ".emacs.d/Emacs-Smali"]
-	path = .emacs.d/Emacs-Smali
-	url = https://github.com/strazzere/Emacs-Smali
 [submodule ".zshrc.d/functions"]
 	path = .zshrc.d/functions
 	url = https://github.com/MarcVador/zsh-functions
