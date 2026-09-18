@@ -74,15 +74,6 @@
   (require 'use-package)
   (require 'bind-key))
 
-(use-package quelpa
-  :ensure t
-  :init
-  (setq quelpa-update-melpa-p nil) ; no auto update (faster startup)
-  )
-
-(use-package  quelpa-use-package
-  :ensure t)
-
 (defun perso/packages-update ()
   "Update all packages and recompile them, logging progress to a buffer."
   (interactive)
@@ -97,7 +88,7 @@
                         (let ((buffer-read-only nil))
                           (goto-char (point-max))
                           (insert msg "\n")
-                          (when-let ((win (get-buffer-window buf t)))
+                          (when-let* ((win (get-buffer-window buf t)))
                             (set-window-point win (point-max))))
                         (redisplay)))))
       (cl-letf (((symbol-function 'message)
@@ -109,6 +100,8 @@
             (progn
               (funcall log-func "Upgrading packages...")
               (package-upgrade-all)
+              (funcall log-func "Upgrading VC packages...")
+              (package-vc-upgrade-all)
               (funcall log-func "Recompiling packages...")
               (package-recompile-all))
           (error
@@ -625,7 +618,7 @@ Existing saved files are left untouched."
          ("C-z d" . consult-dir)))
 
 (use-package consult-tramp
-  :quelpa (consult-tramp :repo "Ladicle/consult-tramp" :fetcher github :commit "main")
+  :vc (:url "https://github.com/Ladicle/consult-tramp" :branch main :rev :newest)
   :bind ("C-x C-t" . consult-tramp))
 
 ;; Embark : act on the thing at point or the current completion candidate
@@ -711,7 +704,6 @@ this project is offered as the default."
 ;; Rg : ripgrep search
 (use-package rg
   :if (executable-find "rg")
-  :quelpa (rg :repo "dajva/rg.el" :fetcher github :commit "master")
   :config
   (defun perso/rg ()
     (interactive)
@@ -1469,6 +1461,22 @@ FACE defaults to inheriting from default and highlight."
   :custom
   (dimmer-fraction 0.2)
   :config
+  ;; Symbolic colors (`foreground-color') are valid in :underline/:box plists
+  ;; -- stock `whitespace-page-delimiter' uses one -- but dimmer passes them to
+  ;; `color-defined-p', which wants a string: (wrong-type-argument stringp
+  ;; foreground-color). The error aborts the dimming loop, so later faces stay
+  ;; undimmed. They delegate to the foreground, already dimmed, so skip them.
+  ;; TODO: drop once fixed upstream.
+  (defun perso/dimmer--skip-symbolic-color (orig face attribute target frac)
+    "Skip ATTRIBUTE of FACE when its :color is a symbol, else call ORIG."
+    (let* ((value (face-attribute face attribute nil t))
+           (color (and (listp value) (plist-get value :color))))
+      (unless (and color (symbolp color) (not (booleanp color)))
+        (funcall orig face attribute target frac))))
+
+  (when (fboundp 'dimmer--dim-face-attribute)   ; private fn, may vanish
+    (advice-add 'dimmer--dim-face-attribute
+                :around #'perso/dimmer--skip-symbolic-color))
   (dimmer-mode))
 
 ;;; Languages and spell-checking
@@ -1775,7 +1783,6 @@ Second call restores each mode to its previously saved state."
         (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
 
 (use-package indent-bars
-  :quelpa (indent-bars :repo "jdtsmith/indent-bars" :fetcher github :commit "main")
   :custom
   ;; Style customization
   (indent-bars-color '(highlight :face-bg t :blend 0.2))
@@ -2224,8 +2231,7 @@ yasnippet, then file. MAINS/LEADING are lists of capf functions."
 ;; - compile lsp-mode with plist deserializaton (see https://emacs-lsp.github.io/lsp-mode/page/performance/#use-plists-for-deserialization)
 ;; - installing emacs-lsp-booster (see https://github.com/blahgeek/emacs-lsp-booster)
 (use-package eglot-booster
-  :ensure t
-  :quelpa (eglot-booster :repo "jdtsmith/eglot-booster" :fetcher github :commit "main")
+  :vc (:url "https://github.com/jdtsmith/eglot-booster" :branch main :rev :newest)
   :after eglot
   :config (eglot-booster-mode))
 
@@ -2278,7 +2284,7 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
    (list (intern (completing-read
                   "C/C++ server: " '("clangd" "ccls" "ccls-esp") nil t))))
   (setq perso/cc-server server)
-  (when-let ((s (and (fboundp 'eglot-current-server) (eglot-current-server))))
+  (when-let* ((s (and (fboundp 'eglot-current-server) (eglot-current-server))))
     (eglot-shutdown s))                  ; reconnect won't re-read the choice; restart instead
   (when (derived-mode-p 'c-mode 'c++-mode 'objc-mode 'c-ts-mode 'c++-ts-mode)
     (eglot-ensure))
@@ -2356,6 +2362,7 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
 ;; ;; that conflict with org-mode
 ;; (use-package pyenv-mode
 ;;   :ensure nil
+;;   ;; NOTE: quelpa is gone; use :vc if re-enabling this.
 ;;   :quelpa (pyenv-mode :repo "mclbn/pyenv-mode" :fetcher github :commit "master")
 ;;   :diminish
 ;;   :after projectile
@@ -2415,25 +2422,9 @@ SERVER is one of the symbols `clangd', `ccls', `ccls-esp'."
   (c-set-style "perso"))
 (add-hook 'c-mode-common-hook 'my-c-mode-common-hook)
 
-;; Emacs-ccls, compiled from source (https://github.com/MaskRay/ccls)
-(use-package ccls
-  :config
-  ;; (setq ccls-executable (expand-file-name "~/src/ccls/Release/ccls"))
-  (defun lsp-switch-to-ccls-esp ()
-    "Switch current lsp workspace to ccls with Espressif llvm"
-    (interactive)
-    (setq ccls-executable (expand-file-name "~/src/ccls/Release/ccls"))
-    (lsp-restart-workspace))
-
-  (defun lsp-switch-to-ccls-native ()
-    "Switch current lsp workspace to system-native ccls"
-    (interactive)
-    (setq ccls-executable "ccls")
-    (lsp-restart-workspace))
-
-  (setq ccls-args '("--log-file=/tmp/ccls.log")))
-;; :hook ((c-mode c++-mode objc-mode cuda-mode) .
-;;        (lambda () (require 'ccls) (lsp))))
+;; NOTE: the `ccls' *package* (an lsp-mode client) was removed along with the
+;; lsp-mode stack; C/C++ now runs on eglot. The ccls *binary* is still used --
+;; see `perso/cc-contact' / `perso/cc-switch-server' above.
 
 ;;; Php modes and settings
 ;; PHP-mode settings
@@ -3725,7 +3716,7 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
   (with-eval-after-load 'gptel
     (require 'movies (locate-user-emacs-file "movies")))
   (use-package gptel-quick
-    :quelpa (gptel-quick :repo "karthink/gptel-quick" :fetcher github :commit "master")
+    :vc (:url "https://github.com/karthink/gptel-quick" :branch master :rev :newest)
     :after gptel
     :bind ("C-z q" . gptel-quick)
     :config
@@ -3742,7 +3733,7 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
 
   (when (file-directory-p "~/.emacs.d/prompts")
     (use-package gptel-prompts
-      :quelpa (gptel-prompts :repo "jwiegley/gptel-prompts" :fetcher github :commit "main")
+      :vc (:url "https://github.com/jwiegley/gptel-prompts" :branch main :rev :newest)
       :after (gptel)
       :demand t
       :config
@@ -4045,7 +4036,7 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
 ;; Emacs-websearch
 ;; looking up stuff on the Internet
 (use-package emacs-websearch
-  :quelpa (emacs-websearch :repo "zhenhua-wang/emacs-websearch" :fetcher github :commit "master")
+  :vc (:url "https://github.com/zhenhua-wang/emacs-websearch" :branch master :rev :newest)
   :bind ("C-z C-w" . emacs-websearch)
   :config (setq emacs-websearch-engine 'duckduckgo))
 
@@ -4135,7 +4126,12 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
 (use-package zenburn-theme
   :ensure t
   :config
-  (load-theme 'zenburn t))
+  (load-theme 'zenburn t)
+  ;; zenburn ships `:background nil', invalid since Emacs 31; warns on every
+  ;; frame. Override must follow `load-theme'. TODO: drop once fixed upstream.
+  (custom-theme-set-faces
+   'zenburn
+   '(doom-modeline-bar-inactive ((t (:background unspecified))))))
 
 ;;; Startup time
 ;; Let's finish loading this file by displaying how much time we took to start
