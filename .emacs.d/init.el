@@ -3463,13 +3463,22 @@ This is a modified version of `mu4e-view-save-attachments'."
 ;; GPTel : chat with LLMs
 (use-package gptel
   :preface
+  (defun perso/gptel-reasoning-buffer-name ()
+    "Name of the reasoning sink dedicated to the current buffer."
+    (format "*gptel-reasoning: %s*" (buffer-name)))
+
+  (defun perso/gptel-reasoning-buffer-setup ()
+    "Redirect this buffer's gptel reasoning to its own buffer.
+Meant for `gptel-mode-hook', so that redirection is on by default."
+    (when (bound-and-true-p gptel-mode)
+      (setq-local gptel-include-reasoning (perso/gptel-reasoning-buffer-name))))
+
   (defun perso/gptel-reasoning-buffer-toggle ()
     "Toggle redirection of this buffer's gptel reasoning to its own buffer."
     (interactive)
     (if (stringp gptel-include-reasoning)
         (kill-local-variable 'gptel-include-reasoning)
-      (setq-local gptel-include-reasoning
-                  (format "*gptel-reasoning: %s*" (buffer-name))))
+      (setq-local gptel-include-reasoning (perso/gptel-reasoning-buffer-name)))
     (message "gptel reasoning: %s"
              (if (stringp gptel-include-reasoning) gptel-include-reasoning "inline")))
 
@@ -3483,6 +3492,7 @@ This is a modified version of `mu4e-view-save-attachments'."
           (unless (bobp) (insert "\n\n"))
           (insert (format "──────── %s ────────\n\n"
                           (format-time-string "%H:%M:%S")))))))
+  :hook (gptel-mode . perso/gptel-reasoning-buffer-setup)
   :config
   (add-hook 'gptel-pre-response-hook #'perso/gptel-reasoning-buffer-new-entry)
   (require 'gptel-integrations)
