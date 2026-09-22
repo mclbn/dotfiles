@@ -4138,7 +4138,8 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
 
 (if (display-graphic-p)
     (apply-gui-stuff))
-(add-hook 'server-after-make-frame-hook #'apply-gui-stuff)
+(add-hook 'after-make-frame-functions
+          (lambda (f) (with-selected-frame f (apply-gui-stuff))))
 
 ;; from https://emacs.stackexchange.com/a/19047
 (add-hook 'replace-update-post-hook 'recenter)
