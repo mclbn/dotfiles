@@ -17,7 +17,7 @@
 ;;
 ;; Load (after gptel, because tools are registered at load time):
 ;;   (with-eval-after-load 'gptel
-;;     (require 'movies (locate-user-emacs-file "movies")))
+;;     (require 'movies))
 ;;
 ;; Configure the file path in your private perso.el, e.g.:
 ;;   (setq perso/movies-org-file (expand-file-name "movies.org" org-directory))

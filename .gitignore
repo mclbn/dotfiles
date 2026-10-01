@@ -12,3 +12,4 @@
 .emacs.d/tree-sitter/
 .emacs.d/undo-fu-session/
 .emacs.d/undos/
+.emacs.d/**/*.elc
