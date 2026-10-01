@@ -373,6 +373,7 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
             :branch main)
   :after gptel
   :demand t
+  :config (gptel-tool-policy-mode 1)
   :custom
   (gptel-tool-policy-bypass-tools
    '("current_datetime"
