@@ -180,6 +180,14 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
         (error (message "gptel: OpenCode Go models failed to load: %s"
                         (error-message-string err))))))
 
+  ;; Update the file with my/commandcode-gptel-config
+  (let ((f (expand-file-name "gptel-commandcode-models.el" user-emacs-directory)))
+    (when (file-readable-p f)
+      (condition-case err
+          (load f nil t t)
+        (error (message "gptel: Command Code models failed to load: %s"
+                        (error-message-string err))))))
+
   (gptel-make-anthropic "OpenCode Go (Qwen Plus non streaming)"
     :host "opencode.ai"
     :endpoint "/zen/go/v1/messages"
@@ -618,6 +626,10 @@ Idempotent.  Returns BACKEND, for use as `:filter-return' advice."
 ;; Fetching Opencode Go models from subscription
 (when (locate-library "opencode-go-gptel")
   (autoload 'my/opencode-go-gptel-config "opencode-go-gptel" nil t))
+
+;; Fetching Command Code models from subscription
+(when (locate-library "commandcode-gptel")
+  (autoload 'my/commandcode-gptel-config "commandcode-gptel" nil t))
 
 ;; ;; Claude code integration
 ;; (use-package claude-code-ide
